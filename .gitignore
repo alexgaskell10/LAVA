@@ -127,3 +127,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# AG additions
+data
+tmp_trainer
+wandb
+.vscode
