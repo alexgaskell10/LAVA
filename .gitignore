@@ -133,3 +133,4 @@ data
 tmp_trainer
 wandb
 .vscode
+runs

@@ -16,8 +16,6 @@ class CustomFlowCallback(TrainerCallback):
         # Evaluate
         if args.evaluation_strategy and state.global_step % args.eval_steps == 0:
             control.should_evaluate = True
-            if args.load_best_model_at_end:
-                control.should_save = True
 
         # Save
         if not args.load_best_model_at_end and args.save_steps > 0 and state.global_step % args.save_steps == 0:
@@ -30,8 +28,9 @@ class CustomFlowCallback(TrainerCallback):
         return control
 
     def on_epoch_end(self, args, state, control, **kwargs):
-        if args.evaluation_strategy:
-            control.should_evaluate = True
-            if args.load_best_model_at_end:
-                control.should_save = True
-        return control
+        pass    # TODO
+        # if args.evaluation_strategy:
+        #     control.should_evaluate = True
+        #     if args.load_best_model_at_end:
+        #         control.should_save = True
+        # return control

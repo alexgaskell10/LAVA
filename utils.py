@@ -1,22 +1,38 @@
+import os
 import pandas as pd
 from tqdm import tqdm
 import torch
+from torch import nn
+from torch.nn import functional as F
 from transformers.tokenization_utils_base import ExplicitEnum
-
+from sklearn.metrics import f1_score, accuracy_score, roc_curve, auc, recall_score
 
 class Features:
     """A single set of features of data."""
-    def __init__(self, input_ids, input_mask, segment_ids, label_id):
+    def __init__(self, input_ids, input_mask, segment_ids, label_id, orig_text):
         self.input_ids = input_ids
         self.attention_mask = input_mask
         self.token_type_ids = segment_ids
         self.labels = label_id
+        self.orig_text = orig_text
+
+
+def compute_metrics(outputs):
+    ys = outputs.label_ids
+    preds = [0 if p1>p2 else 1 for p1, p2 in outputs.predictions]
+    return {
+        'accuracy': accuracy_score(ys, preds),
+        # 'f1': f1_score(ys, preds),
+    }
 
 
 def collate_fn(inputs):
     collated = {}
     for attribute in inputs[0].__dict__.keys():
-        collated[attribute] = torch.tensor([getattr(i, attribute) for i in inputs])
+        if attribute != 'orig_text':
+            collated[attribute] = torch.tensor([getattr(i, attribute) for i in inputs])
+        else:
+            collated[attribute] = [getattr(i, attribute) for i in inputs]
     return collated        
 
 
@@ -98,6 +114,11 @@ def create_features(samples, max_seq_length, tokenizer):
                 Features(input_ids=input_ids,
                             input_mask=input_mask,
                             segment_ids=segment_ids,
-                            label_id=label_id))
+                            label_id=label_id,
+                            orig_text=tokens_a + tokens_b))
     return features
+
+
+def dir_empty_or_nonexistent(args):
+    return not (os.path.exists(args.output_dir) and os.listdir(args.output_dir))
 
