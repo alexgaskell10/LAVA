@@ -113,25 +113,33 @@ class TransformerBinaryQA(Model):
 
         # Segment ids are not used by RoBERTa
         if 'roberta' in self._pretrained_model or 't5' in self._pretrained_model:
-            transformer_outputs, pooled_output = self._transformer_model(input_ids=util.combine_initial_dims(input_ids),
-                                                                         # token_type_ids=util.combine_initial_dims(segment_ids),
-                                                                         attention_mask=util.combine_initial_dims(question_mask))
+            transformer_outputs, pooled_output = self._transformer_model(
+                input_ids=util.combine_initial_dims(input_ids),
+                # token_type_ids=util.combine_initial_dims(segment_ids),
+                attention_mask=util.combine_initial_dims(question_mask)
+            )
             cls_output = self._dropout(pooled_output)
         if 'albert' in self._pretrained_model:
-            transformer_outputs, pooled_output = self._transformer_model(input_ids=util.combine_initial_dims(input_ids),
-                                                                         # token_type_ids=util.combine_initial_dims(segment_ids),
-                                                                         attention_mask=util.combine_initial_dims(question_mask))
+            transformer_outputs, pooled_output = self._transformer_model(
+                input_ids=util.combine_initial_dims(input_ids),
+                # token_type_ids=util.combine_initial_dims(segment_ids),
+                attention_mask=util.combine_initial_dims(question_mask)
+            )
             cls_output = self._dropout(pooled_output)
         elif 'xlnet' in self._pretrained_model:
-            transformer_outputs = self._transformer_model(input_ids=util.combine_initial_dims(input_ids),
-                                                          token_type_ids=util.combine_initial_dims(segment_ids),
-                                                          attention_mask=util.combine_initial_dims(question_mask))
+            transformer_outputs = self._transformer_model(
+                input_ids=util.combine_initial_dims(input_ids),
+                token_type_ids=util.combine_initial_dims(segment_ids),
+                attention_mask=util.combine_initial_dims(question_mask)
+            )
             cls_output = self.sequence_summary(transformer_outputs[0])
 
         elif 'bert' in self._pretrained_model:
-            last_layer, pooled_output = self._transformer_model(input_ids=util.combine_initial_dims(input_ids),
-                                                                token_type_ids=util.combine_initial_dims(segment_ids),
-                                                                attention_mask=util.combine_initial_dims(question_mask))
+            last_layer, pooled_output = self._transformer_model(
+                input_ids=util.combine_initial_dims(input_ids),
+                token_type_ids=util.combine_initial_dims(segment_ids),
+                attention_mask=util.combine_initial_dims(question_mask)
+            )
             cls_output = self._dropout(pooled_output)
         else:
             assert (ValueError)
@@ -153,23 +161,27 @@ class TransformerBinaryQA(Model):
             if os.environ['WANDB_LOG'] == 'true':
                 c = CategoricalAccuracy()
                 c(label_logits, label)
-                if self.training:
-                    wandb.log({"train_loss": loss, "train_acc": self._accuracy.get_metric(), "train_acc_noncuml": c.get_metric()})
-                else:
-                    wandb.log({"val_loss": loss, "val_acc": self._accuracy.get_metric(), "val_acc_noncuml": c.get_metric()})
+                prefix = 'train' if self.training else 'val'
+                wandb.log({
+                    prefix+"_loss": loss, 
+                    prefix+"_acc": self._accuracy.get_metric(), 
+                    prefix+"_acc_noncuml": c.get_metric()}
+                )
 
             for e, example in enumerate(metadata):
                 logits = sanitize(label_logits[e, :])
                 label_probs = sanitize(output_dict['label_probs'][e, :])
                 prediction = sanitize(output_dict['answer_index'][e])
-                prediction_dict = {'id': example['id'], \
-                                   'phrase': example['question_text'], \
-                                   'context': example['context'], \
-                                   'logits': logits,
-                                   'label_probs': label_probs,
-                                   'answer': example['label'],
-                                   'prediction': prediction,
-                                   'is_correct': (example['label'] == prediction) * 1.0}
+                prediction_dict = {
+                    'id': example['id'],
+                    'phrase': example['question_text'],
+                    'context': example['context'],
+                    'logits': logits,
+                    'label_probs': label_probs,
+                    'answer': example['label'],
+                    'prediction': prediction,
+                    'is_correct': (example['label'] == prediction) * 1.0
+                }
 
                 if 'skills' in example:
                     prediction_dict['skills'] = example['skills']

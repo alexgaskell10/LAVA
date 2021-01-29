@@ -15,6 +15,7 @@ class ResultsProcessor():
         ''' Add proof depth for each prediction
         '''
         metrics_paths = glob.glob(os.path.join(self.dir, 'metrics_epoch_*.json'))
+        # metrics_paths = glob.glob(os.path.join(self.dir, 'last_epoch_validation*.json'))
 
         self.scores = {}
         best_score, best_idx = 0, None
@@ -43,14 +44,15 @@ class ResultsProcessor():
                 id2depth[id][q.pop('id')] = q.pop('meta').pop('QDep')
 
         # Add proof depth for each prediction
+        # There are multiple predictions per question (one per epoch)
         preds = self.scores[self.best_idx]['validation_predictions']
-        self.preds = []
+        self.preds = {}
         for pred in preds:
             qid = pred['id']
             id = '-'.join(qid.split('-')[:-1])
             if id in id2depth:
                 pred['QDep'] = id2depth[id][qid]
-                self.preds.append(pred)
+                self.preds[qid] = pred
 
 
 class ResultsAnalyzer(ResultsProcessor):
@@ -59,18 +61,19 @@ class ResultsAnalyzer(ResultsProcessor):
         self.by_depth()
 
     def by_depth(self):
+        ''' Analyze performance by question depth.
+        '''
         # {depth: [#correct, #samples]}
         scores = {i: [0, 0] for i in range(10)}
-        for pred in self.preds:
+        for id, pred in self.preds.items():
             depth = pred['QDep']
             scores[depth][0] += pred['is_correct']
             scores[depth][1] += 1
-            if depth == 1 and not pred['is_correct']:
-                pass
 
         [print(k,v[1],v[0]/v[1]) for k,v in scores.items() if v[1] > 0]
         print(sum([v[0] for k,v in scores.items() if k <= 5]) / sum([v[1] for k,v in scores.items() if k <= 5]))
 
 
 if __name__ == '__main__':
-    ResultsAnalyzer('runs/t12')
+    os.chdir('ruletaker')
+    ResultsAnalyzer('runs/depth-3ext')
