@@ -177,6 +177,10 @@ class TransformerBinaryQA(Model):
                     prediction_dict['tags'] = example['tags']
                 self._predictions.append(prediction_dict)
 
+            assert sum([s['is_correct'] for s in self._predictions]) == self._accuracy.correct_count.item()
+            assert self._accuracy.get_metric() == \
+                sum([s['is_correct'] for s in self._predictions]) / len(self._predictions)
+
         #if self._predictions_file is not None:# and not self.training:
         #    with open(self._predictions_file, 'a') as f:
         #        for e, example in enumerate(metadata):
