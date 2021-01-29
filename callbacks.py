@@ -25,7 +25,7 @@ class CustomFlowCallback(TrainerCallback):
         if state.global_step >= state.max_steps:
             control.should_training_stop = True
 
-        return control
+        return control 
 
     def on_epoch_end(self, args, state, control, **kwargs):
         pass    # TODO
