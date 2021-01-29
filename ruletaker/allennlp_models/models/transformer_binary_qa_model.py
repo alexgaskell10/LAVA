@@ -19,6 +19,7 @@ from allennlp.nn import RegularizerApplicator, util
 from allennlp.training.metrics import CategoricalAccuracy
 
 import wandb
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -148,12 +149,14 @@ class TransformerBinaryQA(Model):
             self._accuracy(label_logits, label)
             output_dict["loss"] = loss# TODO this is shortcut to get predictions fast..
 
-            c = CategoricalAccuracy()
-            c(label_logits, label)
-            if self.training:
-                wandb.log({"train_loss": loss, "train_acc": self._accuracy.get_metric(), "train_acc_noncuml": c.get_metric()})
-            else:
-                wandb.log({"val_loss": loss, "val_acc": self._accuracy.get_metric(), "val_acc_noncuml": c.get_metric()})
+            # Hack to use wandb logging
+            if os.environ['WANDB_LOG'] == 'true':
+                c = CategoricalAccuracy()
+                c(label_logits, label)
+                if self.training:
+                    wandb.log({"train_loss": loss, "train_acc": self._accuracy.get_metric(), "train_acc_noncuml": c.get_metric()})
+                else:
+                    wandb.log({"val_loss": loss, "val_acc": self._accuracy.get_metric(), "val_acc_noncuml": c.get_metric()})
 
             for e, example in enumerate(metadata):
                 logits = sanitize(label_logits[e, :])
@@ -186,8 +189,6 @@ class TransformerBinaryQA(Model):
         #                                'answer': example['correct_answer_index'],
         #                                'prediction': prediction,
         #                                'is_correct': (example['correct_answer_index'] == prediction) * 1.0}) + '\n')
-
-
 
         return output_dict
 

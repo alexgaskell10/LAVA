@@ -1,3 +1,5 @@
+Code within this directory has largely been ported from https://github.com/alontalmor/LeapOfThought.git
+
 # LeapOfThought
 
 This work was performed at The Allen Institute of Artificial Intelligence.

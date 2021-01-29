@@ -94,11 +94,19 @@ def main(prog: Optional[str] = None) -> None:
             sys.argv[3] = f"inputs/dataset/rule-reasoning-dataset-V2020.2.4/{sys.argv[2].split('/')[1]}/{sys.argv[3]}.jsonl"
             sys.argv[5] = f"{'/'.join(sys.argv[2].split('/')[:2])}/{sys.argv[3]}/{sys.argv[5]}"
 
+        if 'tmp' in sys.argv[2]:
+            os.system(f"rm -rf {sys.argv[4]}")
+
     parser = create_parser(prog)
     args = parser.parse_args()
 
-    import wandb
-    wandb.init(project="ruletaker", config=vars(args))
+    # Hack to use wandb logging
+    if sys.argv[1] == 'train' and 'tmp' not in sys.argv[2]:
+        import wandb
+        wandb.init(project="ruletaker", config=vars(args))
+        os.environ['WANDB_LOG'] = 'true'
+    else:
+        os.environ['WANDB_LOG'] = 'false'
 
     # If a subparser is triggered, it adds its work as `args.func`.
     # So if no such attribute has been added, no subparser was triggered,
