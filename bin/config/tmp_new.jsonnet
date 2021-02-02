@@ -13,7 +13,8 @@ local retriever_variant = "spacy";
         "type": "retriever_reasoning",
         "retriever_variant": retriever_variant
     },
-    "retriever": {
-        "variant": retriever_variant
+    "retrieval_reasoning_model": {
+        "variant": retriever_variant,
+        "type": "transformer_binary_qa_retriever"
     }
 }

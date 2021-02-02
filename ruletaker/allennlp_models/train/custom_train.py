@@ -626,7 +626,7 @@ class TrainModel(Registrable):
         #### AG additions 
         archive = None,
         retriever = None,
-        model: Lazy[Model] = None,
+        retrieval_reasoning_model: Lazy[Model] = None,
     ) -> "TrainModel":
         """
         This method is intended for use with our `FromParams` logic, to construct a `TrainModel`
@@ -706,19 +706,21 @@ class TrainModel(Registrable):
                 if key not in datasets:
                     raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {key}")
 
-        instance_generator = (
-            instance
+        retriever_instance_generator = (
+            instance.fields['retrieval']
             for key, dataset in datasets.items()
             if not datasets_for_vocab_creation or key in datasets_for_vocab_creation
             for instance in dataset
         )
-
-        model_ = archive.model
-        vocabulary_ = model_.vocab
-        # vocabulary_ = vocabulary.construct(instances=instance_generator)
-        # if not vocabulary_:
-        #     vocabulary_ = Vocabulary.from_instances(instance_generator)
-        # model_ = model.construct(vocab=vocabulary_)
+       
+        retriever_vocabulary = vocabulary.construct(instances=retriever_instance_generator)
+        if not retriever_vocabulary:
+            retriever_vocabulary = Vocabulary.from_instances(retriever_instance_generator)
+        vocabulary_ = archive.model.vocab
+        vocabulary_.extend_from_vocab(retriever_vocabulary)
+        model_ = retrieval_reasoning_model.construct(
+            qa_model=archive.model, vocab=vocabulary_
+        )
 
         # Initializing the model can have side effect of expanding the vocabulary.
         # Save the vocab only in the master. In the degenerate non-distributed
@@ -727,8 +729,11 @@ class TrainModel(Registrable):
             vocabulary_path = os.path.join(serialization_dir, "vocabulary")
             vocabulary_.save_to_files(vocabulary_path)
 
+            # retriever_vocabulary_path = os.path.join(serialization_dir, "retriever_vocabulary")
+            # retriever_vocabulary.save_to_files(retriever_vocabulary_path)
+
         for dataset in datasets.values():
-            dataset.index_with(model_.vocab)
+            dataset.index_with(vocabulary_)        # TODO: check this. Indexes using both vocabs combined into one
 
         data_loader_ = data_loader.construct(dataset=datasets["train"])
         validation_data = datasets.get("validation")
