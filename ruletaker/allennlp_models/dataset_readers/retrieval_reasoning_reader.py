@@ -8,37 +8,56 @@ from overrides import overrides
 
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import Field, TextField, LabelField
-from allennlp.data.fields import MetadataField, SequenceLabelField
+from allennlp.data.fields import (
+    Field, TextField, LabelField, MetadataField, SequenceLabelField,
+    ListField
+)
 from allennlp.data.instance import Instance
-from allennlp.data.token_indexers import PretrainedTransformerIndexer
-from allennlp.data.tokenizers import Token, PretrainedTransformerTokenizer
+from allennlp.data.token_indexers import PretrainedTransformerIndexer, SingleIdTokenIndexer
+from allennlp.data.tokenizers import Token, PretrainedTransformerTokenizer, SpacyTokenizer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 # TagSpanType = ((int, int), str)
 
-@DatasetReader.register("rule_reasoning")
-class RuleReasoningReader(DatasetReader):
+@DatasetReader.register("retriever_reasoning")
+class RetrievalReasoningReader(DatasetReader):
     """
     Parameters
     ----------
     """
 
     def __init__(self,
-                 pretrained_model: str,
-                 max_pieces: int = 512,
-                 syntax: str = "rulebase",
-                 add_prefix: Dict[str, str] = None,
-                 skip_id_regex: str = None,
-                 scramble_context: bool = False,
-                 use_context_full: bool = False,
-                 sample: int = -1) -> None:
+        pretrained_model: str = None,
+        max_pieces: int = 512,
+        syntax: str = "rulebase",
+        add_prefix: Dict[str, str] = None,
+        skip_id_regex: str = None,
+        scramble_context: bool = False,
+        use_context_full: bool = False,
+        sample: int = -1,
+        retriever_variant: str = None,
+    ) -> None:
         super().__init__()
-        # TODO edit this class
-        self._tokenizer = PretrainedTransformerTokenizer(pretrained_model, max_length=max_pieces)
-        self._tokenizer_internal = self._tokenizer.tokenizer
+        
+        # Init reasoning tokenizer
+        self._tokenizer_qamodel = PretrainedTransformerTokenizer(pretrained_model, max_length=max_pieces)
+        self._tokenizer_qamodel_internal = self._tokenizer_qamodel.tokenizer
         token_indexer = PretrainedTransformerIndexer(pretrained_model)
-        self._token_indexers = {'tokens': token_indexer}
+        self._token_indexers_qamodel = {'tokens': token_indexer}
+        
+        # Init retriever tokenizer
+        if retriever_variant != 'spacy':
+            self._tokenizer_retriever = PretrainedTransformerTokenizer(pretrained_model, max_length=max_pieces)
+            self._tokenizer_retriever_internal = self._tokenizer.tokenizer
+            token_indexer = PretrainedTransformerIndexer(pretrained_model)
+            self._token_indexers_retriever = {'tokens': token_indexer}
+        elif retriever_variant == 'spacy':
+            self._tokenizer_retriever = SpacyTokenizer()
+            self._token_indexers_retriever = {"tokens": SingleIdTokenIndexer()}
+        else:
+            raise ValueError(
+                f"Invalid retriever_variant = {retriever_variant}.\nInvestigate!"
+            )
 
         self._max_pieces = max_pieces
         self._add_prefix = add_prefix
@@ -47,6 +66,7 @@ class RuleReasoningReader(DatasetReader):
         self._sample = sample
         self._syntax = syntax
         self._skip_id_regex = skip_id_regex
+        self._retriever_variant = retriever_variant
 
     @overrides
     def _read(self, file_path: str):
@@ -89,6 +109,7 @@ class RuleReasoningReader(DatasetReader):
                 for question in questions:
                     counter -= 1
                     debug -= 1
+                    qdep = None
                     if counter == 0:
                         is_done = True
                         break
@@ -96,14 +117,15 @@ class RuleReasoningReader(DatasetReader):
                         logger.info(item_json)
                     if self._syntax == "rulebase":
                         text = question['text']
-                        q_id = question.get('id')
+                        q_id = question['id']
                         label = None
                         if 'label' in question:
                             label = 1 if question['label'] else 0
+                        qdep = question['meta']['QDep']
                     elif self._syntax == "propositional-meta":
                         text = question[1]['question']
                         q_id = f"{item_id}-{question[0]}"
-                        label = question[1].get('propAnswer')
+                        label = question[1]['propAnswer']
                         if label is not None:
                             label = ["False", "True", "Unknown"].index(label)
 
@@ -112,27 +134,39 @@ class RuleReasoningReader(DatasetReader):
                         question_text=text,
                         context=context,
                         label=label,
-                        debug=debug)
+                        debug=debug,
+                        qdep=qdep,
+                    )
 
     @overrides
     def text_to_instance(self,  # type: ignore
-                         item_id: str,
-                         question_text: str,
-                         label: int = None,
-                         context: str = None,
-                         debug: int = -1) -> Instance:
+        item_id: str,
+        question_text: str,
+        label: int = None,
+        context: str = None,
+        debug: int = -1,
+        qdep = None,
+    ) -> Instance:
         # pylint: disable=arguments-differ
         fields: Dict[str, Field] = {}
 
+        # Tokenize for the qa model
         qa_tokens, segment_ids = self.transformer_features_from_qa(question_text, context)
-        qa_field = TextField(qa_tokens, self._token_indexers)
+        qa_field = TextField(qa_tokens, self._token_indexers_qamodel)
         fields['phrase'] = qa_field
+
+        # Tokenize for the retriever
+        tokens = self.retriever_features_from_qa(question_text, context)
+        fields['retrieval'] = ListField(
+            [TextField(toks, self._token_indexers_retriever) for toks in tokens]
+        )
 
         metadata = {
             "id": item_id,
             "question_text": question_text,
             "tokens": [x.text for x in qa_tokens],
-            "context": context
+            "context": context,
+            "QDep": qdep,
         }
 
         if label is not None:
@@ -154,9 +188,16 @@ class RuleReasoningReader(DatasetReader):
             question = self._add_prefix.get("q", "") + question
             context = self._add_prefix.get("c", "") + context
         if context is not None:
-            tokens = self._tokenizer.tokenize_sentence_pair(question, context)
+            tokens = self._tokenizer_qamodel.tokenize_sentence_pair(question, context)
         else:
-            tokens = self._tokenizer.tokenize(question)
+            tokens = self._tokenizer_qamodel.tokenize(question)
         segment_ids = [0] * len(tokens)
 
         return tokens, segment_ids
+
+    def retriever_features_from_qa(self, question: str, context: str):
+        # TODO: should "q" and "c" be added here?
+        # TODO: should full stops be here?
+        to_tokenize = (question + (context if context is not None else "")).split('.')[:-1]
+        tokens = [self._tokenizer_retriever.tokenize(item) for item in to_tokenize]
+        return tokens

@@ -1,3 +1,5 @@
+import sys
+import os
 import argparse
 import logging
 from typing import Any, Optional
@@ -80,15 +82,13 @@ def main(prog: Optional[str] = None) -> None:
     """
     import_plugins()
 
-    import sys
-    import os
     if len(sys.argv) == 1:
         os.chdir('ruletaker')
-        # sys.argv[1:] = ['train', 'allennlp_models/config/tmp.jsonnet', 
-        #     '-s', 'runs/t16', '--include-package', 'allennlp_models']
-        sys.argv[1:] = ['evaluate', 'runs/depth-5/model.tar.gz', 'dev', '--output-file', '_results.json', 
-            '-o', "{'trainer': {'cuda_device': 0}, 'validation_data_loader': {'batch_sampler': {'batch_size': 64, 'type': 'bucket'}}}", 
-            '--cuda-device', '0', '--include-package', 'allennlp_models']
+        sys.argv[1:] = ['custom_train', 'allennlp_models/config/tmp.jsonnet', 
+            '-s', 'runs/t16', '--include-package', 'allennlp_models']
+        # sys.argv[1:] = ['evaluate', 'runs/depth-5/model.tar.gz', 'dev', '--output-file', '_results.json', 
+        #     '-o', "{'trainer': {'cuda_device': 0}, 'validation_data_loader': {'batch_sampler': {'batch_size': 64, 'type': 'bucket'}}}", 
+        #     '--cuda-device', '0', '--include-package', 'allennlp_models']
 
         if sys.argv[1] == 'evaluate':
             sys.argv[3] = f"inputs/dataset/rule-reasoning-dataset-V2020.2.4/{sys.argv[2].split('/')[1]}/{sys.argv[3]}.jsonl"
@@ -119,8 +119,10 @@ def main(prog: Optional[str] = None) -> None:
     else:
         parser.print_help()
 
+
 def run():
     main(prog="allennlp")
+
 
 if __name__ == "__main__":
     run()
