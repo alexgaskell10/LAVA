@@ -1,5 +1,7 @@
 from typing import Dict, Optional, List, Any
 import logging
+import re
+import json
 
 from transformers.modeling_t5 import T5Model
 from transformers.modeling_roberta import RobertaModel
@@ -7,10 +9,10 @@ from transformers.modeling_xlnet import XLNetModel
 from transformers.modeling_bert import BertModel
 from transformers.modeling_albert import AlbertModel
 from transformers.modeling_utils import SequenceSummary
-import re
-import json
+
 import torch
 from torch.nn.modules.linear import Linear
+from torch import nn
 
 from allennlp.common.util import sanitize
 from allennlp.data import Vocabulary
@@ -43,19 +45,30 @@ class TransformerBinaryQARetriever(Model):
     ) -> None:
         super().__init__(qa_model.vocab, regularizer)
 
+        self.vocab = vocab
+        self.qa_model = qa_model
+
         if variant == 'spacy':
-            self.retriever = get_spacy_model(
-                spacy_model_name="en_core_web_md", pos_tags=False, parse=False, ner=False
-            )
+            self.retriever_embs = self.init_spacy()
         else:
             raise ValueError(
                 f"Invalid retriever_variant = {retriever_variant}.\nInvestigate!"
             )
 
-        self.vocab = vocab
-        self.qa_model = qa_model
-
         self._debug = -1
+
+    def init_spacy(self):
+        spacy = get_spacy_model(
+            spacy_model_name="en_core_web_md", pos_tags=False, parse=False, ner=False
+        )
+        idx2tok = self.vocab.get_index_to_token_vocabulary()
+        spacy_vecs = {
+            idx: torch.tensor(spacy(tok).vector).unsqueeze(0) for idx, tok in idx2tok.items()
+        }
+        spacy_embs = torch.cat(list(spacy_vecs.values()))
+        retriever_embs = nn.Embedding(*spacy_embs.shape)
+        retriever_embs.weight.data = spacy_embs
+        return retriever_embs
 
     def forward(self, 
         phrase: Dict[str, torch.LongTensor],

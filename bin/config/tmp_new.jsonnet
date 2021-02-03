@@ -2,7 +2,7 @@ local max_pieces = 384;
 local skip_id_regex = "$none";
 local ruletaker_archive = "ruletaker/runs/depth-5-base/model.tar.gz";
 local dataset_dir = "ruletaker/inputs/dataset/tiny-rule-reasoning/depth-3ext-NatLang/";
-local retriever_variant = "spacy";
+local retriever_variant = "spacy";      // {spacy}
 
 {
     "ruletaker_archive": ruletaker_archive,
