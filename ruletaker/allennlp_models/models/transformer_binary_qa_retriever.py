@@ -41,14 +41,15 @@ class TransformerBinaryQARetriever(Model):
         num_labels: int = 2,
         predictions_file=None,
         layer_freeze_regexes: List[str] = None,
-        regularizer: Optional[RegularizerApplicator] = None
+        regularizer: Optional[RegularizerApplicator] = None,
+        topk: int = 5,
+        sentence_embedding_method: str = 'mean',
     ) -> None:
         super().__init__(qa_model.vocab, regularizer)
         self.vocab = vocab
-        self.qa_tok2idx = None
-        self.qa_model = qa_model
-        self.topk = 5                       # TODO
-        self.sentence_embedding_method = 'mean'     # TODO
+        self.qa_model = qa_model.to("cpu")      # TODO
+        self.topk = topk
+        self.sentence_embedding_method = sentence_embedding_method
 
         if variant == 'spacy':
             self.retriever_embs = self.init_spacy()
@@ -58,9 +59,95 @@ class TransformerBinaryQARetriever(Model):
                 f"Invalid retriever_variant = {retriever_variant}.\nInvestigate!"
             )
 
+        self.do_setup = True
         self._debug = -1
 
+    def forward(self, 
+        phrase: Dict[str, torch.LongTensor],
+        label: torch.LongTensor = None,
+        metadata: List[Dict[str, Any]] = None,
+        retrieval: List = None,
+        sentences: List = None,
+    ) -> torch.Tensor:
+
+        phrase_idxs = sentences['tokens']['token_ids']
+        retrieval_idxs = retrieval['tokens']['tokens']
+        self.device = device = phrase_idxs.device
+
+        if self.do_setup:
+            self.setup()
+
+        topk_idxs = self.retrieve_topk_idxs(retrieval_idxs)
+
+        # Construct context from topk indices
+        # NOTE: appears that torch does not allow multidimensional indexing
+        # using tensor so flatten to 2d before indexing
+        query_idxs, context_idxs = phrase_idxs[:,:1,:], phrase_idxs[:,1:,:]
+        topk_idxs_ = (
+            topk_idxs + torch.arange(topk_idxs.size(0)).unsqueeze(1).to(device) * context_idxs.size(1)
+        ).flatten()
+        context_idxs_ = context_idxs.contiguous().view(-1, context_idxs.size(-1))
+        topk_context_idxs = context_idxs_[topk_idxs_].view(
+            context_idxs.size(0), self.topk, context_idxs.size(-1)
+        )
+
+        # Add special tokens and join to single tensor
+        query_idxs_, topk_context_idxs_ = self.add_special_tokens(query_idxs, topk_context_idxs)
+        theory_idxs = torch.cat((query_idxs_, topk_context_idxs_), dim=1)
+
+        # Need to move padding from the middle of the context 
+        # matrix to the end for each row
+        index_ = torch.where(
+            # If the entry is padding...
+            theory_idxs.view(theory_idxs.size(0), -1) == self.qa_pad_idx,
+            # ... replace with large number so can be sorted to the end for each dimension ...
+            torch.tensor(theory_idxs.numel() + 1).to(device),
+            # ... otherwise give index of entry (to retain current ordering)
+            torch.arange(theory_idxs.numel()).view(theory_idxs.size(0), -1).to(device),
+        )
+        padding2end = index_.sort(dim=1).indices
+        padding2end += torch.arange(index_.size(0)).unsqueeze(1).to(device) * index_.size(1)      # Hack as indices reset across dimensions...
+        sorted_theory_idxs = theory_idxs.flatten()[padding2end.flatten()].view(
+            theory_idxs.size(0), -1
+        )
+
+        # Check padding
+        max_seq_len = self.check_correctly_padded(sorted_theory_idxs)
+        # Truncate to max sequence length
+        input_ids = sorted_theory_idxs[:, :max_seq_len + 1]     # TODO: check this
+
+        # Reconfigure args for qa model forward pass
+        phrase['tokens'] = {
+            'token_ids': input_ids,
+            'mask': input_ids != self.qa_pad_idx,
+            'type_ids': torch.zeros_like(input_ids),     # TODO: automate for other model types
+        }
+        for n, meta in enumerate(metadata):
+            meta.update(topk = topk_idxs[n].tolist())
+
+        return self.qa_model.forward(
+            phrase = phrase,
+            label = label,
+            metadata = metadata,
+        )
+
+    def check_correctly_padded(self, idxs):
+        ''' Check that the padding has been added correctly
+            (after tokens).
+        '''
+        # Check that padding index is at the end
+        pad_idxs = (idxs == self.qa_pad_idx).nonzero()
+        max_seq_len = 0
+        for dim in pad_idxs[:,0].unique():
+            idxs = pad_idxs[(pad_idxs[:,0] == dim).nonzero().flatten(), 1]
+            assert torch.all(idxs == torch.arange(idxs.min(), idxs.max()+1).to(self.device))
+            max_seq_len = idxs.min() if idxs.min() > max_seq_len else max_seq_len
+
+        return max_seq_len
+
     def init_spacy(self):
+        ''' Load spacy embeddings as nn.Embedding.
+        '''
         spacy = get_spacy_model(
             spacy_model_name="en_core_web_md", pos_tags=False, parse=False, ner=False
         )
@@ -73,17 +160,18 @@ class TransformerBinaryQARetriever(Model):
         retriever_embs.weight.data = spacy_embs
         return retriever_embs
 
-    def retrieve_topk_idxs(self, retrieval_idxs):
+    def retrieve_topk_idxs(self, idxs):
         ''' Use the specified retrieval embedder and retrieval method
             to find the top k most similar context sentences to the
             query.
         '''
         # Perform retrieval with no gradient
-        with torch.no_grad():
-            token_embs = self.retriever_embs(retrieval_idxs)    # [bsz, context_sentences, max_context_tokens, emb_dim]
+        # with torch.no_grad():
+        if True:
+            token_embs = self.retriever_embs(idxs)    # [bsz, context_sentences, max_context_tokens, emb_dim]
 
             # Compute sentence embeddings
-            retrieval_mask = (retrieval_idxs != self.retriever_pad_idx).long().unsqueeze(-1)
+            retrieval_mask = (idxs != self.retriever_pad_idx).long().unsqueeze(-1)
             if self.sentence_embedding_method == 'mean':
                 sentence_embs = (token_embs * retrieval_mask).sum(dim=2) / retrieval_mask.sum(dim=2)
             else:
@@ -96,110 +184,50 @@ class TransformerBinaryQARetriever(Model):
             # TODO: check where gradient should be activated again
             
             # Find indices of k most similar context sentences
-            # topk = min(self.topk, similarity.size(1))
+            topk = min(self.topk, similarity.size(1))       # TODO
             topk_idxs = torch.topk(similarity, self.topk).indices
         
         return topk_idxs
 
-    def forward(self, 
-        phrase: Dict[str, torch.LongTensor],
-        label: torch.LongTensor = None,
-        metadata: List[Dict[str, Any]] = None,
-        retrieval: List = None,
-        sentences: List = None,
-    ) -> torch.Tensor:
+    def setup(self):
+        ''' Set attributes for forward pass. Should be set during
+            first forward pass. 
+        '''
+        self.retriever_pad_idx = self.vocab.get_token_index(self.vocab._padding_token)
+        self.qa_tok2idx = self.vocab._token_to_index['tags']
+        self.qa_idx2tok = self.vocab._index_to_token['tags']
+        # TODO set below dynamically
+        self.qa_pad_idx = self.qa_tok2idx['<pad>']
+        self.start_idx = self.qa_tok2idx['<s>']      
+        self.end_idx = self.qa_tok2idx['</s>']
+        self.q_idx = self.qa_tok2idx['ĠQ']
+        self.c_idx = self.qa_tok2idx['ĠC']
+        self.colon_idx = self.qa_tok2idx[':']
+        self.start_query_idxs = torch.tensor(
+            [self.start_idx, self.q_idx, self.colon_idx]
+        ).to(self.device)
+        self.start_context_idxs = torch.tensor(
+            [self.start_idx, self.c_idx, self.colon_idx]
+        ).to(self.device)
+        self.end_idxs = torch.tensor(self.end_idx).to(self.device)
+        self.num_extra = self.start_query_idxs.numel() + self.end_idxs.numel()
+        self.do_setup = False
 
-        phrase_idxs = sentences['tokens']['token_ids']
-        retrieval_idxs = retrieval['tokens']['tokens']
-        device = phrase_idxs.device
-
-        if self.qa_tok2idx is None:
-            self.retriever_pad_idx = self.vocab.get_token_index(self.vocab._padding_token)
-            self.qa_tok2idx = self.vocab._token_to_index['tags']
-            self.qa_idx2tok = self.vocab._index_to_token['tags']
-            # TODO set below dynamically
-            self.qa_pad_idx = self.qa_tok2idx['<pad>']
-            self.start_idx = self.qa_tok2idx['<s>']      
-            self.end_idx = self.qa_tok2idx['</s>']
-            self.q_idx = self.qa_tok2idx['ĠQ']
-            self.c_idx = self.qa_tok2idx['ĠC']
-            self.colon_idx = self.qa_tok2idx[':']
-            self.start_query_idxs = torch.tensor(
-                [self.start_idx, self.q_idx, self.colon_idx]
-            ).to(device)
-            self.start_context_idxs = torch.tensor(
-                [self.start_idx, self.c_idx, self.colon_idx]
-            ).to(device)
-            self.end_idxs = torch.tensor(self.end_idx).to(device)
-            # Dictionary of number of extra tokens needed
-            self.num_extra = self.start_query_idxs.numel() + self.end_idxs.numel()
-
-        topk_idxs = self.retrieve_topk_idxs(retrieval_idxs)
-
-        # Construct context from topk indices
-        # TODO: seems that torch does not allow multidimensional indexing
-        # using tensor so flatten to 2d before indexing
-        query_idxs, context_idxs = phrase_idxs[:,:1,:], phrase_idxs[:,1:,:]
-        topk_idxs_ = (
-            topk_idxs + torch.arange(topk_idxs.size(0)).unsqueeze(1).to(device) * context_idxs.size(1)
-        ).flatten()
-        context_idxs_ = context_idxs.contiguous().view(-1, context_idxs.size(-1))
-        topk_context_idxs = context_idxs_[topk_idxs_].view(
-            context_idxs.size(0), self.topk, context_idxs.size(-1)
-        )
-
-        # Add special tokens and join to single tensor
-        query_idxs_, topk_context_idxs_ = self.add_special_tokens(
-            query_idxs, topk_context_idxs, device
-        )
-        theory_idxs = torch.cat((query_idxs_, topk_context_idxs_), dim=1)
-
-        # Need to move padding from the middle of the context 
-        # matrix to the end for each row
-        index_ = torch.where(
-            # If the entry is padding...
-            theory_idxs.view(theory_idxs.size(0), -1) == self.qa_pad_idx,
-            # ... replace with large number so can be sorted to 
-            # the end for each dimension ...
-            torch.tensor(theory_idxs.numel() + 1).to(device),
-            # ... otherwise give index of entry (to retain current ordering)
-            torch.arange(theory_idxs.numel()).view(theory_idxs.size(0), -1).to(device),
-        )
-        padding2end = index_.sort(dim=1).indices
-        padding2end += torch.arange(index_.size(0)).unsqueeze(1).to(device) * index_.size(1)      # Hack as indices reset across dimensions...
-        sorted_theory_idxs = theory_idxs.flatten()[padding2end.flatten()].view(
-            theory_idxs.size(0), -1
-        )
-
-        # Check that padding index is at the end
-        pad_idxs = (sorted_theory_idxs == self.qa_pad_idx).nonzero()
-        max_seq_len = 0
-        for dim in pad_idxs[:,0].unique():
-            idxs = pad_idxs[(pad_idxs[:,0] == dim).nonzero().flatten(), 1]
-            assert torch.all(idxs == torch.arange(idxs.min(), idxs.max()+1).to(device))
-            max_seq_len = idxs.min() if idxs.min() > max_seq_len else max_seq_len
-
-        input_ids = sorted_theory_idxs[:, :max_seq_len + 1]     # TODO: check this
-        mask = (input_ids != self.qa_pad_idx).long()
-
-        pass
-        # return output_dict
-
-    def add_special_tokens(self, query_idxs, context_idxs, device):
+    def add_special_tokens(self, query_idxs, context_idxs):
         ''' Add the special tokens which are normally added at tokenization
             (e.g. <s>, </s>, 'ĠQ', 'ĠC', ':)
             TODO: automate this so works for other models
         '''
         # First remove special tokens (as only partially complete)
-        query_idxs[query_idxs == 0] = self.qa_pad_idx
-        query_idxs[query_idxs == 2] = self.qa_pad_idx
-        context_idxs[context_idxs == 0] = self.qa_pad_idx
-        context_idxs[context_idxs == 2] = self.qa_pad_idx
+        query_idxs[query_idxs == self.start_idx] = self.qa_pad_idx
+        query_idxs[query_idxs == self.end_idx] = self.qa_pad_idx
+        context_idxs[context_idxs == self.start_idx] = self.qa_pad_idx
+        context_idxs[context_idxs == self.end_idx] = self.qa_pad_idx
 
         # For query first
         query_idxs_ = torch.full((
             query_idxs.size(0), query_idxs.size(1), query_idxs.size(2) + self.num_extra
-        ), self.qa_pad_idx).to(device)
+        ), self.qa_pad_idx).to(self.device)
 
         start_toks = self.start_query_idxs.numel()
         end_toks = self.end_idxs.numel()
@@ -214,7 +242,7 @@ class TransformerBinaryQARetriever(Model):
         # around all context
         context_idxs_ = torch.full((
             context_idxs.size(0), context_idxs.size(1), query_idxs_.size(2)
-        ), self.qa_pad_idx).to(device)
+        ), self.qa_pad_idx).to(self.device)
 
         start_toks = self.start_context_idxs.numel()
 
@@ -229,11 +257,11 @@ class TransformerBinaryQARetriever(Model):
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         if reset == True and not self.training:
             return {
-                'EM': self._accuracy.get_metric(reset),
-                'predictions': self._predictions,
+                'EM': self.qa_model._accuracy.get_metric(reset),
+                'predictions': self.qa_model._predictions,
             }
         else:
             return {
-                'EM': self._accuracy.get_metric(reset),
+                'EM': self.qa_model._accuracy.get_metric(reset),
             }
 

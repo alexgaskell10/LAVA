@@ -3,6 +3,7 @@ local skip_id_regex = "$none";
 local ruletaker_archive = "ruletaker/runs/depth-5-base/model.tar.gz";
 local dataset_dir = "ruletaker/inputs/dataset/tiny-rule-reasoning/depth-3ext-NatLang/";
 local retriever_variant = "spacy";      // {spacy}
+local cuda_device = -1;
 
 {
     "ruletaker_archive": ruletaker_archive,
@@ -15,6 +16,11 @@ local retriever_variant = "spacy";      // {spacy}
     },
     "retrieval_reasoning_model": {
         "variant": retriever_variant,
-        "type": "transformer_binary_qa_retriever"
+        "type": "transformer_binary_qa_retriever",
+        "sentence_embedding_method": "mean",
+        "topk": 5
+    },
+    "trainer": {
+        "cuda_device": cuda_device
     }
 }
