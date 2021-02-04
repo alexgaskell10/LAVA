@@ -84,8 +84,8 @@ def main(prog: Optional[str] = None) -> None:
 
     if len(sys.argv) == 1:
         os.chdir('ruletaker')
-        sys.argv[1:] = ['custom_train', 'allennlp_models/config/tmp.jsonnet', 
-            '-s', 'runs/t16', '--include-package', 'allennlp_models']
+        sys.argv[1:] = ['train', 'allennlp_models/config/tmp.jsonnet', 
+            '-s', 'runs/t1', '--include-package', 'allennlp_models']
         # sys.argv[1:] = ['evaluate', 'runs/depth-5/model.tar.gz', 'dev', '--output-file', '_results.json', 
         #     '-o', "{'trainer': {'cuda_device': 0}, 'validation_data_loader': {'batch_sampler': {'batch_size': 64, 'type': 'bucket'}}}", 
         #     '--cuda-device', '0', '--include-package', 'allennlp_models']

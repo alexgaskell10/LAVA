@@ -155,10 +155,18 @@ class RetrievalReasoningReader(DatasetReader):
         qa_field = TextField(qa_tokens, self._token_indexers_qamodel)
         fields['phrase'] = qa_field
 
-        # Tokenize for the retriever
-        tokens = self.retriever_features_from_qa(question_text, context)
+        # Tokenize context sentences seperately
+        retrieval_listfield = self.listfield_features_from_qa(
+            question_text, context, self._tokenizer_retriever
+        )
         fields['retrieval'] = ListField(
-            [TextField(toks, self._token_indexers_retriever) for toks in tokens]
+            [TextField(toks, self._token_indexers_retriever) for toks in retrieval_listfield]
+        )
+        qa_listfield = self.listfield_features_from_qa(
+            question_text, context, self._tokenizer_qamodel
+        )
+        fields['sentences'] = ListField(
+            [TextField(toks, self._token_indexers_qamodel) for toks in qa_listfield]
         )
 
         metadata = {
@@ -195,9 +203,14 @@ class RetrievalReasoningReader(DatasetReader):
 
         return tokens, segment_ids
 
-    def retriever_features_from_qa(self, question: str, context: str):
-        # TODO: should "q" and "c" be added here?
-        # TODO: should full stops be here?
+    def listfield_features_from_qa(self, question: str, context: str, tokenizer):
         to_tokenize = (question + (context if context is not None else "")).split('.')[:-1]
-        tokens = [self._tokenizer_retriever.tokenize(item) for item in to_tokenize]
+        to_tokenize = [toks + '.' for toks in to_tokenize]
+        
+        # TODO: should "q" and "c" be added here?
+        # if self._add_prefix is not None:
+        #     question = self._add_prefix.get("q", "") + question
+        #     context = self._add_prefix.get("c", "") + context
+        
+        tokens = [tokenizer.tokenize(item) for item in to_tokenize]
         return tokens

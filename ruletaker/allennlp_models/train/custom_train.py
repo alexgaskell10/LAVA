@@ -148,9 +148,7 @@ def train_custom_model_from_args(args: argparse.Namespace):
     archive = load_archive(tmp_params["ruletaker_archive"], args.cuda_device, args.overrides)
     params = archive.config
 
-    # Integrate overrides into params
-    # params.__dict__["params"].update(tmp_params.pop("overrides").__dict__["params"])
-    # params.__dict__["params"].update(tmp_params.__dict__["params"])
+    # Integrate user-specified params with saved model params
     for k,v in tmp_params.__dict__["params"].items():
         if isinstance(v, dict):
             if k in params.__dict__["params"]:
@@ -160,7 +158,6 @@ def train_custom_model_from_args(args: argparse.Namespace):
         else:
             params.__dict__["params"].update({k:v})
               
-
     return train_model(
         params=params,
         serialization_dir=args.serialization_dir,
@@ -712,10 +709,22 @@ class TrainModel(Registrable):
             if not datasets_for_vocab_creation or key in datasets_for_vocab_creation
             for instance in dataset
         )
+        instance_generator = (
+            # instance.fields['sentences']
+            instance
+            for key, dataset in datasets.items()
+            if not datasets_for_vocab_creation or key in datasets_for_vocab_creation
+            for instance in dataset
+        )
        
+        # vocabulary_ = vocabulary.construct(instances=instance_generator)
+        # if not vocabulary_:
+            # vocabulary_ = Vocabulary.from_instances(instance_generator)
+
         retriever_vocabulary = vocabulary.construct(instances=retriever_instance_generator)
         if not retriever_vocabulary:
             retriever_vocabulary = Vocabulary.from_instances(retriever_instance_generator)
+        
         vocabulary_ = archive.model.vocab
         vocabulary_.extend_from_vocab(retriever_vocabulary)
         model_ = retrieval_reasoning_model.construct(
@@ -728,9 +737,6 @@ class TrainModel(Registrable):
         if common_util.is_master():
             vocabulary_path = os.path.join(serialization_dir, "vocabulary")
             vocabulary_.save_to_files(vocabulary_path)
-
-            # retriever_vocabulary_path = os.path.join(serialization_dir, "retriever_vocabulary")
-            # retriever_vocabulary.save_to_files(retriever_vocabulary_path)
 
         for dataset in datasets.values():
             dataset.index_with(vocabulary_)        # TODO: check this. Indexes using both vocabs combined into one
