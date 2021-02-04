@@ -36,8 +36,8 @@ def main(prog: Optional[str] = None) -> None:
     if len(sys.argv) == 1:
         # sys.argv[1:] = ['train', 'ruletaker/allennlp_models/config/tmp.jsonnet', 
         #     '-s', 'ruletaker/runs/t16', '--include-package', 'ruletaker.allennlp_models']
-        sys.argv[1:] = ['custom_train', 'bin/config/tmp_new.jsonnet',
-            '-s', 'bin/runs/tmp', '--include-package', 'ruletaker.allennlp_models',
+        sys.argv[1:] = ['custom_train', 'bin/config/spacy_retriever.jsonnet', #'bin/config/tmp_new.jsonnet',
+            '-s', 'bin/runs/depth-5-k1', '--include-package', 'ruletaker.allennlp_models',
             '--cuda-device', '0',]
         # sys.argv[1:] = ['evaluate', 'ruletaker/runs/depth-5-base/model.tar.gz', 'dev', '--output-file', '_results.json', 
         #     '-o', "{'trainer': {'cuda_device': 0}, 'validation_data_loader': {'batch_sampler': {'batch_size': 64, 'type': 'bucket'}}}", 
@@ -56,9 +56,9 @@ def main(prog: Optional[str] = None) -> None:
     args = parser.parse_args()
 
     # Hack to use wandb logging
-    if sys.argv[1] == 'train' and 'tmp' not in sys.argv[2]:
+    if 'train' in sys.argv[1] and 'tmp' not in sys.argv[2]:
         import wandb
-        wandb.init(project="ruletaker", config=vars(args))
+        wandb.init(project="re-re", config=vars(args))
         os.environ['WANDB_LOG'] = 'true'
     else:
         os.environ['WANDB_LOG'] = 'false'

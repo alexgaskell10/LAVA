@@ -24,6 +24,7 @@ from allennlp.training.metrics import CategoricalAccuracy
 import wandb
 import os
 from allennlp.common.util import get_spacy_model
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +48,8 @@ class TransformerBinaryQARetriever(Model):
     ) -> None:
         super().__init__(qa_model.vocab, regularizer)
         self.vocab = vocab
-        self.qa_model = qa_model.to("cpu")      # TODO
+        self.qa_model = qa_model#.to("cpu")      # TODO
+        # os.environ['CUDA_LAUNCH_BLOCKING'] = "1"    # TODO
         self.topk = topk
         self.sentence_embedding_method = sentence_embedding_method
 
