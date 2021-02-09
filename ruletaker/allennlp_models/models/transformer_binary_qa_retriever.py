@@ -48,8 +48,7 @@ class TransformerBinaryQARetriever(Model):
     ) -> None:
         super().__init__(qa_model.vocab, regularizer)
         self.vocab = vocab
-        self.qa_model = qa_model#.to("cpu")      # TODO
-        # os.environ['CUDA_LAUNCH_BLOCKING'] = "1"    # TODO
+        self.qa_model = qa_model
         self.topk = topk
         self.sentence_embedding_method = sentence_embedding_method
 
@@ -168,8 +167,7 @@ class TransformerBinaryQARetriever(Model):
             query.
         '''
         # Perform retrieval with no gradient
-        # with torch.no_grad():
-        if True:
+        with torch.no_grad():
             token_embs = self.retriever_embs(idxs)    # [bsz, context_sentences, max_context_tokens, emb_dim]
 
             # Compute sentence embeddings
@@ -183,8 +181,13 @@ class TransformerBinaryQARetriever(Model):
             query, context = sentence_embs[:,:1,:], sentence_embs[:,1:,:]
             similarity = self.similarity(query, context)
 
-            # TODO: check where gradient should be activated again
-            
+            # Replace nans with 0
+            similarity = torch.where(
+                retrieval_mask[:,1:,:].sum(dim=2).squeeze() == 0,
+                torch.tensor(0).float().to(self.device), 
+                similarity,
+            )
+
             # Find indices of k most similar context sentences
             topk = min(self.topk, similarity.size(1))       # TODO
             topk_idxs = torch.topk(similarity, self.topk).indices

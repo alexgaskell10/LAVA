@@ -6,7 +6,7 @@ local retriever_variant = "spacy";      // {spacy}
 local cuda_device = 0;
 local batch_size = 2;
 local num_gradient_accumulation_steps = 4;
-local topk = 1;
+local topk = 5;
 
 {
     "ruletaker_archive": ruletaker_archive,

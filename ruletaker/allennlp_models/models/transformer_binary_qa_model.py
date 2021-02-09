@@ -180,7 +180,8 @@ class TransformerBinaryQA(Model):
                     'label_probs': label_probs,
                     'answer': example['label'],
                     'prediction': prediction,
-                    'is_correct': (example['label'] == prediction) * 1.0
+                    'is_correct': (example['label'] == prediction) * 1.0,
+                    'q_depth': example['QDep']
                 }
 
                 if 'skills' in example:
