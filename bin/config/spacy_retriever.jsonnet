@@ -4,9 +4,9 @@ local ruletaker_archive = "ruletaker/runs/depth-5-base/model.tar.gz";
 local dataset_dir = "ruletaker/inputs/dataset/rule-reasoning-dataset-V2020.2.4/depth-5/";
 local retriever_variant = "spacy";      // {spacy}
 local cuda_device = 0;
-local batch_size = 2;
-local num_gradient_accumulation_steps = 4;
-local topk = 1;
+local batch_size = 4;
+local num_gradient_accumulation_steps = 2;
+local topk = 100;
 
 {
     "ruletaker_archive": ruletaker_archive,

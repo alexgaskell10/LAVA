@@ -89,7 +89,7 @@ class TransformerBinaryQARetriever(Model):
         ).flatten()
         context_idxs_ = context_idxs.contiguous().view(-1, context_idxs.size(-1))
         topk_context_idxs = context_idxs_[topk_idxs_].view(
-            context_idxs.size(0), self.topk, context_idxs.size(-1)
+            context_idxs.size(0), topk_idxs.size(1), context_idxs.size(-1)
         )
 
         # Add special tokens and join to single tensor
@@ -189,8 +189,8 @@ class TransformerBinaryQARetriever(Model):
             )
 
             # Find indices of k most similar context sentences
-            topk = min(self.topk, similarity.size(1))       # TODO
-            topk_idxs = torch.topk(similarity, self.topk).indices
+            topk = min(self.topk, similarity.size(1))
+            topk_idxs = torch.topk(similarity, topk).indices
         
         return topk_idxs
 

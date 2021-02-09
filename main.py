@@ -36,7 +36,7 @@ def main(prog: Optional[str] = None) -> None:
         # sys.argv[1:] = ['train', 'ruletaker/allennlp_models/config/tmp.jsonnet', 
         #     '-s', 'ruletaker/runs/t16', '--include-package', 'ruletaker.allennlp_models']
         sys.argv[1:] = ['custom_train', 'bin/config/spacy_retriever.jsonnet', # {'bin/config/tmp_new.jsonnet', 'bin/config/spacy_retriever.jsonnet'},
-            '-s', 'bin/runs/test2', '--include-package', 'ruletaker.allennlp_models']
+            '-s', 'bin/runs/depth-5-k100', '--include-package', 'ruletaker.allennlp_models']
         # sys.argv[1:] = ['evaluate', 'ruletaker/runs/depth-5-base/model.tar.gz', 'dev', '--output-file', '_results.json', 
         #     '-o', "{'trainer': {'cuda_device': 0}, 'validation_data_loader': {'batch_sampler': {'batch_size': 64, 'type': 'bucket'}}}", 
         #     '--cuda-device', '0', '--include-package', 'ruletaker.allennlp_models']
@@ -64,65 +64,6 @@ def main(prog: Optional[str] = None) -> None:
     for package_name in args.include_package:
         import_module_and_submodules(package_name)
     args.func(args)
-
-
-def run(args):
-    # Load from archive
-    archive = load_archive(args.archive_file, args.cuda_device, args.overrides, args.weights_file)
-    config = archive.config
-    prepare_environment(config)
-    model = archive.model
-
-    # TODO reconcile config with args
-    args.model = model
-
-
-def run_eval(args):
-    # Load from archive
-    archive = load_archive(args.archive_file, args.cuda_device, args.overrides, args.weights_file)
-    config = archive.config
-    prepare_environment(config)
-    model = archive.model
-
-    # Manually adjust config and args
-    config = adjust_config(config)
-    args = adjust_args(args)
-
-    # Load the evaluation data
-
-    # Try to use the validation dataset reader if there is one - otherwise fall back
-    # to the default dataset_reader used for both training and validation.
-    validation_dataset_reader_params = config.pop("validation_dataset_reader", None)
-    if validation_dataset_reader_params is not None:
-        dataset_reader = DatasetReader.from_params(validation_dataset_reader_params)
-    else:
-        dataset_reader = DatasetReader.from_params(config.pop("dataset_reader"))
-    evaluation_data_path = args.input_file
-    logger.info("Reading evaluation data from %s", evaluation_data_path)
-    instances = dataset_reader.read(evaluation_data_path)
-
-    embedding_sources = (
-        json.loads(args.embedding_sources_mapping) if args.embedding_sources_mapping else {}
-    )
-
-    if args.extend_vocab:
-        logger.info("Vocabulary is being extended with test instances.")
-        model.vocab.extend_from_instances(instances=instances)
-        model.extend_embedder_vocab(embedding_sources)
-
-    instances.index_with(model.vocab)
-    data_loader_params = config.pop("validation_data_loader", None)
-    if data_loader_params is None:
-        data_loader_params = config.pop("data_loader")
-    if args.batch_size:
-        data_loader_params["batch_size"] = args.batch_size
-    data_loader = DataLoader.from_params(dataset=instances, params=data_loader_params)
-
-    # metrics = evaluate(model, data_loader, args.cuda_device, args.batch_weight_key)
-
-    # logger.info("Finished evaluating.")
-
-    # dump_metrics(args.output_file, metrics, log=False)
 
 
 if __name__ == '__main__':

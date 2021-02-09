@@ -6,6 +6,7 @@ local retriever_variant = "spacy";      // {spacy}
 local cuda_device = 0;
 local batch_size = 16;
 local num_gradient_accumulation_steps = 1;
+local topk = 100;
 
 {
     "ruletaker_archive": ruletaker_archive,
@@ -20,7 +21,7 @@ local num_gradient_accumulation_steps = 1;
         "variant": retriever_variant,
         "type": "transformer_binary_qa_retriever",
         "sentence_embedding_method": "mean",
-        "topk": 5
+        "topk": topk
     },
     "trainer": {
         "cuda_device": cuda_device,
