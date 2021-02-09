@@ -7,7 +7,8 @@ from transformers.modeling_xlnet import XLNetModel
 from transformers.modeling_bert import BertModel
 from transformers.modeling_albert import AlbertModel
 from transformers.modeling_utils import SequenceSummary
-import re, json
+import re
+import json
 import torch
 from torch.nn.modules.linear import Linear
 
@@ -159,19 +160,32 @@ class TransformerBinaryQA(Model):
 
             # Hack to use wandb logging
             if os.environ['WANDB_LOG'] == 'true':
+                prefix = 'train' if self.training else 'val'
+                if 'QDep' in metadata[0]:
+                    depth_accuracies = {}
+                    q_depths = torch.tensor([m['QDep'] for m in metadata]).to(label.device)
+                    for dep in q_depths.unique():
+                        idxs = (q_depths == dep).nonzero().squeeze()
+                        logits_ = label_logits[idxs]
+                        labels_ = label[idxs]
+                        c = CategoricalAccuracy()
+                        c(logits_, labels_)
+                        depth_accuracies[f"{prefix}_acc_{dep}"] = c.get_metric()
+                    wandb.log(depth_accuracies, commit=False)
+
                 c = CategoricalAccuracy()
                 c(label_logits, label)
-                prefix = 'train' if self.training else 'val'
                 wandb.log({
                     prefix+"_loss": loss, 
                     prefix+"_acc": self._accuracy.get_metric(), 
-                    prefix+"_acc_noncuml": c.get_metric()}
-                )
+                    prefix+"_acc_noncuml": c.get_metric()
+                })
+
 
             for e, example in enumerate(metadata):
                 logits = sanitize(label_logits[e, :])
                 label_probs = sanitize(output_dict['label_probs'][e, :])
-                prediction = sanitize(output_dict['answer_index'][e])
+                prediction = sanitize(output_dict['answer_index'][e])                    
                 prediction_dict = {
                     'id': example['id'],
                     'phrase': example['question_text'],
@@ -181,8 +195,10 @@ class TransformerBinaryQA(Model):
                     'answer': example['label'],
                     'prediction': prediction,
                     'is_correct': (example['label'] == prediction) * 1.0,
-                    'q_depth': example['QDep']
+                    'q_depth': example['QDep'],
+                    'retrievals': example['topk'] if 'topk' in example else None,
                 }
+
 
                 if 'skills' in example:
                     prediction_dict['skills'] = example['skills']

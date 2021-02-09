@@ -124,7 +124,7 @@ class TransformerBinaryQARetriever(Model):
             'type_ids': torch.zeros_like(input_ids),     # TODO: automate for other model types
         }
         for n, meta in enumerate(metadata):
-            meta.update(topk = topk_idxs[n].tolist())
+            meta.update(topk=topk_idxs[n].tolist())
 
         return self.qa_model.forward(
             phrase = phrase,

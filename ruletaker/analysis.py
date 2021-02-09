@@ -70,10 +70,12 @@ class ResultsAnalyzer(ResultsProcessor):
             scores[depth][0] += pred['is_correct']
             scores[depth][1] += 1
 
-        [print(k,v[1],v[0]/v[1]) for k,v in scores.items() if v[1] > 0]
+        [print(k,'\t', v[1],'\t', v[0]/v[1]) for k,v in scores.items() if v[1] > 0]
         print(sum([v[0] for k,v in scores.items() if k <= 5]) / sum([v[1] for k,v in scores.items() if k <= 5]))
 
 
 if __name__ == '__main__':
-    os.chdir('ruletaker')
-    ResultsAnalyzer('runs/depth-3ext')
+    # os.chdir('ruletaker')
+    # ResultsAnalyzer('runs/depth-3ext')
+    
+    ResultsAnalyzer('bin/runs/depth-5-k1')

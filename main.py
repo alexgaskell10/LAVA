@@ -15,7 +15,6 @@ from allennlp.common.util import dump_metrics, prepare_environment
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data import DataLoader
 from allennlp.models.archival import load_archive
-# from allennlp.training.util import evaluate
 from allennlp.commands.train import TrainModel
 from allennlp.training import util as training_util
 
@@ -36,8 +35,8 @@ def main(prog: Optional[str] = None) -> None:
     if len(sys.argv) == 1:
         # sys.argv[1:] = ['train', 'ruletaker/allennlp_models/config/tmp.jsonnet', 
         #     '-s', 'ruletaker/runs/t16', '--include-package', 'ruletaker.allennlp_models']
-        sys.argv[1:] = ['custom_train', 'bin/config/tmp.jsonnet', # {'bin/config/tmp_new.jsonnet', 'bin/config/spacy_retriever.jsonnet'},
-            '-s', 'bin/runs/tmp', '--include-package', 'ruletaker.allennlp_models']
+        sys.argv[1:] = ['custom_train', 'bin/config/spacy_retriever.jsonnet', # {'bin/config/tmp_new.jsonnet', 'bin/config/spacy_retriever.jsonnet'},
+            '-s', 'bin/runs/test2', '--include-package', 'ruletaker.allennlp_models']
         # sys.argv[1:] = ['evaluate', 'ruletaker/runs/depth-5-base/model.tar.gz', 'dev', '--output-file', '_results.json', 
         #     '-o', "{'trainer': {'cuda_device': 0}, 'validation_data_loader': {'batch_sampler': {'batch_size': 64, 'type': 'bucket'}}}", 
         #     '--cuda-device', '0', '--include-package', 'ruletaker.allennlp_models']
@@ -65,6 +64,7 @@ def main(prog: Optional[str] = None) -> None:
     for package_name in args.include_package:
         import_module_and_submodules(package_name)
     args.func(args)
+
 
 def run(args):
     # Load from archive
