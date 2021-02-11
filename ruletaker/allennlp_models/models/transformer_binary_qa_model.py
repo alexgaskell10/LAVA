@@ -195,7 +195,7 @@ class TransformerBinaryQA(Model):
                     'answer': example['label'],
                     'prediction': prediction,
                     'is_correct': (example['label'] == prediction) * 1.0,
-                    'q_depth': example['QDep'],
+                    'q_depth': example['QDep'] if 'QDep' in example else None,
                     'retrievals': example['topk'] if 'topk' in example else None,
                 }
 

@@ -15,6 +15,7 @@ from allennlp.data.fields import (
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import PretrainedTransformerIndexer, SingleIdTokenIndexer
 from allennlp.data.tokenizers import Token, PretrainedTransformerTokenizer, SpacyTokenizer
+from allennlp.data.dataloader import allennlp_collate
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 # TagSpanType = ((int, int), str)
@@ -45,15 +46,15 @@ class RetrievalReasoningReader(DatasetReader):
         token_indexer = PretrainedTransformerIndexer(pretrained_model)
         self._token_indexers_qamodel = {'tokens': token_indexer}
         
-        # Init retriever tokenizer
-        if retriever_variant != 'spacy':
-            self._tokenizer_retriever = PretrainedTransformerTokenizer(pretrained_model, max_length=max_pieces)
-            self._tokenizer_retriever_internal = self._tokenizer.tokenizer
-            token_indexer = PretrainedTransformerIndexer(pretrained_model)
-            self._token_indexers_retriever = {'tokens': token_indexer}
-        elif retriever_variant == 'spacy':
+        # Initalize retriever tokenizer
+        if retriever_variant == 'spacy':
             self._tokenizer_retriever = SpacyTokenizer()
             self._token_indexers_retriever = {"tokens": SingleIdTokenIndexer()}
+        elif 'roberta' in retriever_variant:
+            self._tokenizer_retriever = PretrainedTransformerTokenizer(retriever_variant, max_length=max_pieces)
+            self._tokenizer_retriever_internal = self._tokenizer_retriever.tokenizer
+            token_indexer = PretrainedTransformerIndexer(retriever_variant)
+            self._token_indexers_retriever = {'tokens': token_indexer}
         else:
             raise ValueError(
                 f"Invalid retriever_variant = {retriever_variant}.\nInvestigate!"
@@ -146,6 +147,7 @@ class RetrievalReasoningReader(DatasetReader):
         context: str = None,
         debug: int = -1,
         qdep = None,
+        qa_only: bool = False,
     ) -> Instance:
         # pylint: disable=arguments-differ
         fields: Dict[str, Field] = {}
@@ -155,19 +157,20 @@ class RetrievalReasoningReader(DatasetReader):
         qa_field = TextField(qa_tokens, self._token_indexers_qamodel)
         fields['phrase'] = qa_field
 
-        # Tokenize context sentences seperately
-        retrieval_listfield = self.listfield_features_from_qa(
-            question_text, context, self._tokenizer_retriever
-        )
-        fields['retrieval'] = ListField(
-            [TextField(toks, self._token_indexers_retriever) for toks in retrieval_listfield]
-        )
-        qa_listfield = self.listfield_features_from_qa(
-            question_text, context, self._tokenizer_qamodel
-        )
-        fields['sentences'] = ListField(
-            [TextField(toks, self._token_indexers_qamodel) for toks in qa_listfield]
-        )
+        if not qa_only:
+            # Tokenize context sentences seperately
+            retrieval_listfield = self.listfield_features_from_qa(
+                question_text, context, self._tokenizer_retriever
+            )
+            qa_listfield = self.listfield_features_from_qa(
+                question_text, context, self._tokenizer_qamodel
+            )
+            fields['retrieval'] = ListField(
+                [TextField(toks, self._token_indexers_retriever) for toks in retrieval_listfield]
+            )
+            fields['sentences'] = ListField(
+                [TextField(toks, self._token_indexers_qamodel) for toks in qa_listfield]
+            )
 
         metadata = {
             "id": item_id,
@@ -204,13 +207,37 @@ class RetrievalReasoningReader(DatasetReader):
         return tokens, segment_ids
 
     def listfield_features_from_qa(self, question: str, context: str, tokenizer):
+        ''' Tokenize the context items seperately and return as a list.
+        '''
         to_tokenize = (question + (context if context is not None else "")).split('.')[:-1]
         to_tokenize = [toks + '.' for toks in to_tokenize]
-        
-        # TODO: should "q" and "c" be added here?
-        # if self._add_prefix is not None:
-        #     question = self._add_prefix.get("q", "") + question
-        #     context = self._add_prefix.get("c", "") + context
-        
         tokens = [tokenizer.tokenize(item) for item in to_tokenize]
         return tokens
+
+    def transformer_indices_from_qa(self, sentences, vocab):
+        ''' Convert question + context strings into a batch
+            which is ready for the qa model.
+        '''
+        instances = []
+        for question, context in sentences:
+            instance = self.text_to_instance(
+                item_id="", question_text=question, context=context, qa_only=True
+            )
+            instance.index_fields(vocab)
+            instances.append(instance)
+
+        return allennlp_collate(instances)
+
+    def decode(self, input_id, mode='qa'):
+        ''' Helper to decode a tokenized sequence.
+        '''
+        if mode == 'qa':
+            tok = self._tokenizer_qamodel_internal
+        elif mode == 'retriever':
+            tok = self._tokenizer_retriever_internal
+        else:
+            raise ValueError
+
+        return ' '.join([
+            tok._convert_id_to_token(t.item()) for t in input_id
+        ])

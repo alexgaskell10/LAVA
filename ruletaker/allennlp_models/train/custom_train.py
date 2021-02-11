@@ -709,17 +709,6 @@ class TrainModel(Registrable):
             if not datasets_for_vocab_creation or key in datasets_for_vocab_creation
             for instance in dataset
         )
-        instance_generator = (
-            # instance.fields['sentences']
-            instance
-            for key, dataset in datasets.items()
-            if not datasets_for_vocab_creation or key in datasets_for_vocab_creation
-            for instance in dataset
-        )
-       
-        # vocabulary_ = vocabulary.construct(instances=instance_generator)
-        # if not vocabulary_:
-            # vocabulary_ = Vocabulary.from_instances(instance_generator)
 
         retriever_vocabulary = vocabulary.construct(instances=retriever_instance_generator)
         if not retriever_vocabulary:
@@ -728,7 +717,7 @@ class TrainModel(Registrable):
         vocabulary_ = archive.model.vocab
         vocabulary_.extend_from_vocab(retriever_vocabulary)
         model_ = retrieval_reasoning_model.construct(
-            qa_model=archive.model, vocab=vocabulary_
+            qa_model=archive.model, vocab=vocabulary_, dataset_reader=dataset_reader
         )
 
         # Initializing the model can have side effect of expanding the vocabulary.
