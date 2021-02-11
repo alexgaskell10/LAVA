@@ -69,15 +69,12 @@ class TransformerRetrievalEmbedder(BaseRetrievalEmbedder):
         self.init()
 
     def init(self):
-        # TODO: check tokenization and padding etc.
         self.embedder = AutoModel.from_pretrained(self.variant)
 
     def forward(self, idxs):
         ''' Compute sentence embeddings of input ids using chosen 
             embedding method.
         '''
-        # TODO: check tokenization and padding etc.
-
         # Prepare batch
         input_ids = idxs.view(-1, idxs.size(-1))
         mask = (input_ids != self.retriever_pad_idx).long()

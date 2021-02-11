@@ -47,10 +47,8 @@ class TransformerBinaryQARetriever(Model):
         self.topk = topk
         self.variant = variant
         self.dataset_reader = dataset_reader
-        self.retriever_pad_idx = self.vocab.get_token_index(self.vocab._padding_token)
 
         if variant == 'spacy':
-            # self.retriever_embedder = self.init_spacy()
             self.retriever_embedder = SpacyRetrievalEmbedder(
                 sentence_embedding_method=sentence_embedding_method,
                 vocab=self.vocab,
@@ -58,6 +56,7 @@ class TransformerBinaryQARetriever(Model):
             )
             self.similarity = nn.CosineSimilarity(dim=2, eps=1e-6)
             self.tok_name = 'tokens'
+            self.retriever_pad_idx = self.vocab.get_token_index(self.vocab._padding_token)      # TODO: standardize these
         elif 'roberta' in variant:
             self.retriever_embedder = TransformerRetrievalEmbedder(
                 sentence_embedding_method=sentence_embedding_method,
@@ -66,6 +65,7 @@ class TransformerBinaryQARetriever(Model):
             )
             self.similarity = nn.CosineSimilarity(dim=2, eps=1e-6)
             self.tok_name = 'token_ids'
+            self.retriever_pad_idx = self.dataset_reader.pad_idx('retriever')       # TODO: standardize these
         else:
             raise ValueError(
                 f"Invalid retriever_variant = {retriever_variant}.\nInvestigate!"
@@ -73,12 +73,6 @@ class TransformerBinaryQARetriever(Model):
 
         self.do_setup = True
         self._debug = -1
-
-    def init_transformer_retriever(self):
-        ''' Load transformer model to compute the embeddings.
-        '''
-        # retriever = 
-        pass
 
     def forward(self, 
         phrase: Dict[str, torch.LongTensor],

@@ -1,18 +1,18 @@
 local max_pieces = 384;
 local skip_id_regex = "$none";
 local ruletaker_archive = "ruletaker/runs/depth-5-base/model.tar.gz";
-local dataset_dir = "ruletaker/inputs/dataset/tiny-rule-reasoning/depth-3ext-NatLang/"; // "ruletaker/inputs/dataset/rule-reasoning-dataset-V2020.2.4/depth-5/";
+local dataset_dir = "ruletaker/inputs/dataset/rule-reasoning-dataset-V2020.2.4/depth-5/";
 local retriever_variant = "roberta-base";      // {spacy, roberta-base, roberta-large, haisongzhang/roberta-tiny-cased}
 local cuda_device = 0;
-local batch_size = 16;
+local batch_size = 8;
 local num_gradient_accumulation_steps = 1;
-local topk = 5;
+local topk = 1;
 
 {
     "ruletaker_archive": ruletaker_archive,
-    "train_data_path": dataset_dir + "dev.jsonl", // "train.jsonl",
+    "train_data_path": dataset_dir + "train.jsonl",
     "validation_data_path": dataset_dir + "dev.jsonl",
-    "test_data_path": dataset_dir + "dev.jsonl", //"test.jsonl",
+    "test_data_path": dataset_dir + "test.jsonl",
     "dataset_reader": {
         "type": "retriever_reasoning",
         "retriever_variant": retriever_variant

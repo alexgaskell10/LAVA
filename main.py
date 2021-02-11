@@ -35,8 +35,8 @@ def main(prog: Optional[str] = None) -> None:
     if len(sys.argv) == 1:
         # sys.argv[1:] = ['train', 'ruletaker/allennlp_models/config/tmp.jsonnet', 
         #     '-s', 'ruletaker/runs/t16', '--include-package', 'ruletaker.allennlp_models']
-        sys.argv[1:] = ['custom_train', 'bin/config/roberta_retriever_tmp.jsonnet', # {'bin/config/tmp_new.jsonnet', 'bin/config/spacy_retriever.jsonnet'},
-            '-s', 'bin/runs/roberta/tmp', '--include-package', 'ruletaker.allennlp_models']
+        sys.argv[1:] = ['custom_train', 'bin/config/roberta_retriever.jsonnet', # {'bin/config/tmp_new.jsonnet', 'bin/config/spacy_retriever.jsonnet'},
+            '-s', 'bin/runs/roberta/d5-k1', '--include-package', 'ruletaker.allennlp_models']
         # sys.argv[1:] = ['evaluate', 'ruletaker/runs/depth-5-base/model.tar.gz', 'dev', '--output-file', '_results.json', 
         #     '-o', "{'trainer': {'cuda_device': 0}, 'validation_data_loader': {'batch_sampler': {'batch_size': 64, 'type': 'bucket'}}}", 
         #     '--cuda-device', '0', '--include-package', 'ruletaker.allennlp_models']

@@ -228,16 +228,23 @@ class RetrievalReasoningReader(DatasetReader):
 
         return allennlp_collate(instances)
 
-    def decode(self, input_id, mode='qa'):
+    def decode(self, input_id, mode='qa', vocab=None):
         ''' Helper to decode a tokenized sequence.
         '''
         if mode == 'qa':
-            tok = self._tokenizer_qamodel_internal
-        elif mode == 'retriever':
-            tok = self._tokenizer_retriever_internal
+            func = self._tokenizer_qamodel_internal._convert_id_to_token
         else:
-            raise ValueError
+            if vocab:
+                func = lambda idx: vocab._index_to_token['tokens'][idx]
+            else:
+                raise ValueError
 
-        return ' '.join([
-            tok._convert_id_to_token(t.item()) for t in input_id
-        ])
+        return ' '.join([func(inp) for inp in input_id.tolist()])
+
+    def pad_idx(self, mode):
+        if mode == 'qa':
+            return self._tokenizer_qamodel_internal.pad_token_id
+        elif mode == 'retriever':
+            return self._tokenizer_retriever_internal.pad_token_id
+        else:
+            raise NotImplementedError()
