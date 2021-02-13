@@ -152,7 +152,6 @@ class TransformerBinaryQA(Model):
         output_dict['label_probs'] = torch.nn.functional.softmax(label_logits, dim=1)
         output_dict['answer_index'] = label_logits.argmax(1)
 
-
         if label is not None:
             loss = self._loss(label_logits, label)
             self._accuracy(label_logits, label)
@@ -160,27 +159,7 @@ class TransformerBinaryQA(Model):
 
             # Hack to use wandb logging
             if os.environ['WANDB_LOG'] == 'true':
-                prefix = 'train' if self.training else 'val'
-                if 'QDep' in metadata[0]:
-                    depth_accuracies = {}
-                    q_depths = torch.tensor([m['QDep'] for m in metadata]).to(label.device)
-                    for dep in q_depths.unique():
-                        idxs = (q_depths == dep).nonzero().squeeze()
-                        logits_ = label_logits[idxs]
-                        labels_ = label[idxs]
-                        c = CategoricalAccuracy()
-                        c(logits_, labels_)
-                        depth_accuracies[f"{prefix}_acc_{dep}"] = c.get_metric()
-                    wandb.log(depth_accuracies, commit=False)
-
-                c = CategoricalAccuracy()
-                c(label_logits, label)
-                wandb.log({
-                    prefix+"_loss": loss, 
-                    prefix+"_acc": self._accuracy.get_metric(), 
-                    prefix+"_acc_noncuml": c.get_metric()
-                })
-
+                self.wandb_log(metadata, label_logits, label, loss)
 
             for e, example in enumerate(metadata):
                 logits = sanitize(label_logits[e, :])
@@ -198,7 +177,6 @@ class TransformerBinaryQA(Model):
                     'q_depth': example['QDep'] if 'QDep' in example else None,
                     'retrievals': example['topk'] if 'topk' in example else None,
                 }
-
 
                 if 'skills' in example:
                     prediction_dict['skills'] = example['skills']
@@ -221,6 +199,27 @@ class TransformerBinaryQA(Model):
 
         return output_dict
 
+    def wandb_log(self, metadata, label_logits, label, loss):
+        prefix = 'train' if self.training else 'val'
+        if 'QDep' in metadata[0]:
+            depth_accuracies = {}
+            q_depths = torch.tensor([m['QDep'] for m in metadata]).to(label.device)
+            for dep in q_depths.unique():
+                idxs = (q_depths == dep).nonzero().squeeze()
+                logits_ = label_logits[idxs]
+                labels_ = label[idxs]
+                c = CategoricalAccuracy()
+                c(logits_, labels_)
+                depth_accuracies[f"{prefix}_acc_{dep}"] = c.get_metric()
+            wandb.log(depth_accuracies, commit=False)
+
+        c = CategoricalAccuracy()
+        c(label_logits, label)
+        wandb.log({
+            prefix+"_loss": loss, 
+            prefix+"_acc": self._accuracy.get_metric(), 
+            prefix+"_acc_noncuml": c.get_metric()
+        })
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         if reset == True and not self.training:

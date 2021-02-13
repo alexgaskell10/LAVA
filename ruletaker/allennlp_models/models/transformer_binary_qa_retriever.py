@@ -68,7 +68,7 @@ class TransformerBinaryQARetriever(Model):
             self.retriever_pad_idx = self.dataset_reader.pad_idx('retriever')       # TODO: standardize these
         else:
             raise ValueError(
-                f"Invalid retriever_variant = {retriever_variant}.\nInvestigate!"
+                f"Invalid retriever_variant = {variant}.\nInvestigate!"
             )
 
         self.do_setup = True

@@ -134,8 +134,6 @@ class CustomTrain(Subcommand):
         )
 
         subparser.set_defaults(func=train_custom_model_from_args)
-        # subparser.set_defaults(func=train_model_from_args)
-
         return subparser
 
 
@@ -144,20 +142,7 @@ def train_custom_model_from_args(args: argparse.Namespace):
     Just converts from an `argparse.Namespace` object to string paths.
     """
     # Load saved model archive
-    tmp_params = Params.from_file(args.param_path, args.overrides)
-    archive = load_archive(tmp_params["ruletaker_archive"], args.cuda_device, args.overrides)
-    params = archive.config
-
-    # Integrate user-specified params with saved model params
-    for k,v in tmp_params.__dict__["params"].items():
-        if isinstance(v, dict):
-            if k in params.__dict__["params"]:
-                params.__dict__["params"][k].update(v)
-            else:
-                params.__dict__["params"][k] = v
-        else:
-            params.__dict__["params"].update({k:v})
-              
+    params, archive = load_file(args)
     return train_model(
         params=params,
         serialization_dir=args.serialization_dir,
@@ -170,6 +155,26 @@ def train_custom_model_from_args(args: argparse.Namespace):
         dry_run=args.dry_run,
         archive=archive,
     )
+
+
+def load_file(args: argparse.Namespace):
+    tmp_params = Params.from_file(args.param_path, args.overrides)
+    if not "ruletaker_archive" in tmp_params:
+        return tmp_params, None
+
+    archive = load_archive(tmp_params["ruletaker_archive"], args.cuda_device, args.overrides)
+    params = archive.config
+    # Integrate user-specified params with saved model params
+    for k,v in tmp_params.__dict__["params"].items():
+        if isinstance(v, dict):
+            if k in params.__dict__["params"]:
+                params.__dict__["params"][k].update(v)
+            else:
+                params.__dict__["params"][k] = v
+        else:
+            params.__dict__["params"].update({k:v})
+    
+    return params, archive
 
 
 def train_model_from_args(args: argparse.Namespace):
@@ -610,7 +615,6 @@ class TrainModel(Registrable):
         batch_weight_key: str,
         dataset_reader: DatasetReader,
         train_data_path: str,
-        # model: Lazy[Model],
         data_loader: Lazy[DataLoader],
         trainer: Lazy[Trainer],
         vocabulary: Lazy[Vocabulary] = None,
@@ -622,6 +626,7 @@ class TrainModel(Registrable):
         evaluate_on_test: bool = False,
         #### AG additions 
         archive = None,
+        model: Lazy[Model] = None,
         retriever = None,
         retrieval_reasoning_model: Lazy[Model] = None,
     ) -> "TrainModel":
