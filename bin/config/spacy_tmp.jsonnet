@@ -4,7 +4,7 @@ local ruletaker_archive = "ruletaker/runs/depth-5-base/model.tar.gz";
 local dataset_dir = "ruletaker/inputs/dataset/tiny-rule-reasoning/depth-3ext-NatLang/";
 local retriever_variant = "spacy";      // {spacy}
 local cuda_device = 0;
-local batch_size = 16;
+local batch_size = 4;
 local num_gradient_accumulation_steps = 1;
 local topk = 100;
 

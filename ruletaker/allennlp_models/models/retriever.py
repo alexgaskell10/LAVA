@@ -132,6 +132,8 @@ class RetrievalScorer(Model):
 
     def wandb_log(self, metadata, label_logits, label, loss):
         prefix = 'train' if self.training else 'val'
+
+        # Metrics by question depth
         if 'QDep' in metadata[0]:
             depth_accuracies = {}
             q_depths = torch.tensor([m['QDep'] for m in metadata]).to(label.device)
@@ -139,11 +141,12 @@ class RetrievalScorer(Model):
                 idxs = (q_depths == dep).nonzero().squeeze()
                 logits_ = label_logits[idxs]
                 labels_ = label[idxs]
-                c = CategoricalAccuracy()
-                c(logits_, labels_)
-                depth_accuracies[f"{prefix}_acc_{dep}"] = c.get_metric()
+                ca = CategoricalAccuracy()
+                ca(logits_, labels_)
+                depth_accuracies[f"{prefix}_acc_{dep}"] = ca.get_metric()
             wandb.log(depth_accuracies, commit=False)
 
+        # Aggregate metrics
         c = CategoricalAccuracy()
         c(label_logits, label)
         wandb.log({
@@ -151,6 +154,10 @@ class RetrievalScorer(Model):
             prefix+"_acc": self._accuracy.get_metric(), 
             prefix+"_acc_noncuml": c.get_metric()
         })
+
+    def decode(self, idxs):
+        idx2tok = self.vocab._index_to_token if self.variant == 'spacy' else self.vocab._index_to_token['tags']
+        return [idx2tok(i) for i in idxs.tolist()]
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         if reset == True and not self.training:

@@ -35,10 +35,10 @@ def main(prog: Optional[str] = None) -> None:
     if len(sys.argv) == 1:
         # sys.argv[1:] = ['train', 'ruletaker/allennlp_models/config/tmp.jsonnet', 
         #     '-s', 'ruletaker/runs/t16', '--include-package', 'ruletaker.allennlp_models']
-        # sys.argv[1:] = ['custom_train', 'bin/config/pretrain_retriever_tmp.jsonnet', # {'bin/config/tmp_new.jsonnet', 'bin/config/spacy_retriever.jsonnet', 'bin/config/pretrain_retriever_tmp.jsonnet'},
+        # sys.argv[1:] = ['custom_train', 'bin/config/spacy_tmp.jsonnet', # {'bin/config/tmp_new.jsonnet', 'bin/config/spacy_retriever.jsonnet', 'bin/config/pretrain_retriever_tmp.jsonnet'},
         #     '-s', 'bin/runs/pretrain_retriever/tmp', '--include-package', 'ruletaker.allennlp_models']
-        sys.argv[1:] = ['train', 'bin/config/pretrain_retriever_tmp.jsonnet', # {'bin/config/tmp_new.jsonnet', 'bin/config/spacy_retriever.jsonnet', 'bin/config/pretrain_retriever_tmp.jsonnet'},
-            '-s', 'bin/runs/pretrain_retriever/tmp', '--include-package', 'ruletaker.allennlp_models']
+        sys.argv[1:] = ['train', 'bin/config/pretrain_retriever.jsonnet', # {'bin/config/tmp_new.jsonnet', 'bin/config/spacy_retriever.jsonnet', 'bin/config/pretrain_retriever_tmp.jsonnet'},
+            '-s', 'bin/runs/pretrain_retriever/rb-base', '--include-package', 'ruletaker.allennlp_models']
         # sys.argv[1:] = ['evaluate', 'ruletaker/runs/depth-5-base/model.tar.gz', 'dev', '--output-file', '_results.json', 
         #     '-o', "{'trainer': {'cuda_device': 0}, 'validation_data_loader': {'batch_sampler': {'batch_size': 64, 'type': 'bucket'}}}", 
         #     '--cuda-device', '0', '--include-package', 'ruletaker.allennlp_models']
@@ -48,7 +48,7 @@ def main(prog: Optional[str] = None) -> None:
             sys.argv[3] = f"ruletaker/inputs/dataset/rule-reasoning-dataset-V2020.2.4/{dset}/{sys.argv[3]}.jsonl"
             sys.argv[5] = f"{'/'.join(sys.argv[2].split('/')[:3])}/{sys.argv[3].strip('.jsonl') + sys.argv[5]}"
 
-        if 'tmp' in sys.argv[2]:
+        if 'tmp' in sys.argv[2] or 'tmp' in sys.argv[4]:
             if os.path.isdir(sys.argv[4]):
                 os.system(f"rm -rf {sys.argv[4]}")
 
@@ -58,7 +58,8 @@ def main(prog: Optional[str] = None) -> None:
     # Hack to use wandb logging
     if 'train' in sys.argv[1] and 'tmp' not in sys.argv[2]:
         import wandb
-        wandb.init(project="re-re", config=vars(args))
+        project = "re-re_pretrain-ret" if 'pretrain_retriever' in sys.argv[2] else "re-re"
+        wandb.init(project=project, config=vars(args))
         os.environ['WANDB_LOG'] = 'true'
     else:
         os.environ['WANDB_LOG'] = 'false'

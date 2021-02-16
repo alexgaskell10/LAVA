@@ -40,6 +40,7 @@ class ProofReader(DatasetReader):
         use_context_full: bool = False,
         sample: int = -1,
         retriever_variant: str = None,
+        max_depth: int = 5,
     ) -> None:
         super().__init__()
         
@@ -65,6 +66,7 @@ class ProofReader(DatasetReader):
         self._syntax = syntax
         self._skip_id_regex = skip_id_regex
         self._retriever_variant = retriever_variant
+        self._max_depth = max_depth
 
     @overrides
     def _read(self, file_path: str):
@@ -83,6 +85,9 @@ class ProofReader(DatasetReader):
             qid = example.id
             qdep = example.qdep
 
+            if qdep > self._max_depth:
+                continue
+
             context = [e.strip() + '.' for e in example.context.split('.')]
             support = [con for i, con in zip(example.node_label, context) if i == 1]
             non_support = [con for i, con in zip(example.node_label, context) if i == 0]
@@ -91,8 +96,18 @@ class ProofReader(DatasetReader):
             # TODO: account for multi-hop proofs by adding relevant context to question
 
             for n, support_item in enumerate(support):
+                # Edge case where there are more support items than
+                # non-support items
+                if len(non_support) == 0:
+                    break
+
+                # Ignore NAF node
+                # TODO: figure out what to do with NAF nodes
+                if support_item == '.':
+                    continue
+
                 # Yield positive example
-                qid_ = qid + f'P-{n}'
+                qid_ = qid + f'-P-{n}'
                 yield self.text_to_instance(
                     item_id=qid_,
                     question_text=question,
@@ -103,8 +118,11 @@ class ProofReader(DatasetReader):
                 )
                 # Yield negative examples by randomly selecting
                 # a context item which does not contribute to the proof
-                neg = non_support.pop(np.random.choice(len(non_support)))
-                qid_ = qid + f'N-{n}'
+                try:
+                    neg = non_support.pop(np.random.choice(len(non_support)))
+                except:
+                    raise ValueError
+                qid_ = qid + f'-N-{n}'
                 yield self.text_to_instance(
                     item_id=qid_,
                     question_text=question,
