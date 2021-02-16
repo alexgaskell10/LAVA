@@ -722,7 +722,9 @@ class TrainModel(Registrable):
         vocabulary_ = archive.model.vocab
         vocabulary_.extend_from_vocab(retriever_vocabulary)
         model_ = retrieval_reasoning_model.construct(
-            qa_model=archive.model, vocab=vocabulary_, dataset_reader=dataset_reader
+            qa_model=archive.model,
+            vocab=vocabulary_,
+            dataset_reader=dataset_reader,
         )
 
         # Initializing the model can have side effect of expanding the vocabulary.

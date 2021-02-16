@@ -37,6 +37,7 @@ class RetrievalReasoningReader(DatasetReader):
         use_context_full: bool = False,
         sample: int = -1,
         retriever_variant: str = None,
+        pretrained_retriever_model = None,
     ) -> None:
         super().__init__()
         
@@ -68,6 +69,7 @@ class RetrievalReasoningReader(DatasetReader):
         self._syntax = syntax
         self._skip_id_regex = skip_id_regex
         self._retriever_variant = retriever_variant
+        self._concat = (pretrained_retriever_model is not None)
 
     @overrides
     def _read(self, file_path: str):
@@ -209,9 +211,13 @@ class RetrievalReasoningReader(DatasetReader):
     def listfield_features_from_qa(self, question: str, context: str, tokenizer):
         ''' Tokenize the context items seperately and return as a list.
         '''
-        to_tokenize = (question + (context if context is not None else "")).split('.')[:-1]
-        to_tokenize = [toks + '.' for toks in to_tokenize]
-        tokens = [tokenizer.tokenize(item) for item in to_tokenize]
+        if self._concat:
+            context_lst = [toks + '.' for toks in context.split('.')[:-1]]
+            tokens = [self.transformer_features_from_qa(question, c)[0] for c in context_lst] 
+        else:
+            to_tokenize = (question + (context if context is not None else "")).split('.')[:-1]
+            to_tokenize = [toks + '.' for toks in to_tokenize]
+            tokens = [tokenizer.tokenize(item) for item in to_tokenize]
         return tokens
 
     def transformer_indices_from_qa(self, sentences, vocab):

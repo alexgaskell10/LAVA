@@ -10,8 +10,13 @@ from allennlp.common.util import get_spacy_model
 
 
 class BaseRetrievalEmbedder(nn.Module):
-    def __init__(self):
+    def __init__(self, sentence_embedding_method, vocab, variant):
         super().__init__()
+        self.sentence_embedding_method = sentence_embedding_method
+        self.vocab = vocab
+        self.retriever_pad_idx = self.vocab.get_token_index(self.vocab._padding_token)
+        self.variant = variant
+        self.init()
 
     def init(self):
         raise NotImplementedError()
@@ -21,12 +26,8 @@ class BaseRetrievalEmbedder(nn.Module):
 
 
 class SpacyRetrievalEmbedder(BaseRetrievalEmbedder):
-    def __init__(self, sentence_embedding_method, vocab, variant):
-        super().__init__()
-        self.sentence_embedding_method = sentence_embedding_method
-        self.vocab = vocab
-        self.retriever_pad_idx = self.vocab.get_token_index(self.vocab._padding_token)
-        self.init()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     def init(self):
         ''' Load spacy embeddings as nn.Embedding.
@@ -60,13 +61,8 @@ class SpacyRetrievalEmbedder(BaseRetrievalEmbedder):
 
 
 class TransformerRetrievalEmbedder(BaseRetrievalEmbedder):
-    def __init__(self, sentence_embedding_method, vocab, variant):
-        super().__init__()
-        self.sentence_embedding_method = sentence_embedding_method
-        self.vocab = vocab
-        self.retriever_pad_idx = self.vocab.get_token_index(self.vocab._padding_token)
-        self.variant = variant
-        self.init()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     def init(self):
         self.embedder = AutoModel.from_pretrained(self.variant)

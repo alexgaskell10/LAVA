@@ -39,6 +39,7 @@ class TransformerBinaryQARetriever(Model):
         topk: int = 5,
         sentence_embedding_method: str = 'mean',
         dataset_reader = None,
+        pretrained_retriever_model = None,
     ) -> None:
         super().__init__(qa_model.vocab, regularizer)
         self.qa_vocab = qa_model.vocab
@@ -47,23 +48,42 @@ class TransformerBinaryQARetriever(Model):
         self.topk = topk
         self.variant = variant
         self.dataset_reader = dataset_reader
+        self.retriever_embedder = None
+
+        # Load pretrained retriever
+        pretrained_retriever_model_ = variant
+        if pretrained_retriever_model is not None:
+            retriever_archive = load_archive(
+                archive_file=pretrained_retriever_model,
+                cuda_device=0   #qa_model.device,   # TODO: sort this
+            )
+            self.retriever_embedder = retriever_archive.model
+            self.similarity = None
 
         if variant == 'spacy':
-            self.retriever_embedder = SpacyRetrievalEmbedder(
-                sentence_embedding_method=sentence_embedding_method,
-                vocab=self.vocab,
-                variant=variant,
-            )
-            self.similarity = nn.CosineSimilarity(dim=2, eps=1e-6)
+            if self.retriever_embedder is None:
+                self.retriever_embedder = SpacyRetrievalEmbedder(
+                    sentence_embedding_method=sentence_embedding_method,
+                    vocab=self.vocab,
+                    variant=variant,
+                )
+                self.similarity = nn.CosineSimilarity(dim=2, eps=1e-6)
+            else:
+                pass    # TODO: how to deal with similarity for trained case?
+                
             self.tok_name = 'tokens'
             self.retriever_pad_idx = self.vocab.get_token_index(self.vocab._padding_token)      # TODO: standardize these
         elif 'roberta' in variant:
-            self.retriever_embedder = TransformerRetrievalEmbedder(
-                sentence_embedding_method=sentence_embedding_method,
-                vocab=self.vocab,
-                variant=variant,
-            )
-            self.similarity = nn.CosineSimilarity(dim=2, eps=1e-6)
+            if self.retriever_embedder is None:
+                self.retriever_embedder = TransformerRetrievalEmbedder(
+                    sentence_embedding_method=sentence_embedding_method,
+                    vocab=self.vocab,
+                    variant=variant,
+                )
+                self.similarity = nn.CosineSimilarity(dim=2, eps=1e-6)
+            else:
+                pass    # TODO: how to deal with similarity for trained case?
+
             self.tok_name = 'token_ids'
             self.retriever_pad_idx = self.dataset_reader.pad_idx('retriever')       # TODO: standardize these
         else:
@@ -113,20 +133,24 @@ class TransformerBinaryQARetriever(Model):
         '''
         # Perform retrieval with no gradient
         with torch.no_grad():
-            # Compute sentence embeddings
-            sentence_embs = self.retriever_embedder(idxs)
+            if self.similarity is not None:
+                # Compute sentence embeddings
+                sentence_embs = self.retriever_embedder(idxs)
 
-            # Compute similarity between context and query sentence embeddingss
-            query, context = sentence_embs[:,:1,:], sentence_embs[:,1:,:]
-            similarity = self.similarity(query, context)
+                # Compute similarity between context and query sentence embeddingss
+                query, context = sentence_embs[:,:1,:], sentence_embs[:,1:,:]
+                similarity = self.similarity(query, context)
 
-            # Replace nans with 0
-            retrieval_mask = (idxs != self.retriever_pad_idx).long().unsqueeze(-1)
-            similarity = torch.where(
-                retrieval_mask[:,1:,:].sum(dim=2).squeeze() == 0,
-                torch.tensor(0).float().to(self.device), 
-                similarity,
-            )
+                # Replace nans with 0
+                retrieval_mask = (idxs != self.retriever_pad_idx).long().unsqueeze(-1)
+                similarity = torch.where(
+                    retrieval_mask[:,1:,:].sum(dim=2).squeeze() == 0,
+                    torch.tensor(0).float().to(self.device), 
+                    similarity,
+                )
+            else:
+                # similarity = 
+                pass
 
             # Find indices of k most similar context sentences
             topk = min(self.topk, similarity.size(1))
@@ -263,7 +287,7 @@ class TransformerBinaryQARetriever(Model):
         retriever_embs.weight.data = spacy_embs
         return retriever_embs
 
-    def convert_to_input_ids_old(self, phrase_idxs, topk_idxs, device):        
+    def convert_to_input_ids(self, phrase_idxs, topk_idxs, device):        
         # Construct context from topk indices
         # NOTE: appears that torch does not allow multidimensional indexing
         # using tensor so flatten to 2d before indexing
