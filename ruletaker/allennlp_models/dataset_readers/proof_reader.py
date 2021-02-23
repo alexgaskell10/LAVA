@@ -118,10 +118,7 @@ class ProofReader(DatasetReader):
                 )
                 # Yield negative examples by randomly selecting
                 # a context item which does not contribute to the proof
-                try:
-                    neg = non_support.pop(np.random.choice(len(non_support)))
-                except:
-                    raise ValueError
+                neg = non_support.pop(np.random.choice(len(non_support)))
                 qid_ = qid + f'-N-{n}'
                 yield self.text_to_instance(
                     item_id=qid_,

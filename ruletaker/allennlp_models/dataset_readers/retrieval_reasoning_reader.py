@@ -17,6 +17,8 @@ from allennlp.data.token_indexers import PretrainedTransformerIndexer, SingleIdT
 from allennlp.data.tokenizers import Token, PretrainedTransformerTokenizer, SpacyTokenizer
 from allennlp.data.dataloader import allennlp_collate
 
+from .processors import RRProcessor
+
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 # TagSpanType = ((int, int), str)
 
@@ -77,69 +79,22 @@ class RetrievalReasoningReader(DatasetReader):
         return instances
 
     def _read_internal(self, file_path: str):
-        # if `file_path` is a URL, redirect to the cache
-        file_path = cached_path(file_path)
-        counter = self._sample + 1
-        debug = 5
-        is_done = False
+        debug = -1
 
-        with open(file_path, 'r') as data_file:
-            logger.info("Reading instances from jsonl dataset at: %s", file_path)
-            for line in data_file:
-                if is_done:
-                    break
-                item_json = json.loads(line.strip())
-                item_id = item_json.get("id", "NA")
-                if self._skip_id_regex and re.match(self._skip_id_regex, item_id):
-                    continue
+        data_dir = '/'.join(file_path.split('/')[:-1])
+        dset = file_path.split('/')[-1].split('.')[0]
+        examples = RRProcessor().get_examples(data_dir, dset)
 
-                if self._syntax == "rulebase":
-                    questions = item_json['questions']
-                    if self._use_context_full:
-                        context = item_json.get('context_full', '')
-                    else:
-                        context = item_json.get('context', "")
-                elif self._syntax == "propositional-meta":
-                    questions = item_json['questions'].items()
-                    sentences = [x['text'] for x in item_json['triples'].values()] + \
-                                [x['text'] for x in item_json['rules'].values()]
-                    if self._scramble_context:
-                        random.shuffle(sentences)
-                    context = " ".join(sentences)
-                else:
-                    raise ValueError(f"Unknown syntax {self._syntax}")
-
-                for question in questions:
-                    counter -= 1
-                    debug -= 1
-                    qdep = None
-                    if counter == 0:
-                        is_done = True
-                        break
-                    if debug > 0:
-                        logger.info(item_json)
-                    if self._syntax == "rulebase":
-                        text = question['text']
-                        q_id = question['id']
-                        label = None
-                        if 'label' in question:
-                            label = 1 if question['label'] else 0
-                        qdep = question['meta']['QDep']
-                    elif self._syntax == "propositional-meta":
-                        text = question[1]['question']
-                        q_id = f"{item_id}-{question[0]}"
-                        label = question[1]['propAnswer']
-                        if label is not None:
-                            label = ["False", "True", "Unknown"].index(label)
-
-                    yield self.text_to_instance(
-                        item_id=q_id,
-                        question_text=text,
-                        context=context,
-                        label=label,
-                        debug=debug,
-                        qdep=qdep,
-                    )
+        for example in examples:
+            yield self.text_to_instance(
+                item_id=example.id,
+                question_text=example.question.strip(),
+                context=example.context,
+                label=example.label,
+                debug=debug,
+                qdep=example.qdep,
+                node_label=example.node_label
+            )
 
     @overrides
     def text_to_instance(self,  # type: ignore
@@ -148,14 +103,15 @@ class RetrievalReasoningReader(DatasetReader):
         label: int = None,
         context: str = None,
         debug: int = -1,
-        qdep = None,
+        qdep: int = None,
         qa_only: bool = False,
+        node_label: list = [],
     ) -> Instance:
         # pylint: disable=arguments-differ
         fields: Dict[str, Field] = {}
 
         # Tokenize for the qa model
-        qa_tokens, segment_ids = self.transformer_features_from_qa(question_text, context)
+        qa_tokens, _ = self.transformer_features_from_qa(question_text, context)
         qa_field = TextField(qa_tokens, self._token_indexers_qamodel)
         fields['phrase'] = qa_field
 
@@ -180,6 +136,7 @@ class RetrievalReasoningReader(DatasetReader):
             "tokens": [x.text for x in qa_tokens],
             "context": context,
             "QDep": qdep,
+            "node_label": node_label,
         }
 
         if label is not None:
@@ -254,3 +211,73 @@ class RetrievalReasoningReader(DatasetReader):
             return self._tokenizer_retriever_internal.pad_token_id
         else:
             raise NotImplementedError()
+
+
+
+
+
+###################
+    def _read_internal_old(self, file_path: str):
+        # if `file_path` is a URL, redirect to the cache
+        file_path = cached_path(file_path)
+        counter = self._sample + 1
+        debug = 5
+        is_done = False
+
+        with open(file_path, 'r') as data_file:
+            logger.info("Reading instances from jsonl dataset at: %s", file_path)
+            for line in data_file:
+                if is_done:
+                    break
+                item_json = json.loads(line.strip())
+                item_id = item_json.get("id", "NA")
+                if self._skip_id_regex and re.match(self._skip_id_regex, item_id):
+                    continue
+
+                if self._syntax == "rulebase":
+                    questions = item_json['questions']
+                    if self._use_context_full:
+                        context = item_json.get('context_full', '')
+                    else:
+                        context = item_json.get('context', "")
+                elif self._syntax == "propositional-meta":
+                    questions = item_json['questions'].items()
+                    sentences = [x['text'] for x in item_json['triples'].values()] + \
+                                [x['text'] for x in item_json['rules'].values()]
+                    if self._scramble_context:
+                        random.shuffle(sentences)
+                    context = " ".join(sentences)
+                else:
+                    raise ValueError(f"Unknown syntax {self._syntax}")
+
+                for question in questions:
+                    counter -= 1
+                    debug -= 1
+                    qdep = None
+                    if counter == 0:
+                        is_done = True
+                        break
+                    if debug > 0:
+                        logger.info(item_json)
+                    if self._syntax == "rulebase":
+                        text = question['text']
+                        q_id = question['id']
+                        label = None
+                        if 'label' in question:
+                            label = 1 if question['label'] else 0
+                        qdep = question['meta']['QDep']
+                    elif self._syntax == "propositional-meta":
+                        text = question[1]['question']
+                        q_id = f"{item_id}-{question[0]}"
+                        label = question[1]['propAnswer']
+                        if label is not None:
+                            label = ["False", "True", "Unknown"].index(label)
+
+                    yield self.text_to_instance(
+                        item_id=q_id,
+                        question_text=text,
+                        context=context,
+                        label=label,
+                        debug=debug,
+                        qdep=qdep,
+                    )

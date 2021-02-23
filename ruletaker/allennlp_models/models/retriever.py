@@ -78,7 +78,7 @@ class RetrievalScorer(Model):
         self._debug = -1
 
     def forward(self, 
-        phrase: Dict[str, torch.LongTensor],
+        phrase,
         label: torch.LongTensor = None,
         metadata: List[Dict[str, Any]] = None,
         retrieval: List = None,
@@ -86,7 +86,10 @@ class RetrievalScorer(Model):
     ) -> torch.Tensor:
         
         self._debug -= 1
-        input_ids = phrase['tokens'][self.tok_name]
+        if isinstance(phrase, dict):
+            input_ids = phrase['tokens'][self.tok_name]
+        else:
+            input_ids = phrase
 
         model_output = self.model(input_ids.unsqueeze(1))
         label_logits = self._classifier(model_output.squeeze())

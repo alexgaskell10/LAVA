@@ -134,7 +134,6 @@ class TransformerBinaryQA(Model):
                 attention_mask=util.combine_initial_dims(question_mask)
             )
             cls_output = self.sequence_summary(transformer_outputs[0])
-
         elif 'bert' in self._pretrained_model:
             last_layer, pooled_output = self._transformer_model(
                 input_ids=util.combine_initial_dims(input_ids),
@@ -176,6 +175,7 @@ class TransformerBinaryQA(Model):
                     'is_correct': (example['label'] == prediction) * 1.0,
                     'q_depth': example['QDep'] if 'QDep' in example else None,
                     'retrievals': example['topk'] if 'topk' in example else None,
+                    'retrieval_recall': self.retrieval_recall(example) if 'node_label' in example else None
                 }
 
                 if 'skills' in example:
@@ -184,41 +184,57 @@ class TransformerBinaryQA(Model):
                     prediction_dict['tags'] = example['tags']
                 self._predictions.append(prediction_dict)
 
-        #if self._predictions_file is not None:# and not self.training:
-        #    with open(self._predictions_file, 'a') as f:
-        #        for e, example in enumerate(metadata):
-        #            logits = sanitize(label_logits[e, :])
-        #            prediction = sanitize(output_dict['answer_index'][e])
-        #            f.write(json.dumps({'id': example['id'], \
-        #                                'phrase': example['question_text' ], \
-        #                                'context': example['context'], \
-        #                                'logits': logits,
-        #                                'answer': example['correct_answer_index'],
-        #                                'prediction': prediction,
-        #                                'is_correct': (example['correct_answer_index'] == prediction) * 1.0}) + '\n')
-
         return output_dict
+
+    def retrieval_recall(self, example):
+        proof_idxs = {n for n,i in enumerate(example['node_label'][:-1]) if i == 1}
+        if example['label'] and proof_idxs:
+            correct_retrieval_idxs = proof_idxs & set(example['topk'])
+            return len(correct_retrieval_idxs) / len(proof_idxs)
+        else:
+            return -1
+
+    def batch_retrieval_recall(self, metadata):
+        recalls = []
+        for example in metadata:
+            if example['label']:
+                recall = self.retrieval_recall(example)
+                if recall != -1:
+                    recalls.append(recall)
+        return sum(recalls) / len(recalls) if recalls else None
 
     def wandb_log(self, metadata, label_logits, label, loss):
         prefix = 'train' if self.training else 'val'
+
+        # Metrics by question depth
         if 'QDep' in metadata[0]:
             depth_accuracies = {}
+            retrieval_recalls = {}
             q_depths = torch.tensor([m['QDep'] for m in metadata]).to(label.device)
             for dep in q_depths.unique():
                 idxs = (q_depths == dep).nonzero().squeeze()
+
+                # Accuracy
                 logits_ = label_logits[idxs]
                 labels_ = label[idxs]
-                c = CategoricalAccuracy()
-                c(logits_, labels_)
-                depth_accuracies[f"{prefix}_acc_{dep}"] = c.get_metric()
-            wandb.log(depth_accuracies, commit=False)
+                ca = CategoricalAccuracy()
+                ca(logits_, labels_)
+                depth_accuracies[f"{prefix}_acc_{dep}"] = ca.get_metric()
 
+                # Retrieval recall
+                meta = [metadata[i] for i in (idxs if idxs.dim() else idxs.unsqueeze(0)).tolist()]
+                retrieval_recalls[f"{prefix}_ret_recall_{dep}"] = self.batch_retrieval_recall(meta)
+
+            wandb.log({**depth_accuracies, **retrieval_recalls}, commit=False)
+
+        # Aggregate metrics
         c = CategoricalAccuracy()
         c(label_logits, label)
         wandb.log({
             prefix+"_loss": loss, 
             prefix+"_acc": self._accuracy.get_metric(), 
-            prefix+"_acc_noncuml": c.get_metric()
+            prefix+"_acc_noncuml": c.get_metric(),
+            prefix+"_ret_recall": self.batch_retrieval_recall(metadata),
         })
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
