@@ -101,10 +101,11 @@ class TransformerBinaryQA(Model):
         self._debug = -1
 
 
-    def forward(self, phrase: Dict[str, torch.LongTensor],
+    def forward(self, 
+            phrase,#: Dict[str, torch.LongTensor],
             label: torch.LongTensor = None,
             metadata: List[Dict[str, Any]] = None
-            ) -> torch.Tensor:
+        ) -> torch.Tensor:
 
         self._debug -= 1
         input_ids = phrase['tokens']['token_ids']
@@ -151,10 +152,13 @@ class TransformerBinaryQA(Model):
         output_dict['label_probs'] = torch.nn.functional.softmax(label_logits, dim=1)
         output_dict['answer_index'] = label_logits.argmax(1)
 
+        output_dict['cls_output'] = cls_output
+        output_dict['pooled_output'] = pooled_output
+
         if label is not None:
             loss = self._loss(label_logits, label)
             self._accuracy(label_logits, label)
-            output_dict["loss"] = loss# TODO this is shortcut to get predictions fast..
+            output_dict["loss"] = loss  # TODO this is shortcut to get predictions fast..
 
             # Hack to use wandb logging
             if os.environ['WANDB_LOG'] == 'true':

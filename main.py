@@ -43,8 +43,11 @@ def main(prog: Optional[str] = None) -> None:
         # sys.argv[1:] = ['train', 'bin/config/pretrain_retriever.jsonnet', # {'bin/config/tmp_new.jsonnet', 'bin/config/spacy_retriever.jsonnet', 'bin/config/pretrain_retriever_tmp.jsonnet'},
         #     '-s', 'bin/runs/pretrain_retriever/rb-base', '--include-package', 'ruletaker.allennlp_models']
         # Pretrained retrieval + ruletaker
-        sys.argv[1:] = ['custom_train', 'bin/config/trained_roberta_retriever.jsonnet', # {'bin/config/tmp_new.jsonnet', 'bin/config/spacy_retriever.jsonnet', 'bin/config/pretrain_retriever_tmp.jsonnet'},
-            '-s', 'bin/runs/pretrained_retriever_ruletaker/roberta/tmp', '--include-package', 'ruletaker.allennlp_models']
+        # sys.argv[1:] = ['custom_train', 'bin/config/trained_roberta_retriever.jsonnet', # {'bin/config/tmp_new.jsonnet', 'bin/config/spacy_retriever.jsonnet', 'bin/config/pretrain_retriever_tmp.jsonnet'},
+        #     '-s', 'bin/runs/pretrained_retriever_ruletaker/roberta/tmp', '--include-package', 'ruletaker.allennlp_models']
+        # RL
+        sys.argv[1:] = ['custom_train', 'bin/config/policy_gradients_tmp.jsonnet', # {'bin/config/tmp_new.jsonnet', 'bin/config/spacy_retriever.jsonnet', 'bin/config/pretrain_retriever_tmp.jsonnet'},
+            '-s', 'bin/runs/pretrained_retriever_ruletaker/roberta/tmp1', '--include-package', 'ruletaker.allennlp_models']
 
         # sys.argv[1:] = ['evaluate', 'ruletaker/runs/depth-5-base/model.tar.gz', 'dev', '--output-file', '_results.json', 
         #     '-o', "{'trainer': {'cuda_device': 0}, 'validation_data_loader': {'batch_sampler': {'batch_size': 64, 'type': 'bucket'}}}", 

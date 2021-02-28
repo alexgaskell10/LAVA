@@ -72,7 +72,7 @@ class TransformerRetrievalEmbedder(BaseRetrievalEmbedder):
             embedding method.
         '''
         # Prepare batch
-        input_ids = idxs.view(-1, idxs.size(-1))
+        input_ids = idxs.contiguous().view(-1, idxs.size(-1))
         mask = (input_ids != self.retriever_pad_idx).long()
 
         # Compute token embeddings

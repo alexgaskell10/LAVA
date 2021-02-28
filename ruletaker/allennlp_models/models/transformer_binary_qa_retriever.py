@@ -51,7 +51,6 @@ class TransformerBinaryQARetriever(Model):
         self.retriever_model = None
 
         # Load pretrained retriever
-        pretrained_retriever_model_ = variant
         if pretrained_retriever_model is not None:
             retriever_archive = load_archive(
                 archive_file=pretrained_retriever_model,
