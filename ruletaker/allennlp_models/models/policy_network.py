@@ -62,15 +62,9 @@ class PolicyNetwork(nn.Module):
         # Policy is distribution over actions
         policy = F.softmax(similarity, dim=1)
 
-        if torch.isinf(policy.sum(dim=1)).any():
-            print('abc')
-
         # Deal with nans- these are caused by all sentences being padding.
         # In this case, retrieve following uniform dist
         policy[torch.isnan(policy.sum(dim=1))] = 1 / policy.size(0)       
-
-        if torch.isnan(policy.sum(dim=1)).all():
-            print('abc')
 
         return policy
 

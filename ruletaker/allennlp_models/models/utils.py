@@ -30,6 +30,9 @@ def safe_log(x):
     return torch.log(x + EPSILON)
 
 def right_pad(x, y, value=0.0):
-    output = torch.full_like(y, value)
-    output[:,:x.size(-1)] = x
-    return output
+    if x.size(-1) < y.size(-1):
+        return x
+    else:
+        output = torch.full_like(y, value)
+        output[..., :x.size(-1)] = x
+        return output

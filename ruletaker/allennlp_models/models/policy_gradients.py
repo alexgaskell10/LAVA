@@ -18,7 +18,7 @@ from allennlp.nn import RegularizerApplicator, util
 from allennlp.training.metrics import CategoricalAccuracy
 
 from .policy_network import PolicyNetwork
-from .utils import safe_log, right_pad, batch_lookup
+from .utils import safe_log, right_pad, batch_lookup, EPSILON
 
 
 class RLFramework(Model):
@@ -100,7 +100,7 @@ class PolicyGradientsAgent(RLFramework):
             if self.baseline == 'avg_reward':
                 stabled_r_2D = r_2D - r_2D.mean(dim=1, keepdim=True)
             elif self.baseline == 'avg_reward_normalized':
-                stabled_r_2D = (r_2D - r_2D.mean(dim=1, keepdim=True)) / (r_2D.std(dim=1, keepdim=True) + ops.EPSILON)
+                stabled_r_2D = (r_2D - r_2D.mean(dim=1, keepdim=True)) / (r_2D.std(dim=1, keepdim=True) + EPSILON)
             else:
                 raise ValueError('Unrecognized baseline function: {}'.format(self.baseline))
             stabled_r = stabled_r_2D.view(-1)
@@ -241,37 +241,37 @@ class PolicyGradientsAgent(RLFramework):
     def predict(self):
         pass
     
-    def wandb_log(self, metadata, label_logits, label, loss):
-        prefix = 'train' if self.training else 'val'
+    # def wandb_log(self, metadata, label_logits, label, loss):
+    #     prefix = 'train' if self.training else 'val'
 
-        # Metrics by question depth
-        if 'QDep' in metadata[0]:
-            depth_accuracies = {}
-            retrieval_recalls = {}
-            q_depths = torch.tensor([m['QDep'] for m in metadata]).to(label.device)
-            for dep in q_depths.unique():
-                idxs = (q_depths == dep).nonzero().squeeze()
+    #     # Metrics by question depth
+    #     if 'QDep' in metadata[0]:
+    #         depth_accuracies = {}
+    #         retrieval_recalls = {}
+    #         q_depths = torch.tensor([m['QDep'] for m in metadata]).to(label.device)
+    #         for dep in q_depths.unique():
+    #             idxs = (q_depths == dep).nonzero().squeeze()
 
-                # Accuracy
-                logits_ = label_logits[idxs]
-                labels_ = label[idxs]
-                ca = CategoricalAccuracy()
-                ca(logits_, labels_)
-                depth_accuracies[f"{prefix}_acc_{dep}"] = ca.get_metric()
+    #             # Accuracy
+    #             logits_ = label_logits[idxs]
+    #             labels_ = label[idxs]
+    #             ca = CategoricalAccuracy()
+    #             ca(logits_, labels_)
+    #             depth_accuracies[f"{prefix}_acc_{dep}"] = ca.get_metric()
 
-                # Retrieval recall
-                meta = [metadata[i] for i in (idxs if idxs.dim() else idxs.unsqueeze(0)).tolist()]
-                retrieval_recalls[f"{prefix}_ret_recall_{dep}"] = self.batch_retrieval_recall(meta)
+    #             # Retrieval recall
+    #             meta = [metadata[i] for i in (idxs if idxs.dim() else idxs.unsqueeze(0)).tolist()]
+    #             retrieval_recalls[f"{prefix}_ret_recall_{dep}"] = self.batch_retrieval_recall(meta)
 
-            wandb.log({**depth_accuracies, **retrieval_recalls}, commit=False)
+    #         wandb.log({**depth_accuracies, **retrieval_recalls}, commit=False)
 
-        # Aggregate metrics
-        c = CategoricalAccuracy()
-        c(label_logits, label)
-        wandb.log({
-            prefix+"_loss": loss, 
-            prefix+"_acc": self._accuracy.get_metric(), 
-            prefix+"_acc_noncuml": c.get_metric(),
-            prefix+"_ret_recall": self.batch_retrieval_recall(metadata),
-        })
+    #     # Aggregate metrics
+    #     c = CategoricalAccuracy()
+    #     c(label_logits, label)
+    #     wandb.log({
+    #         prefix+"_loss": loss, 
+    #         prefix+"_acc": self._accuracy.get_metric(), 
+    #         prefix+"_acc_noncuml": c.get_metric(),
+    #         prefix+"_ret_recall": self.batch_retrieval_recall(metadata),
+    #     })
 

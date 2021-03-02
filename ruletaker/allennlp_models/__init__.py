@@ -10,6 +10,7 @@ try:
     from allennlp_models.models.transformer_binary_qa_retriever import TransformerBinaryQARetriever
     from allennlp_models.models.retriever import RetrievalScorer
     from allennlp_models.models.policy_gradients import PolicyGradientsAgent
+    from allennlp_models.models.gumbel_softmax import GumbelSoftmaxRetrieverReasoner
 except:
     from ruletaker.allennlp_models.dataset_readers.transformer_binary_qa_reader import TransformerBinaryReader
     from ruletaker.allennlp_models.dataset_readers.rule_reasoning_reader import RuleReasoningReader
@@ -22,6 +23,7 @@ except:
     from ruletaker.allennlp_models.models.transformer_binary_qa_retriever import TransformerBinaryQARetriever
     from ruletaker.allennlp_models.models.retriever import RetrievalScorer
     from ruletaker.allennlp_models.models.policy_gradients import PolicyGradientsAgent
+    from ruletaker.allennlp_models.models.gumbel_softmax import GumbelSoftmaxRetrieverReasoner
 
 #from allennlp_models.models.transformer_mc_qa_model import *
 #from allennlp_models.models.transformer_maksed_lm_model import *
