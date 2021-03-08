@@ -40,6 +40,7 @@ class RetrievalReasoningReader(DatasetReader):
         sample: int = -1,
         retriever_variant: str = None,
         pretrained_retriever_model = None,
+        topk: int = None,
     ) -> None:
         super().__init__()
         
@@ -72,6 +73,7 @@ class RetrievalReasoningReader(DatasetReader):
         self._skip_id_regex = skip_id_regex
         self._retriever_variant = retriever_variant
         self._concat = (pretrained_retriever_model is not None)
+        self._topk = topk
 
     @overrides
     def _read(self, file_path: str):
@@ -86,15 +88,17 @@ class RetrievalReasoningReader(DatasetReader):
         examples = RRProcessor().get_examples(data_dir, dset)
 
         for example in examples:
-            yield self.text_to_instance(
-                item_id=example.id,
-                question_text=example.question.strip(),
-                context=example.context,
-                label=example.label,
-                debug=debug,
-                qdep=example.qdep,
-                node_label=example.node_label
-            )
+            if example.qlen == '' or int(example.qlen) <= self._topk:
+                yield self.text_to_instance(
+                    item_id=example.id,
+                    question_text=example.question.strip(),
+                    context=example.context,
+                    label=example.label,
+                    debug=debug,
+                    qdep=example.qdep,
+                    qlen=example.qlen,
+                    node_label=example.node_label
+                )
 
     @overrides
     def text_to_instance(self,  # type: ignore
@@ -104,6 +108,7 @@ class RetrievalReasoningReader(DatasetReader):
         context: str = None,
         debug: int = -1,
         qdep: int = None,
+        qlen: int = None,
         qa_only: bool = False,
         node_label: list = [],
     ) -> Instance:

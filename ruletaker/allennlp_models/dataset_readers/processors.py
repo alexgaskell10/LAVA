@@ -180,6 +180,7 @@ class RRProcessor(DataProcessor):
                 id = question["id"]
                 label = question["label"]
                 qdep = question["meta"]["QDep"]
+                qlen = question["meta"]["QLen"]
                 question = question["text"]
                 meta_data = meta_record["questions"]["Q"+str(j+1)]
 
@@ -190,6 +191,6 @@ class RRProcessor(DataProcessor):
                 nrule = meta_record["NRule"]
                 node_label, edge_label = self._get_node_edge_label_constrained(proofs, sentence_scramble, nfact, nrule)
 
-                examples.append(RRInputExample(id, context, question, node_label, edge_label, label, qdep))
+                examples.append(RRInputExample(id, context, question, node_label, edge_label, label, qdep, qlen))
 
         return examples

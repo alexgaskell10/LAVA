@@ -1,6 +1,6 @@
 
 class RRInputExample(object):
-    def __init__(self, id, context, question, node_label, edge_label, label, qdep):
+    def __init__(self, id, context, question, node_label, edge_label, label, qdep, qlen):
         self.id = id
         self.context = context
         self.question = question
@@ -8,6 +8,7 @@ class RRInputExample(object):
         self.edge_label = edge_label
         self.label = label
         self.qdep = qdep
+        self.qlen = qlen
 
 
 class Node:

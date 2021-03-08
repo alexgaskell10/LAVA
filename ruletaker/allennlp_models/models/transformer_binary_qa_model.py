@@ -104,7 +104,8 @@ class TransformerBinaryQA(Model):
     def forward(self, 
             phrase,#: Dict[str, torch.LongTensor],
             label: torch.LongTensor = None,
-            metadata: List[Dict[str, Any]] = None
+            metadata: List[Dict[str, Any]] = None,
+            index_tensor: torch.Tensor = None,
         ) -> torch.Tensor:
 
         self._debug -= 1
@@ -115,11 +116,19 @@ class TransformerBinaryQA(Model):
 
         # Segment ids are not used by RoBERTa
         if 'roberta' in self._pretrained_model or 't5' in self._pretrained_model:
-            transformer_outputs, pooled_output = self._transformer_model(
-                input_ids=util.combine_initial_dims(input_ids),
-                # token_type_ids=util.combine_initial_dims(segment_ids),
-                attention_mask=util.combine_initial_dims(question_mask)
-            )
+            if index_tensor is not None:
+                transformer_outputs, pooled_output = self._transformer_model(
+                    input_ids=util.combine_initial_dims(input_ids),
+                    # token_type_ids=util.combine_initial_dims(segment_ids),
+                    attention_mask=util.combine_initial_dims(question_mask),
+                    index_tensor=index_tensor,
+                )
+            else:
+                transformer_outputs, pooled_output = self._transformer_model(
+                    input_ids=util.combine_initial_dims(input_ids),
+                    # token_type_ids=util.combine_initial_dims(segment_ids),
+                    attention_mask=util.combine_initial_dims(question_mask),
+                )
             cls_output = self._dropout(pooled_output)
         if 'albert' in self._pretrained_model:
             transformer_outputs, pooled_output = self._transformer_model(

@@ -45,7 +45,7 @@ def main(prog: Optional[str] = None) -> None:
         # Pretrained retrieval + ruletaker
         # sys.argv[1:] = ['custom_train', 'bin/config/trained_roberta_retriever.jsonnet', # {'bin/config/tmp_new.jsonnet', 'bin/config/spacy_retriever.jsonnet', 'bin/config/pretrain_retriever_tmp.jsonnet'},
         #     '-s', 'bin/runs/pretrained_retriever_ruletaker/roberta/tmp', '--include-package', 'ruletaker.allennlp_models']
-        # RL
+        # RL/GS
         sys.argv[1:] = ['custom_train', 'bin/config/gumbel_softmax_tmp.jsonnet', # {'bin/config/tmp_new.jsonnet', 'bin/config/spacy_retriever.jsonnet', 'bin/config/pretrain_retriever_tmp.jsonnet'},
             '-s', 'bin/runs/pretrained_retriever_ruletaker/roberta/tmp1', '--include-package', 'ruletaker.allennlp_models']
 
@@ -68,7 +68,13 @@ def main(prog: Optional[str] = None) -> None:
     # Hack to use wandb logging
     if 'train' in sys.argv[1] and 'tmp' not in sys.argv[2]:
         import wandb
-        project = "re-re_pretrain-ret" if 'pretrain_retriever' in sys.argv[2] else "re-re"
+        if 'pretrain_retriever' in sys.argv[2]:
+            project = "re-re_pretrain-ret"  
+        elif 'gumbel_softmax' in sys.argv[2]:
+            project = "re-re_gumbel-softmax"
+        else:
+            project = "re-re"
+
         wandb.init(project=project, config=vars(args))
         os.environ['WANDB_LOG'] = 'true'
     else:

@@ -1,45 +1,19 @@
-import numpy as np
-
 import torch
-import torch.nn as nn
+from torch import nn
+from torch.nn import functional as F
 from torch.autograd import Variable
 
 from graphviz import Digraph
 
+def stgs(logits):
+    ''' Straight through gumbel softmax
+    '''
+    def gs(logits, hard):
+        return F.gumbel_softmax(logits, tau=1, hard=hard, eps=1e-10, dim=-1)
 
-EPSILON = float(np.finfo(float).eps)
-HUGE_INT = 1e31
-
-def batch_lookup(M, idx, vector_output=True):
-    """
-    Perform batch lookup on matrix M using indices idx.
-    :param M: (Variable) [batch_size, seq_len] Each row of M is an independent population.
-    :param idx: (Variable) [batch_size, sample_size] Each row of idx is a list of sample indices.
-    :param vector_output: If set, return a 1-D vector when sample size is 1.
-    :return samples: [batch_size, sample_size] samples[i, j] = M[idx[i, j]]
-    """
-    batch_size = M.size(0)
-    batch_size2, sample_size = idx.size()
-    assert(batch_size == batch_size2)
-
-    if sample_size == 1 and vector_output:
-        samples = torch.gather(M, 1, idx).view(-1)
-    else:
-        samples = torch.gather(M, 1, idx)
-    pass
-    return samples
-
-def safe_log(x):
-    return torch.log(x + EPSILON)
-
-def right_pad(x, y, value=0.0):
-    if x.size(-1) >= y.size(-1):
-        return x
-    else:
-        output = torch.full_like(y, value)
-        output[..., :x.size(-1)] = x
-        return output
-
+    y_soft = gs(logits, False)
+    y_hard = gs(logits, True)
+    return (y_hard - y_soft).detach() + y_soft
 
 def make_dot(var, params=None):
     if params is not None:
@@ -79,3 +53,27 @@ def make_dot(var, params=None):
 
     add_nodes(var)
     return dot
+
+def m1():
+    x = torch.randn((2, 10), requires_grad=True)
+    y = torch.tensor([[1,0], [0,1]], dtype=torch.float)
+    z = torch.randn([4,3], requires_grad=True)
+
+    l1 = nn.Linear(10, 4, bias=False)
+    l2 = nn.Linear(3, 2, bias=False)
+
+    x = l1(x)
+    tmp1 = stgs(x)
+    tmp2 = torch.matmul(tmp1, z)
+    logits = l2(tmp2)
+    loss = F.binary_cross_entropy_with_logits(logits, y)
+    
+    # TODO
+    g = make_dot(loss)
+    g.view()
+
+    loss.backward()
+
+    print('Done')
+
+m1()
