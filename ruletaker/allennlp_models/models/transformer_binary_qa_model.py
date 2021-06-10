@@ -116,19 +116,11 @@ class TransformerBinaryQA(Model):
 
         # Segment ids are not used by RoBERTa
         if 'roberta' in self._pretrained_model or 't5' in self._pretrained_model:
-            if index_tensor is not None:
-                transformer_outputs, pooled_output = self._transformer_model(
-                    input_ids=util.combine_initial_dims(input_ids),
-                    # token_type_ids=util.combine_initial_dims(segment_ids),
-                    attention_mask=util.combine_initial_dims(question_mask),
-                    index_tensor=index_tensor,
-                )
-            else:
-                transformer_outputs, pooled_output = self._transformer_model(
-                    input_ids=util.combine_initial_dims(input_ids),
-                    # token_type_ids=util.combine_initial_dims(segment_ids),
-                    attention_mask=util.combine_initial_dims(question_mask),
-                )
+            transformer_outputs, pooled_output = self._transformer_model(
+                input_ids=util.combine_initial_dims(input_ids),
+                # token_type_ids=util.combine_initial_dims(segment_ids),
+                attention_mask=util.combine_initial_dims(question_mask),
+            )
             cls_output = self._dropout(pooled_output)
         if 'albert' in self._pretrained_model:
             transformer_outputs, pooled_output = self._transformer_model(
@@ -168,6 +160,7 @@ class TransformerBinaryQA(Model):
             loss = self._loss(label_logits, label)
             self._accuracy(label_logits, label)
             output_dict["loss"] = loss  # TODO this is shortcut to get predictions fast..
+            output_dict["label"] = label
 
             # Hack to use wandb logging
             if os.environ['WANDB_LOG'] == 'true':
@@ -244,7 +237,7 @@ class TransformerBinaryQA(Model):
         c = CategoricalAccuracy()
         c(label_logits, label)
         wandb.log({
-            prefix+"_loss": loss, 
+            prefix+"_loss": loss.mean(), 
             prefix+"_acc": self._accuracy.get_metric(), 
             prefix+"_acc_noncuml": c.get_metric(),
             prefix+"_ret_recall": self.batch_retrieval_recall(metadata),

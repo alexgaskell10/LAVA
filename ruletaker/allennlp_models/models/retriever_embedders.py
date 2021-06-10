@@ -73,12 +73,13 @@ class TransformerRetrievalEmbedder(BaseRetrievalEmbedder):
         '''
         # Prepare batch
         input_ids = idxs.contiguous().view(-1, idxs.size(-1))
-        mask = (input_ids != self.retriever_pad_idx).long()
+        # mask = (input_ids != self.retriever_pad_idx).long()
 
         # Compute token embeddings
-        token_embs = self.embedder(input_ids, mask)[0]
+        # token_embs = self.embedder(input_ids, mask)[0]
+        token_embs = self.embedder(input_ids)[0]
         
         # Use CLS token for sentence embedding
-        sentence_embs = token_embs[:,0,:].view(idxs.size(0), idxs.size(1), -1)
+        sentence_embs = token_embs[:,0,:].squeeze().unsqueeze(0)
 
         return sentence_embs

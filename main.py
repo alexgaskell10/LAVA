@@ -33,7 +33,7 @@ def main(prog: Optional[str] = None) -> None:
     import_plugins()
 
     if len(sys.argv) == 1:
-        ## RT
+        # Ruletaker
         # sys.argv[1:] = ['train', 'ruletaker/allennlp_models/config/tmp.jsonnet', 
         #     '-s', 'ruletaker/runs/t16', '--include-package', 'ruletaker.allennlp_models']
         ## Retrieval + ruletaker
@@ -68,6 +68,7 @@ def main(prog: Optional[str] = None) -> None:
     # Hack to use wandb logging
     if 'train' in sys.argv[1] and 'tmp' not in sys.argv[2]:
         import wandb
+
         if 'pretrain_retriever' in sys.argv[2]:
             project = "re-re_pretrain-ret"  
         elif 'gumbel_softmax' in sys.argv[2]:

@@ -47,10 +47,12 @@ class DataProcessor(object):
 
 
 class RRProcessor(DataProcessor):
-    def get_examples(self, data_dir, dset):
+    def get_examples(self, data_dir, dset, get_proof=True):
         return self._create_examples(
             self._read_jsonl(os.path.join(data_dir, dset+".jsonl")),
-            self._read_jsonl(os.path.join(data_dir, "meta-"+dset+".jsonl")))
+            self._read_jsonl(os.path.join(data_dir, "meta-"+dset+".jsonl")),
+            get_proof=get_proof
+        )
 
     def get_labels(self):
         return [True, False]
@@ -101,7 +103,6 @@ class RRProcessor(DataProcessor):
 
     def _get_node_edge_label_constrained(self, proofs, sentence_scramble, nfact, nrule):
         proof = proofs.split("OR")[0]
-        #print(proof)
         node_label = [0] * (nfact + nrule + 1)
         edge_label = np.zeros((nfact + nrule + 1, nfact + nrule + 1), dtype=int)
 
@@ -109,8 +110,6 @@ class RRProcessor(DataProcessor):
             nodes, edges = get_proof_graph_with_fail(proof)
         else:
             nodes, edges = get_proof_graph(proof)
-        # print(nodes)
-        # print(edges)
 
         component_index_map = {}
         for (i, index) in enumerate(sentence_scramble):
@@ -163,7 +162,7 @@ class RRProcessor(DataProcessor):
 
         return node_label, list(edge_label.flatten())
 
-    def _create_examples(self, records, meta_records):
+    def _create_examples(self, records, meta_records, get_proof):
         examples = []
         for (i, (record, meta_record)) in enumerate(zip(records, meta_records)):
             #print(i)
@@ -189,7 +188,10 @@ class RRProcessor(DataProcessor):
                 proofs = meta_data["proofs"]
                 nfact = meta_record["NFact"]
                 nrule = meta_record["NRule"]
-                node_label, edge_label = self._get_node_edge_label_constrained(proofs, sentence_scramble, nfact, nrule)
+                if get_proof:
+                    node_label, edge_label = self._get_node_edge_label_constrained(proofs, sentence_scramble, nfact, nrule)
+                else:
+                    node_label, edge_label = None, None
 
                 examples.append(RRInputExample(id, context, question, node_label, edge_label, label, qdep, qlen))
 

@@ -41,6 +41,7 @@ class RetrievalReasoningReader(DatasetReader):
         retriever_variant: str = None,
         pretrained_retriever_model = None,
         topk: int = None,
+        concat_q_and_c: bool = None,
     ) -> None:
         super().__init__()
         
@@ -72,7 +73,7 @@ class RetrievalReasoningReader(DatasetReader):
         self._syntax = syntax
         self._skip_id_regex = skip_id_regex
         self._retriever_variant = retriever_variant
-        self._concat = (pretrained_retriever_model is not None)
+        self._concat = concat_q_and_c if concat_q_and_c is not None else (pretrained_retriever_model is not None)       # TODO
         self._topk = topk
 
     @overrides
@@ -217,72 +218,3 @@ class RetrievalReasoningReader(DatasetReader):
         else:
             raise NotImplementedError()
 
-
-
-
-
-###################
-    def _read_internal_old(self, file_path: str):
-        # if `file_path` is a URL, redirect to the cache
-        file_path = cached_path(file_path)
-        counter = self._sample + 1
-        debug = 5
-        is_done = False
-
-        with open(file_path, 'r') as data_file:
-            logger.info("Reading instances from jsonl dataset at: %s", file_path)
-            for line in data_file:
-                if is_done:
-                    break
-                item_json = json.loads(line.strip())
-                item_id = item_json.get("id", "NA")
-                if self._skip_id_regex and re.match(self._skip_id_regex, item_id):
-                    continue
-
-                if self._syntax == "rulebase":
-                    questions = item_json['questions']
-                    if self._use_context_full:
-                        context = item_json.get('context_full', '')
-                    else:
-                        context = item_json.get('context', "")
-                elif self._syntax == "propositional-meta":
-                    questions = item_json['questions'].items()
-                    sentences = [x['text'] for x in item_json['triples'].values()] + \
-                                [x['text'] for x in item_json['rules'].values()]
-                    if self._scramble_context:
-                        random.shuffle(sentences)
-                    context = " ".join(sentences)
-                else:
-                    raise ValueError(f"Unknown syntax {self._syntax}")
-
-                for question in questions:
-                    counter -= 1
-                    debug -= 1
-                    qdep = None
-                    if counter == 0:
-                        is_done = True
-                        break
-                    if debug > 0:
-                        logger.info(item_json)
-                    if self._syntax == "rulebase":
-                        text = question['text']
-                        q_id = question['id']
-                        label = None
-                        if 'label' in question:
-                            label = 1 if question['label'] else 0
-                        qdep = question['meta']['QDep']
-                    elif self._syntax == "propositional-meta":
-                        text = question[1]['question']
-                        q_id = f"{item_id}-{question[0]}"
-                        label = question[1]['propAnswer']
-                        if label is not None:
-                            label = ["False", "True", "Unknown"].index(label)
-
-                    yield self.text_to_instance(
-                        item_id=q_id,
-                        question_text=text,
-                        context=context,
-                        label=label,
-                        debug=debug,
-                        qdep=qdep,
-                    )

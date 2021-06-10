@@ -9,7 +9,7 @@ local skip_id_regex = "$none";
 local transformer_model = "roberta-base";
 local max_pieces = 384;
 local transformer_weights_model = "";
-local dataset_dir = "inputs/dataset/tiny-rule-reasoning/depth-3ext-NatLang/";
+local dataset_dir = "ruletaker/inputs/dataset/tiny-rule-reasoning/depth-5/"; //"inputs/dataset/tiny-rule-reasoning/depth-5/";
 local cuda_device = 0;
 
 {
