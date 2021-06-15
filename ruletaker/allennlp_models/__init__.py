@@ -22,7 +22,7 @@ except:
     from ruletaker.allennlp_models.train.custom_train import *
     from ruletaker.allennlp_models.models.transformer_binary_qa_retriever import TransformerBinaryQARetriever
     from ruletaker.allennlp_models.models.retriever import RetrievalScorer
-    from ruletaker.allennlp_models.models.policy_gradients import PolicyGradientsAgent
+    # from ruletaker.allennlp_models.models.policy_gradients import PolicyGradientsAgent
     from ruletaker.allennlp_models.models.gumbel_softmax import GumbelSoftmaxRetrieverReasoner
 
 #from allennlp_models.models.transformer_mc_qa_model import *

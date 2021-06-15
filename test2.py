@@ -49,6 +49,7 @@ def train(model):
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+        print(loss)
 
 
 ruletaker_archive = "ruletaker/runs/depth-5-base/model.tar.gz"

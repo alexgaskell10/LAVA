@@ -166,29 +166,30 @@ class TransformerBinaryQA(Model):
             if os.environ['WANDB_LOG'] == 'true':
                 self.wandb_log(metadata, label_logits, label, loss)
 
-            for e, example in enumerate(metadata):
-                logits = sanitize(label_logits[e, :])
-                label_probs = sanitize(output_dict['label_probs'][e, :])
-                prediction = sanitize(output_dict['answer_index'][e])                    
-                prediction_dict = {
-                    'id': example['id'],
-                    'phrase': example['question_text'],
-                    'context': example['context'],
-                    'logits': logits,
-                    'label_probs': label_probs,
-                    'answer': example['label'],
-                    'prediction': prediction,
-                    'is_correct': (example['label'] == prediction) * 1.0,
-                    'q_depth': example['QDep'] if 'QDep' in example else None,
-                    'retrievals': example['topk'] if 'topk' in example else None,
-                    'retrieval_recall': self.retrieval_recall(example) if 'node_label' in example else None
-                }
+            # TODO
+            # for e, example in enumerate(metadata):
+            #     logits = sanitize(label_logits[e, :])
+            #     label_probs = sanitize(output_dict['label_probs'][e, :])
+            #     prediction = sanitize(output_dict['answer_index'][e])                    
+            #     prediction_dict = {
+            #         'id': example['id'],
+            #         'phrase': example['question_text'],
+            #         'context': example['context'],
+            #         'logits': logits,
+            #         'label_probs': label_probs,
+            #         'answer': example['label'],
+            #         'prediction': prediction,
+            #         'is_correct': (example['label'] == prediction) * 1.0,
+            #         'q_depth': example['QDep'] if 'QDep' in example else None,
+            #         'retrievals': example['topk'] if 'topk' in example else None,
+            #         'retrieval_recall': self.retrieval_recall(example) if 'node_label' in example else None
+            #     }
 
-                if 'skills' in example:
-                    prediction_dict['skills'] = example['skills']
-                if 'tags' in example:
-                    prediction_dict['tags'] = example['tags']
-                self._predictions.append(prediction_dict)
+            #     if 'skills' in example:
+            #         prediction_dict['skills'] = example['skills']
+            #     if 'tags' in example:
+            #         prediction_dict['tags'] = example['tags']
+            #     self._predictions.append(prediction_dict)
 
         return output_dict
 

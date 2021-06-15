@@ -765,6 +765,13 @@ class TrainModel(Registrable):
             model=model_, data_loader=data_loader_, validation_data_loader=validation_data_loader_,
         )
 
+        # TODO: hack to stop scheduler below
+        # trainer_.optimizer.param_groups[0]['lr'] = trainer_.optimizer.defaults['lr']
+        # trainer_.optimizer.param_groups[1]['lr'] = trainer_.optimizer.defaults['lr']
+        trainer_.optimizer.param_groups[0]['lr'] = 1e-5
+        trainer_.optimizer.param_groups[1]['lr'] = 1e-5
+        trainer_._learning_rate_scheduler = None
+
         return cls(
             serialization_dir=serialization_dir,
             model=model_,

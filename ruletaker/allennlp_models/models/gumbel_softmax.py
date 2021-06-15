@@ -73,13 +73,17 @@ class GumbelSoftmaxRetrieverReasoner(Model):
             the current query+retrieval (i.e. p(zj | zi, y))
         '''
         # Compute embeddings
-        e_q = self.get_query_embs(qr)['pooled_output']
-        self.retriever_model.eval()
+        # e_q = self.get_query_embs(qr)['pooled_output']
+        # self.retriever_model.train()
+        e_q = self.get_context_embs(qr)
         e_c = self.get_context_embs(c)
 
         # Compute similarities
         if self.similarity_func == 'inner':
-            sim = torch.matmul(e_c, e_q.T).squeeze()
+            sim = torch.matmul(e_c, e_q.T).squeeze() / e_c.size(-1)**0.5
+            # sim = torch.cosine_similarity(
+            #     e_c, e_q.unsqueeze(1).repeat(1, e_c.size(1), 1), dim=2
+            # ).squeeze()
         elif self.similarity_func == 'linear':
             e_c_ = e_c.view(-1, e_c.size(-1))
             e_q_ = e_q.repeat(1, e_c.size(1), 1).view(e_c_.shape)
@@ -113,12 +117,12 @@ class GumbelSoftmaxRetrieverReasoner(Model):
         qr_ = {'tokens': {'token_ids': qr, 'type_ids': torch.zeros_like(qr)}}
         return self.qa_model(qr_, label, metadata)
 
-    @torch.no_grad()
+    # @torch.no_grad()
     def get_context_embs(self, c):
-        return self.retriever_model(c)
         # if self._context_embs is None:
         #     self._context_embs = self.retriever_model(c)
         # return self._context_embs
+        return self.retriever_model(c)
     
     def forward(self, 
         label: torch.LongTensor = None,
@@ -133,11 +137,14 @@ class GumbelSoftmaxRetrieverReasoner(Model):
         c = retrieval['tokens']['token_ids'][:,1:,:]
         _d = qr.device
 
-        print(metadata[0]['id'])
-        if 'RelNeg-D5-168-1' == metadata[0]['id']:
-            flag = True
-        else:
-            flag = False
+        # if 'RelNeg-D5-168-1' == metadata[0]['id']:
+        #     flag = True
+        # else:
+        #     flag = False
+        flag = False
+
+        d0_match = [all(qr[0, :c.size(-1)] == c[0,i,:qr.size(-1)]) for i in range(c.size(1))]
+        self.d0_match_idx = d0_match.index(True) if any(d0_match) else None
 
         # TODO: add an "end" context item of a blank one or something....
 
@@ -146,8 +153,10 @@ class GumbelSoftmaxRetrieverReasoner(Model):
         
         # Retrieval rollout phase
         for t in range(self.num_rollout_steps):
+            if self.d0_match_idx is not None:
+                print()
             policy = self.get_retrieval_distr(qr, c, metadata)
-            action = self.gs(policy, tau=1)
+            action = self.gs(policy, tau=10)
             if flag:
                 action = torch.zeros_like(action).scatter(0, torch.tensor(16).cuda(), 1)
             if qr.size(0) == 1:
@@ -160,7 +169,6 @@ class GumbelSoftmaxRetrieverReasoner(Model):
             actions.append(action)
             unscaled_retrieval_losses.append(loss)
 
-            # qr, c, metadata = self.prep_next_batch(c, metadata, actions, t)
             qr, _, metadata = self.prep_next_batch(c, metadata, actions, t)
 
         # Query answering phase
@@ -168,15 +176,16 @@ class GumbelSoftmaxRetrieverReasoner(Model):
         output = self.answer(qr, label, metadata)
 
         # Scale retrieval losses by final loss
-        qa_loss = output['loss'].detach()       # TODO
+        qa_loss = output['loss'].detach()
+        qa_scale = torch.gather(output['label_probs'].detach(), dim=1, index=label.unsqueeze(1))
         unscaled_retrieval_losses_ = torch.cat([u.unsqueeze(0) for u in unscaled_retrieval_losses])
-        # retrieval_losses = qa_loss * unscaled_retrieval_losses_       # NOTE: original
-        retrieval_losses = unscaled_retrieval_losses_ #* torch.exp(-qa_loss)
-        # total_loss = (qa_loss + retrieval_losses / retrieval_losses.size(0))
+        # retrieval_losses = qa_scale * unscaled_retrieval_losses_ / unscaled_retrieval_losses_.size(0)      # NOTE: originals
+        retrieval_losses = unscaled_retrieval_losses_ / unscaled_retrieval_losses_.size(0)      # NOTE: originals
+        # total_loss = qa_loss + unscaled_retrieval_losses_ #retrieval_losses
         total_loss = retrieval_losses
-        # output['loss'] = total_loss.mean()
-        output['loss'] = loss
-        # output['loss'] = unscaled_retrieval_losses.mean()
+        output['loss'] = total_loss.mean()
+        # output['loss'] = loss
+        # output['loss'] = unscaled_retrieval_losses_.mean()
         
         # Record trajectory data
         output['unnorm_policies'] = policies
@@ -184,13 +193,13 @@ class GumbelSoftmaxRetrieverReasoner(Model):
 
         self._context_embs = None
 
-        # learning_rate = 1e-4
-        # if not hasattr(self, 'optimizer'):
-        #     self.optimizer = torch.optim.Adam(self.qa_model.parameters(), lr=learning_rate)
-        # self.optimizer.zero_grad()
-        # loss.backward()
-        # self.optimizer.step()
-        # output['loss'] = torch.tensor([0]).cuda()
+        print(f'{qa_loss.mean().item():.3f}   {retrieval_losses.mean().item():.3f}   {(output["label_probs"].argmax(-1) == label).float().mean().item()}')
+
+        if self.d0_match_idx == action.argmax(-1).item():
+            print('ABC')
+
+        if (self.d0_match_idx == action.argmax(-1).item()) and (output["label_probs"].argmax(-1).item() == label):
+            print('ABC')
 
         return output
 
@@ -279,3 +288,12 @@ class GumbelSoftmaxRetrieverReasoner(Model):
 
         self.retriever_loss = nn.CrossEntropyLoss(reduction='none')
 
+        set_dropout(self.retriever_model, 0.0)
+        set_dropout(self.qa_model, 0.0)
+
+
+def set_dropout(model, drop_rate=0.1):
+    for name, child in model.named_children():
+        if isinstance(child, torch.nn.Dropout):
+            child.p = drop_rate
+        set_dropout(child, drop_rate=drop_rate)
