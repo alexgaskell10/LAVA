@@ -179,8 +179,7 @@ class GumbelSoftmaxRetrieverReasoner(Model):
         qa_loss = output['loss'].detach()
         qa_scale = torch.gather(output['label_probs'].detach(), dim=1, index=label.unsqueeze(1))
         unscaled_retrieval_losses_ = torch.cat([u.unsqueeze(0) for u in unscaled_retrieval_losses])
-        # retrieval_losses = qa_scale * unscaled_retrieval_losses_ / unscaled_retrieval_losses_.size(0)      # NOTE: originals
-        retrieval_losses = unscaled_retrieval_losses_ / unscaled_retrieval_losses_.size(0)      # NOTE: originals
+        retrieval_losses = qa_scale * unscaled_retrieval_losses_ / unscaled_retrieval_losses_.size(0)      # NOTE: originals
         # total_loss = qa_loss + unscaled_retrieval_losses_ #retrieval_losses
         total_loss = retrieval_losses
         output['loss'] = total_loss.mean()
