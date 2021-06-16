@@ -67,7 +67,10 @@ class GumbelSoftmaxRetrieverReasoner(Model):
         self._flag = False
 
         self.define_modules()
-        
+        # self.W1 = nn.Linear(768*2, 768)        # TODO
+        # self.W2 = nn.Linear(768, 768)        # TODO
+        # self.W3 = nn.Linear(768, 1)        # TODO
+
     def get_retrieval_distr(self, qr, c, meta=None):
         ''' Compute the probability of retrieving each item given
             the current query+retrieval (i.e. p(zj | zi, y))
@@ -75,11 +78,16 @@ class GumbelSoftmaxRetrieverReasoner(Model):
         # Compute embeddings
         # e_q = self.get_query_embs(qr)['pooled_output']
         # self.retriever_model.train()
-        e_q = self.get_context_embs(qr)
+        e_q = self.get_context_embs(qr).detach()
         e_c = self.get_context_embs(c)
 
         # Compute similarities
         if self.similarity_func == 'inner':
+            # x = torch.cat([e_q.unsqueeze(1).repeat(1, e_c.size(1), 1), e_c], dim=2)
+            # x = F.relu(self.W1(x))
+            # x = F.relu(self.W2(x))
+            # sim = self.W3(x).squeeze()
+            # sim = self.W(e_c).matmul(e_q.T).squeeze()
             sim = torch.matmul(e_c, e_q.T).squeeze() / e_c.size(-1)**0.5
             # sim = torch.cosine_similarity(
             #     e_c, e_q.unsqueeze(1).repeat(1, e_c.size(1), 1), dim=2
@@ -180,6 +188,7 @@ class GumbelSoftmaxRetrieverReasoner(Model):
         qa_scale = torch.gather(output['label_probs'].detach(), dim=1, index=label.unsqueeze(1))
         unscaled_retrieval_losses_ = torch.cat([u.unsqueeze(0) for u in unscaled_retrieval_losses])
         retrieval_losses = qa_scale * unscaled_retrieval_losses_ / unscaled_retrieval_losses_.size(0)      # NOTE: originals
+        # retrieval_losses = output['label_probs'][:,1].detach() * qa_scale * unscaled_retrieval_losses_ / unscaled_retrieval_losses_.size(0)      # NOTE: originals
         # total_loss = qa_loss + unscaled_retrieval_losses_ #retrieval_losses
         total_loss = retrieval_losses
         output['loss'] = total_loss.mean()
@@ -195,6 +204,9 @@ class GumbelSoftmaxRetrieverReasoner(Model):
         print(f'{qa_loss.mean().item():.3f}   {retrieval_losses.mean().item():.3f}   {(output["label_probs"].argmax(-1) == label).float().mean().item()}')
 
         if self.d0_match_idx == action.argmax(-1).item():
+            print('ABC')
+
+        if self.d0_match_idx == policy.argmax(-1).item():
             print('ABC')
 
         if (self.d0_match_idx == action.argmax(-1).item()) and (output["label_probs"].argmax(-1).item() == label):

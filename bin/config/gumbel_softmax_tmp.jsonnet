@@ -20,7 +20,8 @@ local model_type = 'gumbel_softmax_unified';
         "retriever_variant": retriever_variant,
         "pretrained_retriever_model": pretrained_model,
         "topk": topk,
-        "concat_q_and_c": false
+        "concat_q_and_c": false,
+        "true_samples_only": false
     },
     "retrieval_reasoning_model": {
         "variant": retriever_variant,

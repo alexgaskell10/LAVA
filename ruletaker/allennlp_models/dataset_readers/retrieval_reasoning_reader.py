@@ -42,6 +42,7 @@ class RetrievalReasoningReader(DatasetReader):
         pretrained_retriever_model = None,
         topk: int = None,
         concat_q_and_c: bool = None,
+        true_samples_only: bool = False,
     ) -> None:
         super().__init__()
         
@@ -75,6 +76,7 @@ class RetrievalReasoningReader(DatasetReader):
         self._retriever_variant = retriever_variant
         self._concat = concat_q_and_c if concat_q_and_c is not None else (pretrained_retriever_model is not None)       # TODO
         self._topk = topk
+        self._true_samples_only = true_samples_only
 
     @overrides
     def _read(self, file_path: str):
@@ -89,17 +91,27 @@ class RetrievalReasoningReader(DatasetReader):
         examples = RRProcessor().get_examples(data_dir, dset)
 
         for example in examples:
-            if example.qlen == '' or int(example.qlen) <= self._topk:
-                yield self.text_to_instance(
-                    item_id=example.id,
-                    question_text=example.question.strip(),
-                    context=example.context,
-                    label=example.label,
-                    debug=debug,
-                    qdep=example.qdep,
-                    qlen=example.qlen,
-                    node_label=example.node_label
-                )
+            if self._true_samples_only:
+                # Filter so only positive correct questions and negative
+                # incorrect questions are used
+                if 'not' in example.question and example.label:
+                    continue
+                if 'not' not in example.question and not example.label:
+                    continue
+
+            if not (example.qlen == '' or int(example.qlen) <= self._topk):
+                continue
+
+            yield self.text_to_instance(
+                item_id=example.id,
+                question_text=example.question.strip(),
+                context=example.context,
+                label=example.label,
+                debug=debug,
+                qdep=example.qdep,
+                qlen=example.qlen,
+                node_label=example.node_label
+            )
 
     @overrides
     def text_to_instance(self,  # type: ignore
