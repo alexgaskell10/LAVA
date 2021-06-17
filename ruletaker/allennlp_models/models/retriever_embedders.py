@@ -82,4 +82,4 @@ class TransformerRetrievalEmbedder(BaseRetrievalEmbedder):
         # Use CLS token for sentence embedding
         sentence_embs = token_embs[:,0,:].squeeze().unsqueeze(0)
 
-        return sentence_embs
+        return sentence_embs.view(*idxs.shape[:2], -1)

@@ -118,6 +118,7 @@ class RetrievalReasoningReader(DatasetReader):
         item_id: str,
         question_text: str,
         label: int = None,
+        already_retrieved = '',
         context: str = None,
         debug: int = -1,
         qdep: int = None,
@@ -136,10 +137,10 @@ class RetrievalReasoningReader(DatasetReader):
         if not qa_only:
             # Tokenize context sentences seperately
             retrieval_listfield = self.listfield_features_from_qa(
-                question_text, context, self._tokenizer_retriever
+                question_text, context, already_retrieved, self._tokenizer_retriever
             )
             qa_listfield = self.listfield_features_from_qa(
-                question_text, context, self._tokenizer_qamodel
+                question_text, context, already_retrieved, self._tokenizer_qamodel
             )
             fields['retrieval'] = ListField(
                 [TextField(toks, self._token_indexers_retriever) for toks in retrieval_listfield]
@@ -147,6 +148,7 @@ class RetrievalReasoningReader(DatasetReader):
             fields['sentences'] = ListField(
                 [TextField(toks, self._token_indexers_qamodel) for toks in qa_listfield]
             )
+            exact_match = self._get_exact_match(question_text, context)
 
         metadata = {
             "id": item_id,
@@ -155,6 +157,7 @@ class RetrievalReasoningReader(DatasetReader):
             "context": context,
             "QDep": qdep,
             "node_label": node_label,
+            "exact_match": exact_match if not qa_only else None,
         }
 
         if label is not None:
@@ -183,12 +186,21 @@ class RetrievalReasoningReader(DatasetReader):
 
         return tokens, segment_ids
 
-    def listfield_features_from_qa(self, question: str, context: str, tokenizer):
+    def _get_exact_match(self, question, context):
+        context_lst = [toks.strip() + '.' for toks in context.split('.')[:-1]]
+        exact_match = context_lst.index(question) if question in context_lst else None
+        return exact_match
+
+    def listfield_features_from_qa(self, question: str, context: str, already_retrieved, tokenizer):
         ''' Tokenize the context items seperately and return as a list.
         '''
         if self._concat:
-            context_lst = [toks + '.' for toks in context.split('.')[:-1]]
-            tokens = [self.transformer_features_from_qa(question, c)[0] for c in context_lst] 
+            tokens = []
+            for toks in context.split('.')[:-1]:
+                toks_ = toks.strip() + '.'
+                aug_context = (already_retrieved + ' ' + toks_).strip()
+                trans_features = self.transformer_features_from_qa(question, aug_context)
+                tokens.append(trans_features[0])
         else:
             to_tokenize = (question + (context if context is not None else "")).split('.')[:-1]
             to_tokenize = [toks + '.' for toks in to_tokenize]
@@ -199,15 +211,19 @@ class RetrievalReasoningReader(DatasetReader):
         ''' Convert question + context strings into a batch
             which is ready for the qa model.
         '''
-        instances = []
-        for question, context in sentences:
+        data = []
+        for question, already_retrieved, context in sentences:
             instance = self.text_to_instance(
-                item_id="", question_text=question, context=context, qa_only=True
+                item_id = "", 
+                question_text = question, 
+                context = context, 
+                already_retrieved = already_retrieved,
+                qa_only = False
             )
             instance.index_fields(vocab)
-            instances.append(instance)
+            data.append(instance)
 
-        return allennlp_collate(instances)
+        return allennlp_collate(data)
 
     def decode(self, input_id, mode='qa', vocab=None):
         ''' Helper to decode a tokenized sequence.

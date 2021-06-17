@@ -7,12 +7,12 @@ local pretrained_model = "bin/runs/pretrain_retriever/rb-base/model.tar.gz";
 local cuda_device = 0;
 local batch_size = 1;
 local num_gradient_accumulation_steps = 1;
-local topk = 1;
+local topk = 2;
 local model_type = 'gumbel_softmax_unified';
 
 {
     "ruletaker_archive": ruletaker_archive,
-    "train_data_path": dataset_dir + "train_.jsonl",
+    "train_data_path": dataset_dir + "train.jsonl",
     "validation_data_path": dataset_dir + "test.jsonl",
     "test_data_path": dataset_dir + "test.jsonl",
     "dataset_reader": {
@@ -20,8 +20,8 @@ local model_type = 'gumbel_softmax_unified';
         "retriever_variant": retriever_variant,
         "pretrained_retriever_model": pretrained_model,
         "topk": topk,
-        "concat_q_and_c": false,
-        "true_samples_only": false
+        "concat_q_and_c": true,
+        "true_samples_only": true
     },
     "retrieval_reasoning_model": {
         "variant": retriever_variant,

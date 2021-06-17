@@ -67,55 +67,28 @@ class GumbelSoftmaxRetrieverReasoner(Model):
         self._flag = False
 
         self.define_modules()
-        # self.W1 = nn.Linear(768*2, 768)        # TODO
-        # self.W2 = nn.Linear(768, 768)        # TODO
-        # self.W3 = nn.Linear(768, 1)        # TODO
+        self.W = nn.Linear(self.retriever_model.embedder.config.hidden_size, 1)        # TODO
 
-    def get_retrieval_distr(self, qr, c, meta=None):
+    def get_retrieval_distr(self, qr, meta=None):
         ''' Compute the probability of retrieving each item given
             the current query+retrieval (i.e. p(zj | zi, y))
         '''
-        # Compute embeddings
-        # e_q = self.get_query_embs(qr)['pooled_output']
-        # self.retriever_model.train()
-        e_q = self.get_context_embs(qr).detach()
-        e_c = self.get_context_embs(c)
+        e_q = self.get_context_embs(qr)
+        sim = self.W(e_q).squeeze(-1)
 
-        # Compute similarities
-        if self.similarity_func == 'inner':
-            # x = torch.cat([e_q.unsqueeze(1).repeat(1, e_c.size(1), 1), e_c], dim=2)
-            # x = F.relu(self.W1(x))
-            # x = F.relu(self.W2(x))
-            # sim = self.W3(x).squeeze()
-            # sim = self.W(e_c).matmul(e_q.T).squeeze()
-            sim = torch.matmul(e_c, e_q.T).squeeze() / e_c.size(-1)**0.5
-            # sim = torch.cosine_similarity(
-            #     e_c, e_q.unsqueeze(1).repeat(1, e_c.size(1), 1), dim=2
-            # ).squeeze()
-        elif self.similarity_func == 'linear':
-            e_c_ = e_c.view(-1, e_c.size(-1))
-            e_q_ = e_q.repeat(1, e_c.size(1), 1).view(e_c_.shape)
-            x = torch.cat((e_q_, e_c_), dim=1)
-            sim = self.proj(x).view(e_c.size(0), -1)
-            sim = sim.squeeze() if sim.size(0) == 1 else sim
-        else:
-            raise NotImplementedError()
+        # Ensure padding receives 0 probability mass
+        similarity = torch.where(
+            qr.max(dim=2)[0] == self.retriever_pad_idx,     # Identify rows which contain all padding
+            torch.tensor(-float("inf")).to(e_q.device), 
+            sim,
+        )
 
-        # # Ensure padding receives 0 probability mass
-        # retrieval_mask = (c != self.retriever_pad_idx).long().unsqueeze(-1)
-        # similarity = torch.where(
-        #     retrieval_mask.sum(dim=2).squeeze() == 0, 
-        #     torch.tensor(-float("inf")).to(c.device), 
-        #     sim,
-        # )
+        # Deal with nans- these are caused by all sentences being padding.
+        similarity[torch.isinf(similarity).all(dim=-1)] = 1 / similarity.size(0)
+        if torch.isinf(similarity).all(dim=-1).any():
+            raise ValueError('All retrievals are -inf for a sample. This will lead to nan loss')
 
-        # # Deal with nans- these are caused by all sentences being padding.
-        # similarity[torch.isinf(similarity).all(dim=-1)] = 1 / similarity.size(0)
-        # if torch.isinf(similarity).all(dim=-1).any():
-        #     raise ValueError('All retrievals are -inf for a sample. This will lead to nan loss')
-
-        # return similarity
-
+        return similarity
         return sim
 
     def answer(self, qr, label, metadata):
@@ -131,8 +104,208 @@ class GumbelSoftmaxRetrieverReasoner(Model):
         #     self._context_embs = self.retriever_model(c)
         # return self._context_embs
         return self.retriever_model(c)
-    
+
     def forward(self, 
+        label: torch.LongTensor = None,
+        metadata: List[Dict[str, Any]] = None,
+        retrieval: List = None,
+        **kwargs,
+    ) -> torch.Tensor:
+        ''' Rollout the forward pass of the network. Consists of
+            n retrieval steps followed by an answering step.
+        '''
+        _qr = retrieval['tokens']['token_ids']
+        qr = _qr[:]       # shape = (bsz, context_len, sentence_len)
+        _d = qr.device
+
+        # if 'RelNeg-D5-168-1' == metadata[0]['id']:
+        #     flag = True
+        # else:
+        #     flag = False
+        flag = False
+
+        self.d0_match_idx = metadata[0]['exact_match']      # TODO
+
+        # TODO: add an "end" context item of a blank one or something....
+
+        # Storage tensors
+        policies, actions, unscaled_retrieval_losses = [],[],[]
+        
+        # Retrieval rollout phase
+        for t in range(self.num_rollout_steps):
+            policy = self.get_retrieval_distr(qr, metadata)
+            action = self.gs(policy, tau=1)
+            if flag:
+                action = torch.zeros_like(action).scatter(1, torch.tensor([[16]]).cuda(), 1)
+            loss = self.retriever_loss(policy, action.argmax(-1))
+
+            policies.append(policy)
+            actions.append(action)
+            unscaled_retrieval_losses.append(loss)
+
+            q = qr.gather(1, action.argmax(-1).view(-1, 1, 1).repeat(1, 1, qr.size(-1))).squeeze(1)
+            qr, metadata = self.prep_next_batch(qr, metadata, actions, t)
+
+            if self.d0_match_idx == action.argmax(-1).item():
+                print('A')
+
+            if self.d0_match_idx == policy.argmax(-1).item():
+                print('B')
+
+            if (self.d0_match_idx == action.argmax(-1).item()) and (self.d0_match_idx == policy.argmax(-1).item()):
+                print('D')
+
+        # Query answering phase
+        self.update_meta(q, metadata, actions)
+        output = self.answer(q, label, metadata)
+
+        # Scale retrieval losses by final loss
+        qa_loss = output['loss'].detach()
+        qa_scale = torch.gather(output['label_probs'].detach(), dim=1, index=label.unsqueeze(1))
+        unscaled_retrieval_losses_ = torch.cat([u.unsqueeze(0) for u in unscaled_retrieval_losses])
+        retrieval_losses = qa_scale * unscaled_retrieval_losses_ / unscaled_retrieval_losses_.size(0)      # NOTE: originals
+        # retrieval_losses = output['label_probs'][:,1].detach() * qa_scale * unscaled_retrieval_losses_ / unscaled_retrieval_losses_.size(0)      # NOTE: originals
+        # total_loss = qa_loss + unscaled_retrieval_losses_ #retrieval_losses
+        total_loss = retrieval_losses
+        output['loss'] = total_loss.mean()
+        # output['loss'] = loss
+        # output['loss'] = unscaled_retrieval_losses_.mean()
+        
+        # Record trajectory data
+        output['unnorm_policies'] = policies
+        output['sampled_actions'] = torch.cat([a.unsqueeze(0) for a in actions]).argmax(dim=-1)
+
+        self._context_embs = None
+
+        print(f'\n{qa_loss.mean().item():.3f}   {retrieval_losses.mean().item():.3f}   {(output["label_probs"].argmax(-1) == label).float().mean().item()}')
+
+        if (self.d0_match_idx == action.argmax(-1).item()) and (output["label_probs"].argmax(-1).item() == label):
+            print('C')
+
+        return output
+
+    def gs(self, logits, tau=1):
+        ''' Gumbel softmax
+        '''
+        return F.gumbel_softmax(logits, tau=tau, hard=True, eps=1e-10, dim=-1)
+
+    def update_meta(self, query_retrieval, metadata, actions):
+        ''' Log relevant metadata for later use.
+        '''
+        retrievals = torch.cat([a.unsqueeze(0) for a in actions]).argmax(dim=-1).T
+        for qr, topk, meta in zip(query_retrieval, retrievals, metadata):
+            meta['topk'] = topk.tolist()
+            meta['query_retrieval'] = qr.tolist()
+
+    def prep_next_batch(self, qr, metadata, actions, t):
+        ''' Concatenate the latest retrieval to the current 
+            query+retrievals. Also update the tensors for the next
+            rollout pass.
+        '''
+        # Get indexes of retrieval items
+        retrievals = torch.cat([a.unsqueeze(0) for a in actions]).argmax(dim=-1).T
+
+        # Concatenate query + retrival to make new query_retrieval
+        # matrix of idxs        
+        sentences = []
+        for topk, meta in zip(retrievals, metadata):
+            question = meta['question_text']
+            sentence_idxs = [int(i) for i in topk.tolist()[:t+1] if i != self.x]
+            context_rtr = [
+                toks + '.' for n, toks in enumerate(meta['context'].split('.')[:-1]) 
+                if n in sentence_idxs
+            ]
+            meta['context_str'] = f"q: {question} c: {''.join(context_rtr).strip()}"
+            sentences.append((question, ''.join(context_rtr).strip(), meta['context']))
+
+        batch = self.dataset_reader.transformer_indices_from_qa(sentences, self.qa_vocab)
+        qr_ = batch['retrieval']['tokens']['token_ids'].to(qr.device)
+
+        # Replace retrieved context with padding so same context isn't retrieved twice
+        current_action = actions[t].argmax(dim=1)
+
+        qr_ = qr_.scatter(
+            1, current_action.repeat(qr_.size(-1), 1, 1).T, self.retriever_pad_idx
+        )
+
+        return qr_, metadata
+
+    def prep_next_batch_1(self, context, metadata, actions, t):
+        ''' Concatenate the latest retrieval to the current 
+            query+retrievals. Also update the tensors for the next
+            rollout pass.
+        '''
+        # Get indexes of retrieval items
+        retrievals = torch.cat([a.unsqueeze(0) for a in actions]).argmax(dim=-1).T
+
+        # Concatenate query + retrival to make new query_retrieval
+        # tensor of idxs        
+        sentences = []
+        for topk, meta in zip(retrievals, metadata):
+            question = meta['question_text']
+            sentence_idxs = [int(i) for i in topk.tolist()[:t+1] if i != self.x]
+            context_str = ''.join([
+                toks + '.' for n, toks in enumerate(meta['context'].split('.')[:-1]) 
+                if n in sentence_idxs
+            ]).strip()
+            meta['context_str'] = f"q: {question} c: {context_str}"
+            sentences.append((question, context_str))
+        batch = self.dataset_reader.transformer_indices_from_qa(sentences, self.qa_vocab)
+        query_retrieval = batch['phrase']['tokens']['token_ids'].to(context.device)
+
+        # Replace retrieved context with padding so same context isn't retrieved twice
+        current_action = actions[t].argmax(dim=1)
+        context = context.scatter(
+            1, current_action.repeat(context.size(-1), 1, 1).T, self.retriever_pad_idx
+        )
+
+        return query_retrieval, context, metadata
+
+    def predict(self):
+        pass
+
+    def get_metrics(self, reset: bool = False) -> Dict[str, float]:
+        if reset == True and not self.training:
+            return {
+                'EM': self.qa_model._accuracy.get_metric(reset),
+                'predictions': self.qa_model._predictions,
+            }
+        else:
+            return {
+                'EM': self.qa_model._accuracy.get_metric(reset),
+            }
+
+    def define_modules(self):
+        if self.variant == 'spacy':
+            self.retriever_model = SpacyRetrievalEmbedder(
+                sentence_embedding_method=self.sentence_embedding_method,
+                vocab=self.vocab,
+                variant=self.variant,
+            )
+            self.tok_name = 'tokens'
+            self.retriever_pad_idx = self.vocab.get_token_index(self.vocab._padding_token)      # TODO: standardize these
+        elif 'roberta' in self.variant:
+            self.retriever_model = TransformerRetrievalEmbedder(
+                sentence_embedding_method=self.sentence_embedding_method,
+                vocab=self.vocab,
+                variant=self.variant,
+            )
+            self.tok_name = 'token_ids'
+            self.retriever_pad_idx = self.dataset_reader.pad_idx(mode='retriever')       # TODO: standardize these
+        else:
+            raise ValueError(
+                f"Invalid retriever_variant: {self.variant}.\nInvestigate!"
+            )
+
+        if self.similarity_func == 'linear':
+            self.proj = nn.Linear(2*self.qa_model._output_dim, 1)      # TODO: sort for different retriever and qa models
+
+        self.retriever_loss = nn.CrossEntropyLoss(reduction='none')
+
+        set_dropout(self.retriever_model, 0.0)
+        set_dropout(self.qa_model, 0.0)
+
+    def forward_1(self, 
         label: torch.LongTensor = None,
         metadata: List[Dict[str, Any]] = None,
         retrieval: List = None,
@@ -214,93 +387,53 @@ class GumbelSoftmaxRetrieverReasoner(Model):
 
         return output
 
-    def gs(self, logits, tau=1):
-        ''' Gumbel softmax
+    def get_retrieval_distr_1(self, qr, c, meta=None):
+        ''' Compute the probability of retrieving each item given
+            the current query+retrieval (i.e. p(zj | zi, y))
         '''
-        return F.gumbel_softmax(logits, tau=tau, hard=True, eps=1e-10, dim=-1)
+        # Compute embeddings
+        # e_q = self.get_query_embs(qr)['pooled_output']
+        # self.retriever_model.train()
+        e_q = self.get_context_embs(qr).detach()
+        e_c = self.get_context_embs(c)
 
-    def update_meta(self, query_retrieval, metadata, actions):
-        ''' Log relevant metadata for later use.
-        '''
-        retrievals = torch.cat([a.unsqueeze(0) for a in actions]).argmax(dim=-1).T
-        for qr, topk, meta in zip(query_retrieval, retrievals, metadata):
-            meta['topk'] = topk.tolist()
-            meta['query_retrieval'] = qr.tolist()
-
-    def prep_next_batch(self, context, metadata, actions, t):
-        ''' Concatenate the latest retrieval to the current 
-            query+retrievals. Also update the tensors for the next
-            rollout pass.
-        '''
-        # Get indexes of retrieval items
-        retrievals = torch.cat([a.unsqueeze(0) for a in actions]).argmax(dim=-1).T
-
-        # Concatenate query + retrival to make new query_retrieval
-        # tensor of idxs        
-        sentences = []
-        for topk, meta in zip(retrievals, metadata):
-            question = meta['question_text']
-            sentence_idxs = [int(i) for i in topk.tolist()[:t+1] if i != self.x]
-            context_str = ''.join([
-                toks + '.' for n, toks in enumerate(meta['context'].split('.')[:-1]) 
-                if n in sentence_idxs
-            ]).strip()
-            meta['context_str'] = f"q: {question} c: {context_str}"
-            sentences.append((question, context_str))
-        batch = self.dataset_reader.transformer_indices_from_qa(sentences, self.qa_vocab)
-        query_retrieval = batch['phrase']['tokens']['token_ids'].to(context.device)
-
-        # Replace retrieved context with padding so same context isn't retrieved twice
-        current_action = actions[t].argmax(dim=1)
-        context = context.scatter(
-            1, current_action.repeat(context.size(-1), 1, 1).T, self.retriever_pad_idx
-        )
-
-        return query_retrieval, context, metadata
-
-    def predict(self):
-        pass
-
-    def get_metrics(self, reset: bool = False) -> Dict[str, float]:
-        if reset == True and not self.training:
-            return {
-                'EM': self.qa_model._accuracy.get_metric(reset),
-                'predictions': self.qa_model._predictions,
-            }
+        # Compute similarities
+        if self.similarity_func == 'inner':
+            # x = torch.cat([e_q.unsqueeze(1).repeat(1, e_c.size(1), 1), e_c], dim=2)
+            # x = F.relu(self.W1(x))
+            # x = F.relu(self.W2(x))
+            # sim = self.W3(x).squeeze()
+            # sim = self.W(e_c).matmul(e_q.T).squeeze()
+            sim = torch.matmul(e_c, e_q.T).squeeze() / e_c.size(-1)**0.5
+            # sim = torch.cosine_similarity(
+            #     e_c, e_q.unsqueeze(1).repeat(1, e_c.size(1), 1), dim=2
+            # ).squeeze()
+        elif self.similarity_func == 'linear':
+            e_c_ = e_c.view(-1, e_c.size(-1))
+            e_q_ = e_q.repeat(1, e_c.size(1), 1).view(e_c_.shape)
+            x = torch.cat((e_q_, e_c_), dim=1)
+            sim = self.proj(x).view(e_c.size(0), -1)
+            sim = sim.squeeze() if sim.size(0) == 1 else sim
         else:
-            return {
-                'EM': self.qa_model._accuracy.get_metric(reset),
-            }
+            raise NotImplementedError()
 
-    def define_modules(self):
-        if self.variant == 'spacy':
-            self.retriever_model = SpacyRetrievalEmbedder(
-                sentence_embedding_method=self.sentence_embedding_method,
-                vocab=self.vocab,
-                variant=self.variant,
-            )
-            self.tok_name = 'tokens'
-            self.retriever_pad_idx = self.vocab.get_token_index(self.vocab._padding_token)      # TODO: standardize these
-        elif 'roberta' in self.variant:
-            self.retriever_model = TransformerRetrievalEmbedder(
-                sentence_embedding_method=self.sentence_embedding_method,
-                vocab=self.vocab,
-                variant=self.variant,
-            )
-            self.tok_name = 'token_ids'
-            self.retriever_pad_idx = self.dataset_reader.pad_idx(mode='retriever')       # TODO: standardize these
-        else:
-            raise ValueError(
-                f"Invalid retriever_variant: {self.variant}.\nInvestigate!"
-            )
+        # # Ensure padding receives 0 probability mass
+        # retrieval_mask = (c != self.retriever_pad_idx).long().unsqueeze(-1)
+        # similarity = torch.where(
+        #     retrieval_mask.sum(dim=2).squeeze() == 0, 
+        #     torch.tensor(-float("inf")).to(c.device), 
+        #     sim,
+        # )
 
-        if self.similarity_func == 'linear':
-            self.proj = nn.Linear(2*self.qa_model._output_dim, 1)      # TODO: sort for different retriever and qa models
+        # # Deal with nans- these are caused by all sentences being padding.
+        # similarity[torch.isinf(similarity).all(dim=-1)] = 1 / similarity.size(0)
+        # if torch.isinf(similarity).all(dim=-1).any():
+        #     raise ValueError('All retrievals are -inf for a sample. This will lead to nan loss')
 
-        self.retriever_loss = nn.CrossEntropyLoss(reduction='none')
+        # return similarity
 
-        set_dropout(self.retriever_model, 0.0)
-        set_dropout(self.qa_model, 0.0)
+        return sim
+
 
 
 def set_dropout(model, drop_rate=0.1):
