@@ -68,6 +68,7 @@ class GumbelSoftmaxRetrieverReasoner(Model):
 
         self.define_modules()
         self.W = nn.Linear(self.retriever_model.embedder.config.hidden_size, 1)        # TODO
+        self.answers = []
 
     def get_retrieval_distr(self, qr, meta=None):
         ''' Compute the probability of retrieving each item given
@@ -118,13 +119,10 @@ class GumbelSoftmaxRetrieverReasoner(Model):
         qr = _qr[:]       # shape = (bsz, context_len, sentence_len)
         _d = qr.device
 
-        # if 'RelNeg-D5-168-1' == metadata[0]['id']:
-        #     flag = True
-        # else:
-        #     flag = False
         flag = False
-
-        self.d0_match_idx = metadata[0]['exact_match']      # TODO
+        self.ms = torch.tensor([m['exact_match'] for m in metadata]).to(_d)
+        nl = [torch.tensor(m['node_label'][:-1]).nonzero().squeeze().to(_d) for m in metadata] # [:-1] because final node is NAF node
+        naf = [torch.tensor(m['node_label'][-1:]).nonzero().squeeze().to(_d) for m in metadata]
 
         # TODO: add an "end" context item of a blank one or something....
 
@@ -136,7 +134,7 @@ class GumbelSoftmaxRetrieverReasoner(Model):
             policy = self.get_retrieval_distr(qr, metadata)
             action = self.gs(policy, tau=1)
             if flag:
-                action = torch.zeros_like(action).scatter(1, torch.tensor([[16]]).cuda(), 1)
+                action = torch.zeros_like(action).scatter(1, torch.tensor([16]*action.size(0)).view(-1,1).cuda(), 1)
             loss = self.retriever_loss(policy, action.argmax(-1))
 
             policies.append(policy)
@@ -146,15 +144,43 @@ class GumbelSoftmaxRetrieverReasoner(Model):
             q = qr.gather(1, action.argmax(-1).view(-1, 1, 1).repeat(1, 1, qr.size(-1))).squeeze(1)
             qr, metadata = self.prep_next_batch(qr, metadata, actions, t)
 
-            if self.d0_match_idx == action.argmax(-1).item():
+            a = action.argmax(-1)
+            p = policy.argmax(-1)
+            p_ = policy.softmax(-1)
+            argmax_ps = p_.gather(1, p.unsqueeze(1)).squeeze()
+            action_ps = p_.gather(1, a.unsqueeze(1)).squeeze()
+
+            if False:
+                # d=0 checks
+                ac, pol, both, e = None, None, None, None
+                correct_actions = (self.ms == a).nonzero()
+                correct_policy = (self.ms == p).nonzero()
+                # self.dataset_reader.decode(q[e])
+                # [self.dataset_reader.decode(_qr[e,i]) for i in range(_qr.size(1))]
+                # p_[e, self.ms[e]]
+                correct_both = ((self.ms == p) & (self.ms == a)).nonzero()
+                em = (self.ms != -1).nonzero()
+                if correct_actions.numel():
+                    ac = correct_actions[0,0]
+                    print('A')
+                if correct_policy.numel():
+                    pol = correct_policy[0,0]
+                    print('B')
+                if em.numel():
+                    e = em[0,0]
+                if correct_both.numel():
+                    idx = correct_policy[0,0]
+                    print('C')
+
+            # d=1 checks
+            i = 0
+            if a[i] in nl[i]:
                 print('A')
-
-            if self.d0_match_idx == policy.argmax(-1).item():
+            if p[i] in nl[i]:
                 print('B')
-
-            if (self.d0_match_idx == action.argmax(-1).item()) and (self.d0_match_idx == policy.argmax(-1).item()):
-                print('D')
-
+            if a[i] in nl[i] and p[i] in nl[i]:
+                print('C')
+            
         # Query answering phase
         self.update_meta(q, metadata, actions)
         output = self.answer(q, label, metadata)
@@ -162,25 +188,49 @@ class GumbelSoftmaxRetrieverReasoner(Model):
         # Scale retrieval losses by final loss
         qa_loss = output['loss'].detach()
         qa_scale = torch.gather(output['label_probs'].detach(), dim=1, index=label.unsqueeze(1))
-        unscaled_retrieval_losses_ = torch.cat([u.unsqueeze(0) for u in unscaled_retrieval_losses])
-        retrieval_losses = qa_scale * unscaled_retrieval_losses_ / unscaled_retrieval_losses_.size(0)      # NOTE: originals
+        unscaled_retrieval_losses_ = torch.cat([u.unsqueeze(1) for u in unscaled_retrieval_losses], dim=1)      # TODO: check this works for bsz > 1
+        retrieval_losses = qa_scale * unscaled_retrieval_losses_ / unscaled_retrieval_losses_.size(1)      # NOTE: originals
         # retrieval_losses = output['label_probs'][:,1].detach() * qa_scale * unscaled_retrieval_losses_ / unscaled_retrieval_losses_.size(0)      # NOTE: originals
         # total_loss = qa_loss + unscaled_retrieval_losses_ #retrieval_losses
         total_loss = retrieval_losses
         output['loss'] = total_loss.mean()
         # output['loss'] = loss
         # output['loss'] = unscaled_retrieval_losses_.mean()
-        
-        # Record trajectory data
-        output['unnorm_policies'] = policies
-        output['sampled_actions'] = torch.cat([a.unsqueeze(0) for a in actions]).argmax(dim=-1)
+
+        # # Record trajectory data
+        pol = torch.cat([p.unsqueeze(0) for p in policies])
+        act = torch.cat([a.unsqueeze(0) for a in actions])
+        # output['unnorm_policies'] = policies
+        # output['sampled_actions'] = torch.cat([a.unsqueeze(0) for a in actions]).argmax(dim=-1)
+
+        # d=1 further checks
+        correct_acts = torch.equal(act.argmax(-1).unique(), nl[i])
+        correct_pols = torch.equal(pol.argmax(-1).unique(), nl[i])
+        max_probs = [p.softmax(-1)[i,k].item() for k,p in zip(pol.argmax(-1).squeeze().tolist(), policies)]     # Probability of the most likely action given the policy
+        act_probs = [p.softmax(-1)[i,k].item() for k,p in zip(act.argmax(-1).squeeze().tolist(), policies)]     # Probability of selecting the action given the policy
+        nl_probs = [p.softmax(-1)[i,nl[i]].tolist() for p in policies]      # The policy probabilities of selecting the proof items
+        if correct_acts:
+            print('AA')
+        if correct_pols:
+            print('BB')
+        if correct_acts and correct_pols:
+            print('CC')
 
         self._context_embs = None
 
         print(f'\n{qa_loss.mean().item():.3f}   {retrieval_losses.mean().item():.3f}   {(output["label_probs"].argmax(-1) == label).float().mean().item()}')
 
-        if (self.d0_match_idx == action.argmax(-1).item()) and (output["label_probs"].argmax(-1).item() == label):
-            print('C')
+        # if (self.ms == action.argmax(-1).item()) and (output["label_probs"].argmax(-1).item() == label):
+        #     print('C')
+
+        if any(output["label_probs"].argmax(-1) == label):
+            print('E')
+
+        self.answers.extend((output["label_probs"].argmax(-1) == label).tolist())
+        all_score = self.answers.count(True) / len(self.answers)
+        last_100 = self.answers[-100:].count(True) / len(self.answers[-100:])
+
+        print(f'\n\nAll: {all_score}\tLast 100: {last_100}')
 
         return output
 

@@ -96,13 +96,19 @@ class RetrievalReasoningReader(DatasetReader):
                 # incorrect questions are used
                 if 'not' in example.question and example.label:
                     continue
+                if 'not' in example.question:
+                    continue
                 if 'not' not in example.question and not example.label:
                     continue
+                if example.node_label[-1] == 1:
+                    continue
 
-            if not (example.qlen == '' or int(example.qlen) <= self._topk):
+            # if not (example.qlen == '' or int(example.qlen) <= self._topk):
+            if not int(example.qlen) == self._topk:
+            # if not (0 <= int(example.qlen) <= self._topk):
                 continue
 
-            yield self.text_to_instance(
+            yield self.text_to_instance(        # 'RelNeg-D5-1029-3'
                 item_id=example.id,
                 question_text=example.question.strip(),
                 context=example.context,
@@ -188,7 +194,7 @@ class RetrievalReasoningReader(DatasetReader):
 
     def _get_exact_match(self, question, context):
         context_lst = [toks.strip() + '.' for toks in context.split('.')[:-1]]
-        exact_match = context_lst.index(question) if question in context_lst else None
+        exact_match = context_lst.index(question) if question in context_lst else -1
         return exact_match
 
     def listfield_features_from_qa(self, question: str, context: str, already_retrieved, tokenizer):

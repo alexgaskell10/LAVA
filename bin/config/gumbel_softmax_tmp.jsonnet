@@ -1,7 +1,7 @@
 local max_pieces = 256;
 local skip_id_regex = "$none";
 local ruletaker_archive = "ruletaker/runs/depth-5-base/model.tar.gz";
-local dataset_dir = "ruletaker/inputs/dataset/tiny-rule-reasoning/depth-5/"; // "ruletaker/inputs/dataset/rule-reasoning-dataset-V2020.2.4/depth-5/"; "ruletaker/inputs/dataset/tiny-rule-reasoning/depth-3ext-NatLang/"
+local dataset_dir = "ruletaker/inputs/dataset/tiny-rule-reasoning/challenge/";
 local retriever_variant = "roberta-base";      // {spacy, roberta-base, roberta-large}
 local pretrained_model = "bin/runs/pretrain_retriever/rb-base/model.tar.gz";
 local cuda_device = 0;
@@ -12,7 +12,7 @@ local model_type = 'gumbel_softmax_unified';
 
 {
     "ruletaker_archive": ruletaker_archive,
-    "train_data_path": dataset_dir + "train.jsonl",
+    "train_data_path": dataset_dir + "train_.jsonl",
     "validation_data_path": dataset_dir + "test.jsonl",
     "test_data_path": dataset_dir + "test.jsonl",
     "dataset_reader": {
