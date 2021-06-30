@@ -41,6 +41,8 @@ class RetrievalReasoningReader(DatasetReader):
         retriever_variant: str = None,
         pretrained_retriever_model = None,
         topk: int = None,
+        longest_proof: int = 100,
+        shortest_proof: int = 1,
         concat_q_and_c: bool = None,
         true_samples_only: bool = False,
     ) -> None:
@@ -76,12 +78,33 @@ class RetrievalReasoningReader(DatasetReader):
         self._retriever_variant = retriever_variant
         self._concat = concat_q_and_c if concat_q_and_c is not None else (pretrained_retriever_model is not None)       # TODO
         self._topk = topk
+        self._longest = longest_proof
+        self._shortest = shortest_proof
         self._true_samples_only = true_samples_only
 
     @overrides
     def _read(self, file_path: str):
         instances = self._read_internal(file_path)
         return instances
+
+    def _read_internal_(self, file_path: str):
+        debug = -1
+
+        data_dir = '/'.join(file_path.split('/')[:-1])
+        dset = file_path.split('/')[-1].split('.')[0]
+        examples = RRProcessor().get_examples(data_dir, dset)
+
+        for example in examples:
+            yield self.text_to_instance(
+                item_id=example.id,
+                question_text=example.question.strip(),
+                context=example.context,
+                label=example.label,
+                debug=debug,
+                qdep=example.qdep,
+                qlen=example.qlen,
+                node_label=example.node_label
+            )
 
     def _read_internal(self, file_path: str):
         debug = -1
@@ -104,11 +127,11 @@ class RetrievalReasoningReader(DatasetReader):
                     continue
 
             # if not (example.qlen == '' or int(example.qlen) <= self._topk):
-            if not int(example.qlen) == self._topk:
-            # if not (0 <= int(example.qlen) <= self._topk):
+            # if not int(example.qlen) == self._topk:
+            if not (self._shortest <= int(example.qlen) <= self._longest):
                 continue
 
-            yield self.text_to_instance(        # 'RelNeg-D5-1029-3'
+            yield self.text_to_instance(
                 item_id=example.id,
                 question_text=example.question.strip(),
                 context=example.context,
@@ -164,6 +187,7 @@ class RetrievalReasoningReader(DatasetReader):
             "QDep": qdep,
             "node_label": node_label,
             "exact_match": exact_match if not qa_only else None,
+            "QLen": qlen,
         }
 
         if label is not None:

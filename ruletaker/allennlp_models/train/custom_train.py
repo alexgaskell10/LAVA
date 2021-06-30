@@ -58,6 +58,9 @@ from allennlp.models.model import _DEFAULT_WEIGHTS, Model
 from allennlp.training.trainer import Trainer
 from allennlp.training import util as training_util
 
+from ruletaker.allennlp_models.train.custom_trainer import CustomTrainer
+from ruletaker.allennlp_models.models.replay_buffer import ReplayMemory
+
 logger = logging.getLogger(__name__)
 
 
@@ -758,11 +761,14 @@ class TrainModel(Registrable):
         else:
             test_data_loader = None
 
+        replay_memory = ReplayMemory()
+
         # We don't need to pass serialization_dir and local_rank here, because they will have been
         # passed through the trainer by from_params already, because they were keyword arguments to
         # construct this class in the first place.
         trainer_ = trainer.construct(
             model=model_, data_loader=data_loader_, validation_data_loader=validation_data_loader_,
+            replay_memory=replay_memory,
         )
 
         # TODO: hack to stop scheduler below

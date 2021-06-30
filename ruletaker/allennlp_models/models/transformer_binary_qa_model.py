@@ -100,7 +100,6 @@ class TransformerBinaryQA(Model):
 
         self._debug = -1
 
-
     def forward(self, 
             phrase,#: Dict[str, torch.LongTensor],
             label: torch.LongTensor = None,
@@ -159,39 +158,72 @@ class TransformerBinaryQA(Model):
         if label is not None:
             loss = self._loss(label_logits, label)
             self._accuracy(label_logits, label)
-            output_dict["loss"] = loss  # TODO this is shortcut to get predictions fast..
+            output_dict["loss"] = loss
             output_dict["label"] = label
 
             # Hack to use wandb logging
             if os.environ['WANDB_LOG'] == 'true':
                 self.wandb_log(metadata, label_logits, label, loss)
 
-            # TODO
-            # for e, example in enumerate(metadata):
-            #     logits = sanitize(label_logits[e, :])
-            #     label_probs = sanitize(output_dict['label_probs'][e, :])
-            #     prediction = sanitize(output_dict['answer_index'][e])                    
-            #     prediction_dict = {
-            #         'id': example['id'],
-            #         'phrase': example['question_text'],
-            #         'context': example['context'],
-            #         'logits': logits,
-            #         'label_probs': label_probs,
-            #         'answer': example['label'],
-            #         'prediction': prediction,
-            #         'is_correct': (example['label'] == prediction) * 1.0,
-            #         'q_depth': example['QDep'] if 'QDep' in example else None,
-            #         'retrievals': example['topk'] if 'topk' in example else None,
-            #         'retrieval_recall': self.retrieval_recall(example) if 'node_label' in example else None
-            #     }
+            for e, example in enumerate(metadata):
+                logits = sanitize(label_logits[e, :])
+                label_probs = sanitize(output_dict['label_probs'][e, :])
+                prediction = sanitize(output_dict['answer_index'][e])                    
+                prediction_dict = {
+                    'id': example['id'],
+                    'phrase': example['question_text'],
+                    'context': example['context'],
+                    'logits': logits,
+                    'label_probs': label_probs,
+                    'answer': example['label'],
+                    'prediction': prediction,
+                    'is_correct': (example['label'] == prediction) * 1.0,
+                    'q_depth': example['QDep'] if 'QDep' in example else None,
+                    'retrievals': example['topk'] if 'topk' in example else None,
+                    'retrieval_recall': self.retrieval_recall(example) if 'node_label' in example else None
+                }
 
-            #     if 'skills' in example:
-            #         prediction_dict['skills'] = example['skills']
-            #     if 'tags' in example:
-            #         prediction_dict['tags'] = example['tags']
-            #     self._predictions.append(prediction_dict)
+                if 'skills' in example:
+                    prediction_dict['skills'] = example['skills']
+                if 'tags' in example:
+                    prediction_dict['tags'] = example['tags']
+                self._predictions.append(prediction_dict)
 
         return output_dict
+
+    def wandb_log(self, metadata, label_logits, label, loss):
+        prefix = 'train' if self.training else 'val'
+
+        # Metrics by proof length
+        if 'QLen' in metadata[0]:
+            len_accs = {}
+            retrieval_recalls = {}
+            q_lens = torch.tensor([m['QLen'] for m in metadata]).to(label.device)
+            for len_ in q_lens.unique():
+                idxs = (q_lens == len_).nonzero().squeeze()
+
+                # Accuracy
+                logits_ = label_logits[idxs]
+                labels_ = label[idxs]
+                ca = CategoricalAccuracy()
+                ca(logits_, labels_)
+                len_accs[f"{prefix}_acc_{len_}"] = ca.get_metric()
+
+                # Retrieval recall
+                meta = [metadata[i] for i in (idxs if idxs.dim() else idxs.unsqueeze(0)).tolist()]
+                retrieval_recalls[f"{prefix}_ret_recall_{len_}"] = self.batch_retrieval_recall(meta)
+
+            wandb.log({**len_accs, **retrieval_recalls}, commit=False)
+
+        # Aggregate metrics
+        c = CategoricalAccuracy()
+        c(label_logits, label)
+        wandb.log({
+            prefix+"_loss": loss.mean(), 
+            prefix+"_acc": self._accuracy.get_metric(), 
+            prefix+"_acc_noncuml": c.get_metric(),
+            prefix+"_ret_recall": self.batch_retrieval_recall(metadata),
+        })
 
     def retrieval_recall(self, example):
         proof_idxs = {n for n,i in enumerate(example['node_label'][:-1]) if i == 1}
@@ -209,40 +241,6 @@ class TransformerBinaryQA(Model):
                 if recall != -1:
                     recalls.append(recall)
         return sum(recalls) / len(recalls) if recalls else None
-
-    def wandb_log(self, metadata, label_logits, label, loss):
-        prefix = 'train' if self.training else 'val'
-
-        # Metrics by question depth
-        if 'QDep' in metadata[0]:
-            depth_accuracies = {}
-            retrieval_recalls = {}
-            q_depths = torch.tensor([m['QDep'] for m in metadata]).to(label.device)
-            for dep in q_depths.unique():
-                idxs = (q_depths == dep).nonzero().squeeze()
-
-                # Accuracy
-                logits_ = label_logits[idxs]
-                labels_ = label[idxs]
-                ca = CategoricalAccuracy()
-                ca(logits_, labels_)
-                depth_accuracies[f"{prefix}_acc_{dep}"] = ca.get_metric()
-
-                # Retrieval recall
-                meta = [metadata[i] for i in (idxs if idxs.dim() else idxs.unsqueeze(0)).tolist()]
-                retrieval_recalls[f"{prefix}_ret_recall_{dep}"] = self.batch_retrieval_recall(meta)
-
-            wandb.log({**depth_accuracies, **retrieval_recalls}, commit=False)
-
-        # Aggregate metrics
-        c = CategoricalAccuracy()
-        c(label_logits, label)
-        wandb.log({
-            prefix+"_loss": loss.mean(), 
-            prefix+"_acc": self._accuracy.get_metric(), 
-            prefix+"_acc_noncuml": c.get_metric(),
-            prefix+"_ret_recall": self.batch_retrieval_recall(metadata),
-        })
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         if reset == True and not self.training:
