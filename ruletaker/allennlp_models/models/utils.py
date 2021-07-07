@@ -79,3 +79,30 @@ def make_dot(var, params=None):
 
     add_nodes(var)
     return dot
+
+
+def set_dropout(model, drop_rate=0.1):
+    for name, child in model.named_children():
+        if isinstance(child, torch.nn.Dropout):
+            child.p = drop_rate
+        set_dropout(child, drop_rate=drop_rate)
+
+
+def one_hot(make_as, x):
+    return torch.zeros_like(make_as).scatter(1, x.unsqueeze(-1), 1)
+
+
+def lfilter(*args):
+    return list(filter(*args))
+
+
+def lmap(*args):
+    return list(map(*args))
+
+
+def flatten_list(l):
+    return [item for sublist in l for item in sublist]
+
+
+def lrange(*args):
+    return list(range(*args))

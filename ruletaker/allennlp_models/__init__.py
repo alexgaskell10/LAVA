@@ -12,7 +12,8 @@ try:
     from allennlp_models.models.transformer_binary_qa_retriever import TransformerBinaryQARetriever
     from allennlp_models.models.retriever import RetrievalScorer
     from allennlp_models.models.policy_gradients import PolicyGradientsAgent
-    from allennlp_models.models.gumbel_softmax import GumbelSoftmaxRetrieverReasoner
+    from allennlp_models.models.gumbel_softmax import GumbelSoftmaxRetrieverReasoner, ProgressiveDeepeningGumbelSoftmaxRetsrieverReasoner
+    from allennlp_models.models.utils import *
 except:
     from ruletaker.allennlp_models.dataset_readers.transformer_binary_qa_reader import TransformerBinaryReader
     from ruletaker.allennlp_models.dataset_readers.rule_reasoning_reader import RuleReasoningReader
@@ -26,4 +27,5 @@ except:
     from ruletaker.allennlp_models.train.custom_trainer import *
     from ruletaker.allennlp_models.models.transformer_binary_qa_retriever import TransformerBinaryQARetriever
     from ruletaker.allennlp_models.models.retriever import RetrievalScorer
-    from ruletaker.allennlp_models.models.gumbel_softmax import GumbelSoftmaxRetrieverReasoner
+    from ruletaker.allennlp_models.models.gumbel_softmax import GumbelSoftmaxRetrieverReasoner, ProgressiveDeepeningGumbelSoftmaxRetsrieverReasoner
+    from ruletaker.allennlp_models.models.utils import *

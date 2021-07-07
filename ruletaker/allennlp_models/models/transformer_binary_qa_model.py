@@ -74,7 +74,7 @@ class TransformerBinaryQA(Model):
             self._padding_value = 0  # The index of the BERT padding token
             self._dropout = torch.nn.Dropout(self._transformer_model.config.hidden_dropout_prob)
         else:
-            assert (ValueError)
+            assert ValueError
 
         for name, param in self._transformer_model.named_parameters():
             if layer_freeze_regexes and requires_grad:
@@ -108,7 +108,7 @@ class TransformerBinaryQA(Model):
         ) -> torch.Tensor:
 
         self._debug -= 1
-        input_ids = phrase['tokens']['token_ids']
+        input_ids = phrase['tokens']['token_ids']       # TODO sort for both forward passes
         segment_ids = phrase['tokens']['type_ids']
 
         question_mask = (input_ids != self._padding_value).long()
@@ -147,17 +147,22 @@ class TransformerBinaryQA(Model):
 
         label_logits = self._classifier(cls_output)
 
+        if label_logits.size(1) == 2:
+            label_logits_ = label_logits
+        elif label_logits.size(1) == 1:
+            label_logits_ = torch.cat([(1-label_logits.sigmoid()).log(), label_logits.sigmoid().log()], axis=1)
+            assert ((label_logits_.softmax(-1)[:,1:2] - label_logits.sigmoid()) < 1e-5).all()
+
         output_dict = {}
         output_dict['label_logits'] = label_logits
-        output_dict['label_probs'] = torch.nn.functional.softmax(label_logits, dim=1)
-        output_dict['answer_index'] = label_logits.argmax(1)
-
+        output_dict['label_probs'] = torch.nn.functional.softmax(label_logits_, dim=1)
+        output_dict['answer_index'] = label_logits_.argmax(1)
         output_dict['cls_output'] = cls_output
         output_dict['pooled_output'] = pooled_output
 
         if label is not None:
-            loss = self._loss(label_logits, label)
-            self._accuracy(label_logits, label)
+            loss = self._loss(label_logits_, label)
+            self._accuracy(label_logits_, label)
             output_dict["loss"] = loss
             output_dict["label"] = label
 
@@ -179,8 +184,9 @@ class TransformerBinaryQA(Model):
                     'prediction': prediction,
                     'is_correct': (example['label'] == prediction) * 1.0,
                     'q_depth': example['QDep'] if 'QDep' in example else None,
+                    'q_length': example['QDep'] if 'QLen' in example else None,
                     'retrievals': example['topk'] if 'topk' in example else None,
-                    'retrieval_recall': self.retrieval_recall(example) if 'node_label' in example else None
+                    'retrieval_recall': self.retrieval_recall(example) if 'node_label' in example and 'topk' in example else None
                 }
 
                 if 'skills' in example:

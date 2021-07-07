@@ -14,11 +14,11 @@ Transition = namedtuple('Transition',
 class ReplayMemory:
     def __init__(self, capacity=1e5):
         self._capacity = capacity
-        self._empty_deque()
+        self.empty()
 
-    def push(self, *args):
+    def push(self, sample):
         '''Save a transition'''
-        self.memory.append(Transition(*args))
+        self.memory.append(sample)
 
     def sample(self, batch_size):
         return random.sample(self.memory, batch_size)
@@ -26,11 +26,11 @@ class ReplayMemory:
     def __len__(self):
         return len(self.memory)
     
-    def _empty_deque(self):
+    def empty(self):
         self.memory = deque([], maxlen=int(self._capacity))
 
+    def peek(self, idx=0):
+        return self.memory[idx]
 
-'''
-- Whole sample (get sampler index somehow?!?)
-- Retrievals and order of retrievals
-'''
+    def __iter__(self):
+        yield from self.memory

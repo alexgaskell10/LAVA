@@ -5,12 +5,12 @@ local dataset_dir = "ruletaker/inputs/dataset/tiny-rule-reasoning/challenge/";
 local retriever_variant = "roberta-base";      // {spacy, roberta-base, roberta-large}
 local pretrained_model = "bin/runs/pretrain_retriever/rb-base/model.tar.gz";
 local cuda_device = 0;
-local batch_size = 4;
-local num_gradient_accumulation_steps = 2;
-local topk = 2;
+local batch_size = 1;
+local num_gradient_accumulation_steps = 1;
+local topk = 1;
 local longest_proof = topk;
 local shortest_proof = 1;
-local model_type = 'gumbel_softmax_unified';
+local model_type = 'gumbel_softmax_pg';
 
 {
     "ruletaker_archive": ruletaker_archive,
@@ -36,7 +36,10 @@ local model_type = 'gumbel_softmax_unified';
     "trainer": {
         "type": "custom_trainer",
         "cuda_device": cuda_device,
-        "num_gradient_accumulation_steps": num_gradient_accumulation_steps
+        "num_gradient_accumulation_steps": num_gradient_accumulation_steps,
+        "topk": topk,
+        "longest_proof": longest_proof,
+        "shortest_proof": shortest_proof
     },
     "data_loader": {
         "batch_sampler": {
@@ -44,6 +47,6 @@ local model_type = 'gumbel_softmax_unified';
             "type": "custom",
             "sampler": "custom_sequential",
             "drop_last": false
-        }    
+        }
     }
 }

@@ -5,16 +5,16 @@ local dataset_dir = "ruletaker/inputs/dataset/tiny-rule-reasoning/challenge/";
 local retriever_variant = "roberta-base";      // {spacy, roberta-base, roberta-large}
 local pretrained_model = "bin/runs/pretrain_retriever/rb-base/model.tar.gz";
 local cuda_device = 0;
-local batch_size = 4;
-local num_gradient_accumulation_steps = 2;
-local topk = 2;
+local batch_size = 2;
+local num_gradient_accumulation_steps = 4;
+local topk = 5;
 local longest_proof = topk;
 local shortest_proof = 1;
-local model_type = 'gumbel_softmax_unified';
+local model_type = 'gumbel_softmax_pg';
 
 {
     "ruletaker_archive": ruletaker_archive,
-    "train_data_path": dataset_dir + "train_.jsonl",
+    "train_data_path": dataset_dir + "train__.jsonl",
     "validation_data_path": dataset_dir + "test.jsonl",
     "test_data_path": dataset_dir + "test.jsonl",
     "dataset_reader": {
@@ -34,14 +34,18 @@ local model_type = 'gumbel_softmax_unified';
         "topk": topk
     },
     "trainer": {
+        "type": "custom_trainer",
         "cuda_device": cuda_device,
-        "num_gradient_accumulation_steps": num_gradient_accumulation_steps
+        "num_gradient_accumulation_steps": num_gradient_accumulation_steps,
+        "topk": topk,
+        "longest_proof": longest_proof,
+        "shortest_proof": shortest_proof
     },
     "data_loader": {
         "batch_sampler": {
             "batch_size": batch_size,
-            "type": "basic",
-            "sampler": "sequential",
+            "type": "custom",
+            "sampler": "custom_sequential",
             "drop_last": false
         }
     }

@@ -47,6 +47,7 @@ class SpacyRetrievalEmbedder(BaseRetrievalEmbedder):
         ''' Compute sentence embeddings of input ids using chosen 
             embedding method.
         '''
+        raise NotImplementedError
         # Compute token embeddings
         token_embs = self.embedder(idxs)    # [bsz, context_sentences, max_context_tokens, emb_dim]
 

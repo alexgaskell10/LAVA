@@ -138,7 +138,7 @@ class RetrievalReasoningReader(DatasetReader):
                 label=example.label,
                 debug=debug,
                 qdep=example.qdep,
-                qlen=example.qlen,
+                qlen=sum(example.node_label[:-1]), #example.qlen,
                 node_label=example.node_label
             )
 
@@ -241,12 +241,13 @@ class RetrievalReasoningReader(DatasetReader):
         ''' Convert question + context strings into a batch
             which is ready for the qa model.
         '''
+        # TODO: dynamically set which model the batch is being prepped for
         data = []
         for question, already_retrieved, context in sentences:
             instance = self.text_to_instance(
                 item_id = "", 
                 question_text = question, 
-                context = context, 
+                context = context,
                 already_retrieved = already_retrieved,
                 qa_only = False
             )
