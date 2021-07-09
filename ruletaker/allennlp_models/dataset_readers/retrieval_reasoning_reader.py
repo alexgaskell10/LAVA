@@ -114,6 +114,8 @@ class RetrievalReasoningReader(DatasetReader):
         examples = RRProcessor().get_examples(data_dir, dset)
 
         for example in examples:
+            example.qlen = sum(example.node_label[:-1])
+            
             if self._true_samples_only:
                 # Filter so only positive correct questions and negative
                 # incorrect questions are used
@@ -138,7 +140,7 @@ class RetrievalReasoningReader(DatasetReader):
                 label=example.label,
                 debug=debug,
                 qdep=example.qdep,
-                qlen=sum(example.node_label[:-1]), #example.qlen,
+                qlen=example.qlen,
                 node_label=example.node_label
             )
 

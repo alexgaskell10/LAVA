@@ -19,8 +19,9 @@ from allennlp.training.metrics import CategoricalAccuracy
 from .retriever_embedders import (
     SpacyRetrievalEmbedder, TransformerRetrievalEmbedder
 )
-from .utils import safe_log, right_pad, batch_lookup, EPSILON, make_dot, set_dropout, one_hot
+from .utils import safe_log, right_pad, batch_lookup, EPSILON, make_dot, set_dropout, one_hot, lmap, lfilter
 from .transformer_binary_qa_model import TransformerBinaryQA
+from .baseline import Baseline
 
 torch.manual_seed(0)
 
@@ -56,7 +57,6 @@ class GumbelSoftmaxRetrieverReasoner(Model):
         self.x = -111
         self.gamma = 1          # TODO
         self.beta = 1           # TODO
-        self.n_mc = 5           # TODO
         self.num_rollout_steps = topk
         self.retriever_model = None
         self.run_analysis = False   # TODO
@@ -67,7 +67,8 @@ class GumbelSoftmaxRetrieverReasoner(Model):
         self._flag = False
         self._replay_memory = None
         self._mode = 'retrieval'
-        self.b = 0.0
+        # self.b = 0.0
+        self.b = Baseline()
 
         self.define_modules()
         self.answers = {}
@@ -111,7 +112,11 @@ class GumbelSoftmaxRetrieverReasoner(Model):
             unscaled_retrieval_losses.append(loss)
 
             q = qr.gather(1, action.argmax(-1).view(-1, 1, 1).repeat(1, 1, qr.size(-1))).squeeze(1)
-            qr, metadata = self.prep_next_batch(qr, metadata, actions, t)
+            if t == self.num_rollout_steps:
+                metadata = self.prep_next_batch(qr, metadata, actions, t, False)
+            else:
+                qr, metadata = self.prep_next_batch(qr, metadata, actions, t, True)
+
 
             if True:
                 a = action.argmax(-1)
@@ -128,7 +133,7 @@ class GumbelSoftmaxRetrieverReasoner(Model):
         qa_loss = output['loss'].detach()
         qa_scale = torch.gather(output['label_probs'].detach(), dim=1, index=label.unsqueeze(1))
         unscaled_retrieval_losses_ = torch.cat([u.unsqueeze(1) for u in unscaled_retrieval_losses], dim=1)
-        retrieval_losses = (qa_scale - self.b) * unscaled_retrieval_losses_ / unscaled_retrieval_losses_.size(1)      # NOTE: originals
+        retrieval_losses = (qa_scale - self.b()) * unscaled_retrieval_losses_ / unscaled_retrieval_losses_.size(1)      # NOTE: originals
         # retrieval_losses = (qa_loss.unsqueeze(1) - self.b) * unscaled_retrieval_losses_ / unscaled_retrieval_losses_.size(1)      # NOTE: originals
         # total_loss = qa_loss + unscaled_retrieval_losses_ #retrieval_losses
         total_loss = retrieval_losses
@@ -510,7 +515,3 @@ class ProgressiveDeepeningGumbelSoftmaxRetsrieverReasoner(GumbelSoftmaxRetriever
             return self.dataset_reader.decode(ids)
         else:
             raise NotImplementedError
-
-
-def lmap(*args):
-    return list(map(*args))
