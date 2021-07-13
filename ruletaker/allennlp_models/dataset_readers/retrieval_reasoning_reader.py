@@ -4,6 +4,7 @@ import logging
 import random
 import re
 
+from torch import Tensor
 from overrides import overrides
 
 from allennlp.common.file_utils import cached_path
@@ -258,6 +259,25 @@ class RetrievalReasoningReader(DatasetReader):
 
         return allennlp_collate(data)
 
+    def encode_batch(self, sentences, vocab):
+        ''' Convert question + context strings into a batch
+            which is ready for the qa model.
+        '''
+        # TODO: dynamically set which model the batch is being prepped for
+        data = []
+        for question, already_retrieved, label in sentences:
+            instance = self.text_to_instance(
+                item_id = "", 
+                question_text = question, 
+                context = already_retrieved,
+                qa_only = True,
+                label = label.item(),
+            )
+            instance.index_fields(vocab)
+            data.append(instance)
+
+        return allennlp_collate(data)
+
     def decode(self, input_id, mode='qa', vocab=None):
         ''' Helper to decode a tokenized sequence.
         '''
@@ -277,5 +297,22 @@ class RetrievalReasoningReader(DatasetReader):
         elif mode == 'retriever':
             return self._tokenizer_retriever_internal.pad_token_id
         else:
-            raise NotImplementedError()
+            raise NotImplementedError
 
+    def encode_token(self, tok, mode):
+        if mode == 'qa':
+            return self._tokenizer_qamodel.tokenizer.encoder[tok]
+        elif mode == 'retriever':
+            return self._tokenizer_retriever.tokenizer.encoder[tok]
+        else:
+            raise NotImplementedError
+
+    def move(self, d: dict, device) -> dict:
+        for k in d:
+            if isinstance(d[k], dict):
+                d[k] = self.move(d[k], device)
+            elif isinstance(d[k], Tensor):
+                d[k] = d[k].to(device=device, non_blocking=True)
+        return d       
+
+    
