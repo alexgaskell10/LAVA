@@ -101,6 +101,79 @@ class RRProcessor(DataProcessor):
 
         return node_label, list(edge_label.flatten())
 
+    # def _get_node_edge_label_constrained(self, proofs, sentence_scramble, nfact, nrule):
+    #     node_labels = []
+    #     edge_labels = []
+    #     proof_idx = -1
+    #     max_len = float("inf")
+    #     for n, proof in enumerate(proofs.split("OR")):
+    #         # proof = proofs.split("OR")[0]
+    #         node_label = [0] * (nfact + nrule + 1)
+    #         edge_label = np.zeros((nfact + nrule + 1, nfact + nrule + 1), dtype=int)
+
+    #         if "FAIL" in proof:
+    #             nodes, edges = get_proof_graph_with_fail(proof)
+    #         else:
+    #             nodes, edges = get_proof_graph(proof)
+
+    #         component_index_map = {}
+    #         for (i, index) in enumerate(sentence_scramble):
+    #             if index <= nfact:
+    #                 component = "triple" + str(index)
+    #             else:
+    #                 component = "rule" + str(index - nfact)
+    #             component_index_map[component] = i
+    #         component_index_map["NAF"] = nfact+nrule
+
+    #         for node in nodes:
+    #             index = component_index_map[node]
+    #             node_label[index] = 1
+
+    #         edges = list(set(edges))
+    #         for edge in edges:
+    #             start_index = component_index_map[edge[0]]
+    #             end_index = component_index_map[edge[1]]
+    #             edge_label[start_index][end_index] = 1
+
+    #         # Mask impossible edges
+    #         for i in range(len(edge_label)):
+    #             for j in range(len(edge_label)):
+    #                 # Ignore diagonal
+    #                 if i == j:
+    #                     edge_label[i][j] = -100
+    #                     continue
+
+    #                 # Ignore edges between non-nodes
+    #                 if node_label[i] == 0 or node_label[j] == 0:
+    #                     edge_label[i][j] = -100
+    #                     continue
+
+    #                 is_fact_start = False
+    #                 is_fact_end = False
+    #                 if i == len(edge_label)-1 or sentence_scramble[i] <= nfact:
+    #                     is_fact_start = True
+    #                 if j == len(edge_label)-1 or sentence_scramble[j] <= nfact:
+    #                     is_fact_end = True
+
+    #                 # No edge between fact/NAF -> fact/NAF
+    #                 if is_fact_start and is_fact_end:
+    #                     edge_label[i][j] = -100
+    #                     continue
+
+    #                 # No edge between Rule -> fact/NAF
+    #                 if not is_fact_start and is_fact_end:
+    #                     edge_label[i][j] = -100
+    #                     continue
+
+    #         # Return the shortest proof
+    #         node_labels.append(node_label)
+    #         edge_labels.append(list(edge_label.flatten()))
+    #         if sum(node_label) < max_len:
+    #             max_len = sum(node_label)
+    #             proof_idx = n
+
+    #     return node_labels[proof_idx], edge_labels[proof_idx]
+
     def _get_node_edge_label_constrained(self, proofs, sentence_scramble, nfact, nrule):
         proof = proofs.split("OR")[0]
         node_label = [0] * (nfact + nrule + 1)

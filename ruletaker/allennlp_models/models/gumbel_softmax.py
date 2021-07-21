@@ -60,15 +60,15 @@ class GumbelSoftmaxRetrieverReasoner(Model):
         self.num_rollout_steps = topk
         self.retriever_model = None
         self.run_analysis = False   # TODO
-        self.baseline = 'n/a'
+        # self.baseline = 0
         self.training = True
         self._context_embs = None
         self.b = None
         self._flag = False
         self._replay_memory = None
         self._mode = 'retrieval'
-        # self.b = 0.0
-        self.b = Baseline()
+        self.b = 0.0
+        # self.b = Baseline()
 
         self.define_modules()
         self.answers = {}

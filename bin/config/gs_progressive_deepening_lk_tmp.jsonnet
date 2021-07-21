@@ -14,7 +14,7 @@ local model_type = 'gumbel_softmax_pg';
 
 {
     "ruletaker_archive": ruletaker_archive,
-    "train_data_path": dataset_dir + "train__.jsonl",
+    "train_data_path": dataset_dir + "train_.jsonl",
     "validation_data_path": dataset_dir + "test.jsonl",
     "test_data_path": dataset_dir + "test.jsonl",
     "dataset_reader": {

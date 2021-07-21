@@ -50,7 +50,7 @@ class ELBO(Model):
         self.variant = variant
         self.qa_model = qa_model        # TODO: replace with fresh transformerbinaryqa
         self.qa_model._loss = nn.CrossEntropyLoss(reduction='none')
-        # self._loss = nn.CrossEntropyLoss(reduction='none')
+        self.__loss = nn.CrossEntropyLoss(reduction='none')
         self._loss = nn.BCEWithLogitsLoss(reduction='none')
         self.qa_vocab = qa_model.vocab
         self.dataset_reader = dataset_reader
@@ -66,9 +66,9 @@ class ELBO(Model):
         self.x = nn.Parameter(torch.tensor(0.0), requires_grad=True)
         self._reinforce = Reinforce()#baseline_decay=baseline_decay)
         
-        set_dropout(self.infr_model, 0.0)
-        set_dropout(self.gen_model, 0.0)
-        set_dropout(self.qa_model, 0.0)
+        # set_dropout(self.infr_model, 0.0)
+        # set_dropout(self.gen_model, 0.0)
+        # set_dropout(self.qa_model, 0.0)
 
     def forward(self,
         phrase=None, label=None, metadata=None, retrieval=None, **kwargs,
@@ -99,12 +99,12 @@ class ELBO(Model):
 
         # Compute log probabilites from logits and sample. log probability = -loss
         target = torch.zeros_like(infr_logits).scatter_(1, z, 1.)
-        infr_logprobs = -self._loss(infr_logits, target).mean(-1)
-        gen_logprobs = -self._loss(gen_logits, target).mean(-1)
+        # infr_logprobs = -self._loss(infr_logits, target).mean(-1)
+        # gen_logprobs = -self._loss(gen_logits, target).mean(-1)
         qa_logprobs = -qa_output['loss']
 
-        # infr_logprobs = -self.__loss(infr_logits, z.squeeze(-1))
-        # gen_logprobs = -self.__loss(gen_logits, z.squeeze(-1))
+        infr_logprobs = -self.__loss(infr_logits, z.squeeze(-1))
+        gen_logprobs = -self.__loss(gen_logits, z.squeeze(-1))
 
         # Compute REINFORCE estimator for the inference network
         reinforce_reward = qa_logprobs - self._beta * (infr_logprobs - gen_logprobs)
@@ -112,7 +112,7 @@ class ELBO(Model):
 
         # Compute elbo
         elbo = qa_logprobs.detach() + self._beta * (gen_logprobs - infr_logprobs) + reinforce_likelihood       # WORKED WITH BUG
-        # elbo = qa_logprobs.detach() + self._beta * (gen_logprobs + infr_logprobs) - reinforce_likelihood
+        # elbo = qa_logprobs.detach() + self._beta * (gen_logprobs) + reinforce_likelihood
         outputs = {"loss": -elbo.mean()}
 
         # Compute optimization objective (i.e. expression that yields correct expressions for gradients when we differentiate it)
@@ -131,7 +131,7 @@ class ELBO(Model):
             self._pytorch_model.infr_model.model.encoder.layer[0].attention.self.key.weight.grad
             self._pytorch_model.qa_model._transformer_model.encoder.layer[0].attention.self.key.weight.grad
 
-        if True:
+        if self.n_z == 1:
             e = [m['exact_match'] for m in metadata]
             z_ = z.squeeze(-1)
             p = infr_logits.argmax(-1)
@@ -158,7 +158,7 @@ class ELBO(Model):
             query+retrievals. Also update the tensors for the next
             rollout pass.
         '''
-        # Concatenate query + retrival to make new query_retrieval matrix of idxs        
+        # Concatenate query + retrival to make new query_retrieval matrix of idxs
         sentences = []
         for topk, meta, e in zip(z, metadata, label):
             question = meta['question_text']
@@ -236,7 +236,7 @@ class _BaseSentenceClassifier(Model):
 
         # Concat first and last token idxs
         max_num_sentences = (x == self.split_idx).nonzero()[:,0].bincount().max() - 1
-        node_reprs = torch.full((x.size(0), max_num_sentences), -torch.tensor(float("inf"))).to(self._d)      # shape: (bsz, # sentences, 2, model_dim)
+        node_reprs = torch.full((x.size(0), max_num_sentences), -torch.tensor(float(1e9))).to(self._d)      # shape: (bsz, # sentences, 2, model_dim)
         for b in range(x.size(0)):
             # Create list of end idxs of each context item
             end_idxs = (x[b] == self.split_idx).nonzero().squeeze().tolist()
@@ -263,7 +263,7 @@ class _BaseSentenceClassifier(Model):
             node_logits = self._W(reprs_).squeeze(-1)                
             node_reprs[b, :len(node_logits)] = node_logits
 
-        return node_reprs.log_softmax(-1)       # TODO
+        return node_reprs.log_softmax(-1)
 
 
 class InferenceNetwork(_BaseSentenceClassifier):
