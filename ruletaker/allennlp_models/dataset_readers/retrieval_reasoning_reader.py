@@ -166,7 +166,8 @@ class RetrievalReasoningReader(DatasetReader):
         qa_field = TextField(qa_tokens, self._token_indexers_qamodel)
         fields['phrase'] = qa_field
 
-        if not qa_only:
+        # if not qa_only:
+        if False:
             # Tokenize context sentences seperately
             retrieval_listfield = self.listfield_features_from_qa(
                 question_text, context, already_retrieved, self._tokenizer_retriever
@@ -180,6 +181,7 @@ class RetrievalReasoningReader(DatasetReader):
             fields['sentences'] = ListField(
                 [TextField(toks, self._token_indexers_qamodel) for toks in qa_listfield]
             )
+        if True:
             exact_match = self._get_exact_match(question_text, context)
 
         metadata = {

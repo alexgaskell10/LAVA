@@ -711,19 +711,20 @@ class TrainModel(Registrable):
                 if key not in datasets:
                     raise ConfigurationError(f"invalid 'dataset_for_vocab_creation' {key}")
 
-        retriever_instance_generator = (
-            instance.fields['retrieval']
-            for key, dataset in datasets.items()
-            if not datasets_for_vocab_creation or key in datasets_for_vocab_creation
-            for instance in dataset
-        )
-
-        retriever_vocabulary = vocabulary.construct(instances=retriever_instance_generator)
-        if not retriever_vocabulary:
-            retriever_vocabulary = Vocabulary.from_instances(retriever_instance_generator)
-        
         vocabulary_ = archive.model.vocab
-        vocabulary_.extend_from_vocab(retriever_vocabulary)
+        if 'retrieval' in datasets['train'][0].fields:
+            retriever_instance_generator = (
+                instance.fields['retrieval']
+                for key, dataset in datasets.items()
+                if not datasets_for_vocab_creation or key in datasets_for_vocab_creation
+                for instance in dataset
+            )
+
+            retriever_vocabulary = vocabulary.construct(instances=retriever_instance_generator)
+            if not retriever_vocabulary:
+                retriever_vocabulary = Vocabulary.from_instances(retriever_instance_generator)
+            
+            vocabulary_.extend_from_vocab(retriever_vocabulary)
         model_ = retrieval_reasoning_model.construct(
             qa_model=archive.model,
             vocab=vocabulary_,

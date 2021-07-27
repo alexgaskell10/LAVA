@@ -2,19 +2,20 @@ local max_pieces = 512;
 local skip_id_regex = "$none";
 local ruletaker_archive = "ruletaker/runs/depth-5-base/model.tar.gz";
 local dataset_dir = "ruletaker/inputs/dataset/tiny-rule-reasoning/challenge/";
-local retriever_variant = "roberta-base";      // {spacy, roberta-base, roberta-large}
+local retriever_variant = "roberta-large";      // {spacy, roberta-base, roberta-large}
 local pretrained_model = "bin/runs/pretrain_retriever/rb-base/model.tar.gz";
-local cuda_device = 0;
-local batch_size = 24;
+local cuda_device = 1;
+local batch_size = 1;
 local num_gradient_accumulation_steps = 1;
-local topk = 10;
+local topk = 2;
+local num_monte_carlo = 4;
 local longest_proof = topk;
-local shortest_proof = 1;
+local shortest_proof = 2;
 local model_type = 'variational_inference_base';
 
 {
     "ruletaker_archive": ruletaker_archive,
-    "train_data_path": dataset_dir + "train_.jsonl",
+    "train_data_path": dataset_dir + "train__.jsonl",
     "validation_data_path": dataset_dir + "test.jsonl",
     "test_data_path": dataset_dir + "test.jsonl",
     "dataset_reader": {
@@ -31,7 +32,8 @@ local model_type = 'variational_inference_base';
         "variant": retriever_variant,
         "type": model_type,
         "sentence_embedding_method": "mean",
-        "topk": topk
+        "topk": topk,
+        "num_monte_carlo": num_monte_carlo
     },
     "trainer": {
         "cuda_device": cuda_device,
