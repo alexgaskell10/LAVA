@@ -65,7 +65,7 @@ class ELBO(Model):
         self._beta = 0.1        # Scale factor for KL_div TODO: set dynamically
         self._p0 = torch.tensor(-float(1e9))        # TODO: set dynamically
         self._n_mc = num_monte_carlo          # Number of monte carlo steps
-        self._logprob_method = 'log-mean-prob'#'log-sum-prob'#'BCE'#'log-sum-prob'      # TODO: set dynamically
+        self._logprob_method = 'BCE'#'log-sum-prob'#'BCE'#'log-sum-prob'      # TODO: set dynamically
         
         self.answers = {}
         # self.x = nn.Parameter(torch.tensor(0.0), requires_grad=True)
@@ -116,10 +116,10 @@ class ELBO(Model):
             if self._ == 0:
             # z = one_hot(z.squeeze(-1), torch.tensor([16]*z.size(0)).view(-1,1).cuda())
                 z = torch.tensor([16]*z.size(0)).view(*z.shape).to(self._d)
-                self._ = 1
+                self._ = 0      # TODO
             else:
                 z = torch.tensor([15]*z.size(0)).view(*z.shape).to(self._d)
-                self._ = 0
+                self._ = 1      # TODO
             # z = torch.tensor([[9,13]]).to(self._d)
         batch = self._prep_batch(z, metadata_, label_)
         qa_output = self.qa_model(**batch)
@@ -135,7 +135,6 @@ class ELBO(Model):
         # Compute elbo
         # elbo = qa_logprobs.detach() + self._beta * (gen_logprobs - infr_logprobs) + reinforce_likelihood       # WORKS WITH BUG
         elbo = qa_logprobs.detach() + self._beta * gen_logprobs + reinforce_likelihood       # CORRECT ACCORING TO YISHU
-        # elbo = qa_logprobs.detach() + self._beta * gen_logprobs - reinforce_likelihood       # CORRECT ACCORING TO YISHU
         outputs = {"loss": -elbo.mean()}
 
         with torch.no_grad():
@@ -438,7 +437,6 @@ class Reinforce(nn.Module):
     def forward(self, inputs, reward):
         # Detach the reward term, we don't want gradients to flow to through it.
         centered_reward = reward.detach() - self._reinforce_baseline
-        # centered_reward = reward.detach() - torch.log(torch.tensor(0.5))        # TODO
 
         # Update moving average baseline.
         self._reinforce_baseline += self._baseline_decay * centered_reward.mean().item()
