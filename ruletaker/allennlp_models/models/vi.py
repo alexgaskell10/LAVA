@@ -66,7 +66,7 @@ class ELBO(Model):
         self._beta = 0.1        # Scale factor for KL_div TODO: set dynamically
         self._p0 = torch.tensor(-float(1e9))        # TODO: set dynamically
         self._n_mc = num_monte_carlo          # Number of monte carlo steps
-        self._logprob_method = 'label_smoothing_CE'#'CE'#'log-sum-prob'      # TODO: set dynamically
+        self._logprob_method = 'CE'#'CE'#'log-sum-prob'      # TODO: set dynamically
         
         self.answers = {}
         # self.x = nn.Parameter(torch.tensor(0.0), requires_grad=True)
