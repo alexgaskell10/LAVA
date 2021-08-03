@@ -55,22 +55,25 @@ class ELBO(Model):
         self._mlloss = nn.BCEWithLogitsLoss(reduction='none')
         self.qa_vocab = qa_model.vocab
         self.dataset_reader = dataset_reader
-        self.infr_model = InferenceNetwork(variant=variant, vocab=vocab, dataset_reader=dataset_reader)
-        self.gen_model = GenerativeNetwork(variant=variant, vocab=vocab, dataset_reader=dataset_reader)
+        self.infr_model = InferenceNetwork(variant=variant, vocab=vocab, dataset_reader=dataset_reader, num_labels=1)
+        self.gen_model = GenerativeNetwork(variant=variant, vocab=vocab, dataset_reader=dataset_reader, num_labels=1)
         self.vocab = vocab
         self.regularizer = regularizer
         self.sentence_embedding_method = sentence_embedding_method
+        self.num_labels = num_labels
         
         self._n_z = topk        # Number of latent retrievals
         self._beta = 0.1        # Scale factor for KL_div TODO: set dynamically
         self._p0 = torch.tensor(-float(1e9))        # TODO: set dynamically
         self._n_mc = num_monte_carlo          # Number of monte carlo steps
-        self._logprob_method = 'BCE'#'log-sum-prob'#'BCE'#'log-sum-prob'      # TODO: set dynamically
+        self._logprob_method = 'label_smoothing_CE'#'CE'#'log-sum-prob'      # TODO: set dynamically
         
         self.answers = {}
         # self.x = nn.Parameter(torch.tensor(0.0), requires_grad=True)
         self._ = 0
         self._reinforce = Reinforce(baseline_decay=0.99)
+        self._alpha = 0.1
+        self._smoothloss = LabelSmoothingLoss(self._alpha)
         
         set_dropout(self.infr_model, 0.0)
         set_dropout(self.gen_model, 0.0)
@@ -92,7 +95,8 @@ class ELBO(Model):
         qlens = [m['QLen'] for m in metadata]
         qlens_ = [m['QLen'] for m in metadata for _ in range(self._n_mc)]
         metadata_ = [m for m in metadata for _ in range(self._n_mc)]
-        nodes = torch.cat([torch.tensor(m['node_label']).nonzero() for m in metadata], dim=1).T
+        if len(metadata) == 1:
+            nodes = torch.cat([torch.tensor(m['node_label']).nonzero().squeeze(1) for m in metadata[:1]], dim=0).T
         s = self.dataset_reader.decode(phrase['tokens']['token_ids'][0]).split('.')
         flag = False
 
@@ -110,8 +114,6 @@ class ELBO(Model):
         label_ = label.repeat_interleave(self._n_mc, dim=0)
 
         z = self._draw_samples(infr_logits, random_chance=False)        # (bsz * mc steps, num retrievals)
-        # while (z == 9).any() or (z == 13).any():    # TODO: remove
-        #     z = self._draw_samples(infr_logits, random_chance=False)
         if flag:
             if self._ == 0:
             # z = one_hot(z.squeeze(-1), torch.tensor([16]*z.size(0)).view(-1,1).cuda())
@@ -131,11 +133,12 @@ class ELBO(Model):
         # Compute REINFORCE estimator for the inference network
         reinforce_reward = qa_logprobs - self._beta * (infr_logprobs - gen_logprobs)
         reinforce_likelihood = self._reinforce(infr_logprobs, reinforce_reward)
+        # reinforce_likelihood = self._reinforce(infr_logprobs, reinforce_reward.exp())
 
         # Compute elbo
         # elbo = qa_logprobs.detach() + self._beta * (gen_logprobs - infr_logprobs) + reinforce_likelihood       # WORKS WITH BUG
         elbo = qa_logprobs.detach() + self._beta * gen_logprobs + reinforce_likelihood       # CORRECT ACCORING TO YISHU
-        outputs = {"loss": -elbo.mean()}
+        outputs = {"loss": -elbo.sum() / self._n_mc}
 
         with torch.no_grad():
             z_baseline = self._draw_samples(infr_logits, random_chance=True)
@@ -162,7 +165,6 @@ class ELBO(Model):
             argmax_ps = p_.gather(1, p.unsqueeze(1)).squeeze()
             action_ps = p_.gather(1, z_.unsqueeze(1)).squeeze()
 
-        # outputs = {"loss": -(self.x - 4)**2}
         return outputs
 
     def _compute_logprobs(self, z, *logits):
@@ -175,7 +177,16 @@ class ELBO(Model):
             logprobs = [-self._mlloss(logit, target).mean(-1) for logit in logits]
         elif self._logprob_method == 'CE':
             # Using CE loss (single-label): logprob = -CE loss
-            logprobs = [-self._loss(logit, z.squeeze(-1)) for logit in logits]
+            # logprobs = [-self._loss(logit, z.squeeze(-1)) for logit in logits]
+            logprobs = []
+            for logit in logits:
+                ce_losses = torch.cat([-self._loss(logit, z[:, i]).unsqueeze(1) for i in range(z.size(1))], dim=1)
+                logprobs.append(ce_losses.mean(-1))
+        elif self._logprob_method == 'label_smoothing_CE':
+            logprobs = []
+            for logit in logits:
+                ce_losses = torch.cat([-self._smoothloss(logit, z[:, i]).unsqueeze(1) for i in range(z.size(1))], dim=1)
+                logprobs.append(ce_losses.mean(-1))
         elif self._logprob_method == 'log-mean-prob':
             # Compute log mean probability. Generalizes CE loss for
             # when retrieving more than one z
@@ -219,6 +230,7 @@ class ELBO(Model):
                 last_100 = self.answers[d][-100:].count(True) / len(self.answers[d][-100:])
                 print(f'\nL: {d}\tAll: {all_score:.4f}\tLast 100: {last_100:.2f}\tN: {len(self.answers[d])}')
         else:
+            n = self._n_mc * 100
             for d, c, r in zip(qlens, acc, ref.repeat_interleave(self._n_mc, dim=0)):
                 if d not in self.answers:
                     self.answers[d] = [[], []]
@@ -227,10 +239,10 @@ class ELBO(Model):
 
             for d in sorted(self.answers.keys()):
                 all_score_a = self.answers[d][0].count(True) / len(self.answers[d][0])
-                last_100_a = self.answers[d][0][-100:].count(True) / len(self.answers[d][0][-100:])
+                last_100_a = self.answers[d][0][-n:].count(True) / len(self.answers[d][0][-n:])
                 all_score_r = self.answers[d][1].count(True) / len(self.answers[d][1])
-                last_100_r = self.answers[d][1][-100:].count(True) / len(self.answers[d][1][-100:])
-                print(f'\nM:\tL: {d}\tAll: {all_score_a:.4f}\tLast 400: {last_100_a:.2f}\tB:\tAll: {all_score_r:.4f}\tLast 400: {last_100_r:.2f}\tN: {len(self.answers[d][0])}')
+                last_100_r = self.answers[d][1][-n:].count(True) / len(self.answers[d][1][-n:])
+                print(f'\nM:\tL: {d}\tAll: {all_score_a:.4f}\tLast {n}: {last_100_a:.2f}\tB:\tAll: {all_score_r:.4f}\tLast {n}: {last_100_r:.2f}\tN: {len(self.answers[d][0])}')
             
     def _prep_batch(self, z, metadata, label):
         ''' Concatenate the latest retrieval to the current 
@@ -299,12 +311,56 @@ class _BaseSentenceClassifier(Model):
         self._W = NodeClassificationHead(self._output_dim * self.node_class_k, 0, num_labels)
 
         self._accuracy = CategoricalAccuracy()
-        self._loss = torch.nn.CrossEntropyLoss()
+        self._loss = nn.CrossEntropyLoss()
+        self.num_labels = num_labels
 
         # Split sentences in the context based on full stop
         self.split_idx = self.dataset_reader.encode_token('.', mode='retriever')
 
         self._p0 = torch.tensor(-float(1e9))
+
+    def forward_(self, x) -> torch.Tensor:
+        ''' Forward pass of the network. Outputs a distribution over sentences z. 
+
+            - q(z|e,q,c) - variational distribution (infr_model)
+            - e: entailment relation [0,1] (i.e. does q follow from c (or z))
+            - z: retrievals (subset of c)
+            - c: context (rules + facts)
+            - q: claim
+        '''
+        # Compute representations
+        embs = self.model(x)[0]
+
+        # Concat first and last token idxs
+        max_num_sentences = (x == self.split_idx).nonzero()[:,0].bincount().max() - 1
+        node_reprs = torch.full((x.size(0), max_num_sentences), self._p0).to(self._d)      # shape: (bsz, # sentences, 2, model_dim)
+        for b in range(x.size(0)):
+            # Create list of end idxs of each context item
+            end_idxs = (x[b] == self.split_idx).nonzero().squeeze().tolist()
+            q_end = end_idxs.pop(0)     # Remove first item as this is the question
+            end_idxs.insert(0, q_end + 4)   # Tokenizer adds four "decorative" tokens at the beginning of the context
+
+            # Form tensor containing embedding of first and last token for each sentence
+            reprs = torch.zeros(len(end_idxs)-1, self.node_class_k, embs.size(-1)).to(self._d)      # shape: (# context items, 2, model_dim)
+            for i in range(len(end_idxs)-1):
+                start_idx = end_idxs[i] + 1            # +1 to skip full stop at beginning
+                end_idx = end_idxs[i+1] + 1            # +1 to include full stop at end
+                
+                # Extract reprs for tokens in the sentence from the original encoded sequence
+                if self.node_class_method == 'concat_first_last':
+                    reprs[i, 0] = embs[b, start_idx]
+                    reprs[i, 1] = embs[b, end_idx]
+                elif self.node_class_method == 'mean':
+                    reprs[i, 0] = embs[b, start_idx:end_idx].mean(dim=0)
+                else:
+                    raise NotImplementedError
+
+            # Pass through classifier
+            reprs_ = reprs.view(reprs.size(0), -1)
+            node_logits = self._W(reprs_).squeeze(-1)                
+            node_reprs[b, :len(node_logits)] = node_logits
+
+        return node_reprs
 
     def forward(self, x) -> torch.Tensor:
         ''' Forward pass of the network. Outputs a distribution over sentences z. 
@@ -320,7 +376,7 @@ class _BaseSentenceClassifier(Model):
 
         # Concat first and last token idxs
         max_num_sentences = (x == self.split_idx).nonzero()[:,0].bincount().max() - 1
-        node_reprs = torch.full((x.size(0), max_num_sentences), self._p0).to(self._d)      # shape: (bsz, # sentences, 2, model_dim)
+        node_reprs = torch.full((x.size(0), max_num_sentences), self._p0).to(self._d)      # shape: (bsz, # sentences)
         for b in range(x.size(0)):
             # Create list of end idxs of each context item
             end_idxs = (x[b] == self.split_idx).nonzero().squeeze().tolist()
@@ -460,3 +516,19 @@ class NodeClassificationHead(nn.Module):
         x = self.dropout(x)
         x = self.out_proj(x)
         return x
+
+
+class LabelSmoothingLoss(nn.Module):
+    def __init__(self, classes, smoothing=0.0, dim=-1):
+        super(LabelSmoothingLoss, self).__init__()
+        self.confidence = 1.0 - smoothing
+        self.smoothing = smoothing
+        self.dim = dim
+
+    def forward(self, pred, target):
+        pred = pred.log_softmax(dim=self.dim)
+        with torch.no_grad():
+            # true_dist = pred.data.clone()
+            true_dist = torch.full_like(pred, self.smoothing / (pred.size(1) - 1))
+            true_dist.scatter_(1, target.data.unsqueeze(1), self.confidence)
+        return torch.mean(torch.sum(-true_dist * pred, dim=self.dim))

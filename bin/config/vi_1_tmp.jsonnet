@@ -4,18 +4,18 @@ local ruletaker_archive = "ruletaker/runs/depth-5-base/model.tar.gz";
 local dataset_dir = "ruletaker/inputs/dataset/tiny-rule-reasoning/challenge/";
 local retriever_variant = "roberta-base";      // {spacy, roberta-base, roberta-large}
 local pretrained_model = "bin/runs/pretrain_retriever/rb-base/model.tar.gz";
-local cuda_device = 0;
+local cuda_device = 6;
 local batch_size = 1;
 local num_gradient_accumulation_steps = 1;
 local topk = 2;
 local num_monte_carlo = 8;
 local longest_proof = topk;
-local shortest_proof = 2;
+local shortest_proof = 1;
 local model_type = 'variational_inference_base';
 
 {
     "ruletaker_archive": ruletaker_archive,
-    "train_data_path": dataset_dir + "train_2.jsonl",
+    "train_data_path": dataset_dir + "train_.jsonl",
     "validation_data_path": dataset_dir + "test.jsonl",
     "test_data_path": dataset_dir + "test.jsonl",
     "dataset_reader": {
