@@ -698,7 +698,16 @@ class TrainModel(Registrable):
             you should only very rarely evaluate your model on actual test data.
         """
 
-        datasets = training_util.read_all_datasets(
+        # datasets = training_util.read_all_datasets(
+        #     train_data_path=train_data_path,
+        #     dataset_reader=dataset_reader,
+        #     validation_dataset_reader=validation_dataset_reader,
+        #     validation_data_path=validation_data_path,
+        #     test_data_path=test_data_path,
+        # )
+
+        from ruletaker.allennlp_models.train.utils import read_all_datasets
+        datasets = read_all_datasets(
             train_data_path=train_data_path,
             dataset_reader=dataset_reader,
             validation_dataset_reader=validation_dataset_reader,

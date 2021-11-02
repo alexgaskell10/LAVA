@@ -1,8 +1,5 @@
 from typing import Dict, Any
-import json
-import logging
-import random
-import re
+import random, re, os, json, logging, pickle
 
 from torch import Tensor
 from overrides import overrides
@@ -82,6 +79,8 @@ class RetrievalReasoningReader(DatasetReader):
         self._longest = longest_proof
         self._shortest = shortest_proof
         self._true_samples_only = true_samples_only
+        tok = type(self).__name__
+        self.pkl_file = f'{tok}_{self._max_pieces}_{self._shortest}_{self._longest}_DSET.pkl'
 
     @overrides
     def _read(self, file_path: str):

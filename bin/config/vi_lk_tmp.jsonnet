@@ -2,13 +2,13 @@ local max_pieces = 512;
 local skip_id_regex = "$none";
 local ruletaker_archive = "ruletaker/runs/depth-5-base/model.tar.gz";
 local dataset_dir = "ruletaker/inputs/dataset/rule-reasoning-dataset-V2020.2.4/depth-5/";
-local retriever_variant = "roberta-base";      // {spacy, roberta-base, roberta-large}
+local retriever_variant = "roberta-large";      // {spacy, roberta-base, roberta-large}
 local pretrained_model = "bin/runs/pretrain_retriever/rb-base/model.tar.gz";
-local cuda_device = 7;
+local cuda_device = 1;
 local batch_size = 4;
 local num_gradient_accumulation_steps = 1;
 local topk = 5;
-local num_monte_carlo = 8;
+local num_monte_carlo = 16;
 local longest_proof = topk;
 local shortest_proof = 1;
 local model_type = 'variational_inference_base';
@@ -16,7 +16,7 @@ local model_type = 'variational_inference_base';
 {
     "ruletaker_archive": ruletaker_archive,
     "train_data_path": dataset_dir + "train.jsonl",
-    "validation_data_path": dataset_dir + "test.jsonl",
+    "validation_data_path": dataset_dir + "dev.jsonl",
     "test_data_path": dataset_dir + "test.jsonl",
     "dataset_reader": {
         "type": "retriever_reasoning",

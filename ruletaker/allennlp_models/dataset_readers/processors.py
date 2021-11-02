@@ -5,6 +5,7 @@ import logging
 import os
 import sys
 from io import open
+from tqdm import tqdm
 
 import json
 from nltk.tokenize import sent_tokenize
@@ -237,7 +238,7 @@ class RRProcessor(DataProcessor):
 
     def _create_examples(self, records, meta_records, get_proof):
         examples = []
-        for (i, (record, meta_record)) in enumerate(zip(records, meta_records)):
+        for (i, (record, meta_record)) in tqdm(enumerate(zip(records, meta_records))):
             #print(i)
             assert record["id"] == meta_record["id"]
             context = record["context"]
