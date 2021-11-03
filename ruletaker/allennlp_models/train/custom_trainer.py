@@ -46,7 +46,7 @@ logger = logging.getLogger(__name__)
 
 @Trainer.register("custom_trainer", constructor="from_partial_objects")
 class CustomTrainer(GradientDescentTrainer):
-    def __init__(self, replay_memory, longest_proof, shortest_proof, topk, *args, **kwargs):
+    def __init__(self, replay_memory, longest_proof, shortest_proof, topk, lr, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._replay_memory = replay_memory
         self._sampler = self.data_loader.batch_sampler.sampler
@@ -55,6 +55,9 @@ class CustomTrainer(GradientDescentTrainer):
         self.longest_proof = longest_proof
         self.shortest_proof = shortest_proof
         self.topk = topk
+        self.optimizer.param_groups[0]['lr'] = lr
+        self.optimizer.param_groups[1]['lr'] = lr
+        self._learning_rate_scheduler = None
 
     def _train_epoch(self, epoch: int) -> Dict[str, float]:
         for i in [4]:

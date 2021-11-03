@@ -11,6 +11,7 @@ local topk = 2;
 local num_monte_carlo = 8;
 local longest_proof = topk;
 local shortest_proof = 1;
+local lr = 1e-5;
 local model_type = 'variational_inference_base';
 
 {
@@ -18,6 +19,7 @@ local model_type = 'variational_inference_base';
     "train_data_path": dataset_dir + "train.jsonl",
     "validation_data_path": dataset_dir + "dev.jsonl",
     "test_data_path": dataset_dir + "test.jsonl",
+    "lr": lr,
     "dataset_reader": {
         "type": "retriever_reasoning",
         "retriever_variant": retriever_variant,
@@ -26,7 +28,7 @@ local model_type = 'variational_inference_base';
         "longest_proof": longest_proof,
         "shortest_proof": shortest_proof,
         "concat_q_and_c": true,
-        "true_samples_only": true
+        "true_samples_only": false
     },
     "retrieval_reasoning_model": {
         "variant": retriever_variant,

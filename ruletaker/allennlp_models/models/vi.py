@@ -79,9 +79,7 @@ class ELBO(Model):
         set_dropout(self.gen_model, 0.0)
         set_dropout(self.qa_model, 0.0)
 
-    def forward(self,
-        phrase=None, label=None, metadata=None, retrieval=None, **kwargs,
-    ) -> torch.Tensor:
+    def forward(self, phrase=None, label=None, metadata=None, retrieval=None, **kwargs) -> torch.Tensor:
         ''' Forward pass of the network. 
 
             - p(e|z,q) - answering term (qa_model)
@@ -132,7 +130,8 @@ class ELBO(Model):
 
         # Compute elbo
         # elbo = qa_logprobs.detach() + self._beta * (gen_logprobs - infr_logprobs) + reinforce_likelihood       # WORKS WITH BUG
-        elbo = qa_logprobs.detach() + self._beta * gen_logprobs + reinforce_likelihood       # CORRECT ACCORING TO YISHU
+        # elbo = qa_logprobs.detach() + self._beta * gen_logprobs + reinforce_likelihood       # CORRECT ACCORING TO YISHU
+        elbo = qa_logprobs + self._beta * gen_logprobs + reinforce_likelihood       # CORRECT ACCORING TO YISHU
 
         if self._supervised:
             # Use some labeled examples and train inference model using supervised learning
@@ -154,11 +153,13 @@ class ELBO(Model):
             correct_baseline = (qa_output_baseline["label_probs"].argmax(-1) == label)
 
         if True:
-            nodes_ = [n for node in nodes for n in [node]*self._n_mc]
+            nodes_ = [n.tolist() for node in nodes for n in [node]*self._n_mc]
             correct = (qa_output["label_probs"].argmax(-1) == label_)
-            correct_true = [set(n.tolist()).issubset(set(row.tolist())) for n,row in zip(nodes_,z)]
+            correct_true = [set(n).issubset(set(row.tolist())) for n,row in zip(nodes_,z)]
             tp = [c.item() and ct for c,ct in zip(correct, correct_true)]
             fp = [c.item() and not ct for c,ct in zip(correct, correct_true)]
+            def decode(i):
+                return self.dataset_reader.decode(batch['phrase']['tokens']['token_ids'][i]).split('</s> </s>')
         self.log_results(qlens_, correct, tp, correct_baseline)
 
         if False:

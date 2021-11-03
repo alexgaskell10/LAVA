@@ -632,6 +632,7 @@ class TrainModel(Registrable):
         model: Lazy[Model] = None,
         retriever = None,
         retrieval_reasoning_model: Lazy[Model] = None,
+        lr = None,
     ) -> "TrainModel":
         """
         This method is intended for use with our `FromParams` logic, to construct a `TrainModel`
@@ -784,8 +785,8 @@ class TrainModel(Registrable):
         # TODO: hack to stop scheduler below
         # trainer_.optimizer.param_groups[0]['lr'] = trainer_.optimizer.defaults['lr']
         # trainer_.optimizer.param_groups[1]['lr'] = trainer_.optimizer.defaults['lr']
-        trainer_.optimizer.param_groups[0]['lr'] = 1e-5
-        trainer_.optimizer.param_groups[1]['lr'] = 1e-5
+        trainer_.optimizer.param_groups[0]['lr'] = lr
+        trainer_.optimizer.param_groups[1]['lr'] = lr
         trainer_._learning_rate_scheduler = None
 
         return cls(
