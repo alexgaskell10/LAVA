@@ -30,4 +30,4 @@ except:
     from ruletaker.allennlp_models.models.retriever import RetrievalScorer
     from ruletaker.allennlp_models.models.gumbel_softmax import GumbelSoftmaxRetrieverReasoner, ProgressiveDeepeningGumbelSoftmaxRetsrieverReasoner
     from ruletaker.allennlp_models.models.utils import *
-    from ruletaker.allennlp_models.models.vi import ELBO
+    from ruletaker.allennlp_models.models.vi import VariationalObjective

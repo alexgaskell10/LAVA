@@ -30,7 +30,7 @@ from .baseline import Baseline
 torch.manual_seed(0)
 
 @Model.register("variational_inference_base")
-class ELBO(Model):
+class VariationalObjective(Model):
     def __init__(self,
         qa_model: Model,
         variant: str,
@@ -47,6 +47,8 @@ class ELBO(Model):
         dataset_reader = None,
         num_monte_carlo = 1,
         do_mask_z = True,
+        baseline_type = 'decay',
+        additional_qa_training = False,
     ) -> None:
         super().__init__(qa_model.vocab, regularizer)
         self.variant = variant
@@ -70,10 +72,18 @@ class ELBO(Model):
         self._logprob_method = 'CE'      # TODO: set dynamically
         self._z_mask = -1
         self._do_mask_z = do_mask_z     # TODO: set dynamically
-        
+        self._additional_qa_training = additional_qa_training
+
+        self._baseline_type = baseline_type
+        if baseline_type == 'Prob-NMN':
+            self._reinforce = Reinforce(baseline_decay=0.99)
+        elif baseline_type == 'NVIL':
+            self.baseline_model = BaselineNetwork(variant=variant, vocab=vocab, dataset_reader=dataset_reader, num_labels=1)
+            self._reinforce = TrainableReinforce(self.baseline_model)
+            set_dropout(self.baseline_model, 0.0)
+
         self.answers = {}
         self._ = 0
-        self._reinforce = Reinforce(baseline_decay=0.99)
         self._alpha = 0.1       # TODO: check this
         self._smoothloss = LabelSmoothingLoss(self._alpha)
         self._supervised = False
@@ -81,8 +91,8 @@ class ELBO(Model):
         set_dropout(self.infr_model, 0.0)
         set_dropout(self.gen_model, 0.0)
         set_dropout(self.qa_model, 0.0)
-
-    def forward(self, phrase=None, label=None, metadata=None, retrieval=None, **kwargs) -> torch.Tensor:
+        
+    def forward_nvil(self, phrase=None, label=None, metadata=None, retrieval=None, **kwargs) -> torch.Tensor:
         ''' Forward pass of the network. 
 
             - p(e|z,q) - answering term (qa_model)
@@ -114,15 +124,6 @@ class ELBO(Model):
 
         z_ = self._draw_samples(infr_logits, random_chance=False)        # (bsz * mc steps, num retrievals)
         z = self.mask_z(z_, lens) if self._do_mask_z else z_
-        if flag:
-            if self._ == 0:
-            # z = one_hot(z.squeeze(-1), torch.tensor([16]*z.size(0)).view(-1,1).cuda())
-                z = torch.tensor([16]*z.size(0)).view(*z.shape).to(self._d)
-                self._ = 0      # TODO
-            else:
-                z = torch.tensor([15]*z.size(0)).view(*z.shape).to(self._d)
-                self._ = 1      # TODO
-            # z = torch.tensor([[9,13]]).to(self._d)
         batch = self._prep_batch(z, metadata_, label_)
         qa_output = self.qa_model(**batch)
 
@@ -132,24 +133,30 @@ class ELBO(Model):
 
         # Compute REINFORCE estimator for the inference network
         reinforce_reward = qa_logprobs - self._beta * (infr_logprobs - gen_logprobs)
-        reinforce_likelihood = self._reinforce(infr_logprobs, reinforce_reward)
+        reinforce_likelihood = self._reinforce(infr_logprobs, reinforce_reward, phrase, label)
 
         # Compute elbo (maximize this)
         # elbo = qa_logprobs.detach() + self._beta * gen_logprobs + reinforce_likelihood
         elbo = qa_logprobs + self._beta * gen_logprobs + reinforce_likelihood
+        aux_signals = 0
 
         if self._supervised:
             # Use some labeled examples and train inference model using supervised learning
             sl_logprobs = torch.cat([self._compute_logprobs(node.unsqueeze(0), logit.unsqueeze(0))[0] 
                             for node, logit in zip(nodes, infr_logits)], dim=-1)
-            elbo += sl_logprobs.repeat_interleave(self._n_mc, dim=0)
+            aux_signals += sl_logprobs.mean()
 
-        if isinstance(self._reinforce, TrainableReinforce):
+        if self._baseline_type == 'NVIL':
             # Train reinforce baseline to minimize distance from reward
-            reinforce_gap = self._reinforce.centered_reward ** 2
-            elbo += reinforce_gap * self._n_mc
+            # Minimize the error --> maximize the negative error
+            aux_signals -= self._reinforce.sq_error.mean()
 
-        outputs = {"loss": -elbo.sum() / self._n_mc}
+        if self._additional_qa_training:
+            qa_output_full = self.qa_model(phrase=phrase, label=label, metadata=metadata)
+            qa_logprobs_full = -qa_output_full['loss']
+            aux_signals += qa_logprobs_full.mean()
+
+        outputs = {"loss": -(elbo.sum() / self._n_mc + aux_signals)}
 
         with torch.no_grad():
             z_baseline = self._draw_samples(infr_logits, random_chance=True)
@@ -162,8 +169,6 @@ class ELBO(Model):
             nodes_ = [n.tolist() for node in nodes for n in [node]*self._n_mc]
             correct = (qa_output["label_probs"].argmax(-1) == label_)
             correct_true = [set(n).issubset(set(row.tolist())) for n,row in zip(nodes_,z)]
-            # tp = [c.item() and ct for c,ct in zip(correct, correct_true)]
-            # fp = [c.item() and not ct for c,ct in zip(correct, correct_true)]
             tp = [c.item() and ct if a else -1 for c,ct,a in zip(correct, correct_true, annots_)]
             fp = [c.item() and not ct if a else -1 for c,ct,a in zip(correct, correct_true, annots_)]
             def decode(i):
@@ -185,6 +190,92 @@ class ELBO(Model):
             p_ = infr_logits.softmax(-1)
             argmax_ps = p_.gather(1, p.unsqueeze(1)).squeeze()
             action_ps = p_.gather(1, z_.unsqueeze(1)).squeeze()
+
+        return outputs
+        ((lens.squeeze().cpu() == 2).int() * (torch.tensor(tp) == True).int()).bool().any()
+
+    def forward_nvil(self, phrase=None, label=None, metadata=None, retrieval=None, **kwargs) -> torch.Tensor:
+        ''' Forward pass of the network. 
+
+            - p(e|z,q) - answering term (qa_model)
+            - q(z|e,q,c) - variational distribution (infr_model)
+            - p(z|q,c) - generative distribution (gen_model)
+            - e: entailment relation [0,1] (i.e. does q follow from c (or z))
+            - z: retrievals (subset of c)
+            - c: context (rules + facts)
+        '''
+        self._d = phrase['tokens']['token_ids'].device
+        qlens = [m['QLen'] for m in metadata]
+        qlens_ = [m['QLen'] for m in metadata for _ in range(self._n_mc)]
+        lens = torch.tensor(qlens_, device=self._d).unsqueeze(1)
+        metadata_ = [m for m in metadata for _ in range(self._n_mc)]
+        nodes = [torch.tensor(m['node_label'], device=self._d).nonzero().squeeze(1) for m in metadata]
+        s = self.dataset_reader.decode(phrase['tokens']['token_ids'][0]).split('.')
+        flag = False
+        # 1-1 --> not Neg In Head, pos; 1-0 --> not NIH, neg; 0-1 --> NIH, pos; 0-0 --> NIH, neg
+        annots = torch.tensor([[1-int('not' in m['question_text']), l.item()] for m,l in zip(metadata,label)], device=self._d)
+
+        # Obtain retrieval logits
+        infr_logits = self.infr_model(phrase, label)
+        gen_logits = self.gen_model(phrase)
+
+        # Take multiple monte carlo samples by tiling the logits
+        infr_logits_ = infr_logits.repeat_interleave(self._n_mc, dim=0)
+        gen_logits_ = gen_logits.repeat_interleave(self._n_mc, dim=0)
+        label_ = label.repeat_interleave(self._n_mc, dim=0)
+
+        z_ = self._draw_samples(infr_logits, random_chance=False)        # (bsz * mc steps, num retrievals)
+        z = self.mask_z(z_, lens) if self._do_mask_z else z_
+        batch = self._prep_batch(z, metadata_, label_)
+        qa_output = self.qa_model(**batch)
+
+        # Compute log probabilites from logits and sample. log probability = -loss
+        qa_logprobs = -qa_output['loss']
+        infr_logprobs, gen_logprobs = self._compute_logprobs(z, infr_logits_, gen_logits_)
+
+        # Compute REINFORCE estimator for the inference network
+        reinforce_reward = qa_logprobs - self._beta * (infr_logprobs - gen_logprobs)
+        reinforce_likelihood = self._reinforce(infr_logprobs, reinforce_reward, phrase, label)
+
+        # Compute elbo (maximize this)
+        # elbo = qa_logprobs.detach() + self._beta * gen_logprobs + reinforce_likelihood
+        elbo = qa_logprobs + self._beta * gen_logprobs + reinforce_likelihood
+        aux_signals = 0
+
+        if self._supervised:
+            # Use some labeled examples and train inference model using supervised learning
+            sl_logprobs = torch.cat([self._compute_logprobs(node.unsqueeze(0), logit.unsqueeze(0))[0] 
+                            for node, logit in zip(nodes, infr_logits)], dim=-1)
+            aux_signals += sl_logprobs.mean()
+
+        if self._baseline_type == 'NVIL':
+            # Train reinforce baseline to minimize distance from reward
+            # Minimize the error --> maximize the negative error
+            aux_signals -= self._reinforce.sq_error.mean()
+
+        if self._additional_qa_training:
+            qa_output_full = self.qa_model(phrase=phrase, label=label, metadata=metadata)
+            qa_logprobs_full = -qa_output_full['loss']
+            aux_signals += qa_logprobs_full.mean()
+
+        outputs = {"loss": -(elbo.sum() / self._n_mc + aux_signals)}
+
+        with torch.no_grad():
+            z_baseline = self._draw_samples(infr_logits, random_chance=True)
+            batch_baseline = self._prep_batch(z_baseline, metadata, label)
+            qa_output_baseline = self.qa_model(**batch_baseline)
+            correct_baseline = (qa_output_baseline["label_probs"].argmax(-1) == label)
+
+        if True:
+            annots_ = [a.tolist() in [[1,1],[0,0]] for annot in annots for a in [annot]*self._n_mc]
+            nodes_ = [n.tolist() for node in nodes for n in [node]*self._n_mc]
+            correct = (qa_output["label_probs"].argmax(-1) == label_)
+            correct_true = [set(n).issubset(set(row.tolist())) for n,row in zip(nodes_,z)]
+            tp = [c.item() and ct if a else -1 for c,ct,a in zip(correct, correct_true, annots_)]
+            fp = [c.item() and not ct if a else -1 for c,ct,a in zip(correct, correct_true, annots_)]
+            def decode(i):
+                return self.dataset_reader.decode(batch['phrase']['tokens']['token_ids'][i]).split('</s> </s>')
+        self.log_results(qlens_, correct, tp, correct_baseline)
 
         return outputs
 
@@ -324,6 +415,8 @@ class ELBO(Model):
         )
         return z
 
+    # def forward(self, *args, **kwargs):
+    #     if self.setting == ''
 
 class _BaseSentenceClassifier(Model):
     def __init__(self, variant, vocab, dataset_reader, regularizer=None, num_labels=1):
@@ -342,9 +435,6 @@ class _BaseSentenceClassifier(Model):
         # unifing all model classification layer
         self.node_class_method = 'mean'     # ['mean', 'concat_first_last']
         self.node_class_k = 1 if self.node_class_method == 'mean' else 2
-        # self._W = Linear(self._output_dim * self.node_class_k, num_labels)
-        # self._W.weight.data.normal_(mean=0.0, std=0.02)
-        # self._W.bias.data.zero_()
         self._W = NodeClassificationHead(self._output_dim * self.node_class_k, 0, num_labels)
 
         self._accuracy = CategoricalAccuracy()
@@ -355,6 +445,13 @@ class _BaseSentenceClassifier(Model):
         self.split_idx = self.dataset_reader.encode_token('.', mode='retriever')
 
         self._p0 = torch.tensor(-float(1e9))
+
+        self.e_true = torch.tensor(
+            [self.dataset_reader.encode_token(tok, mode='retriever') for tok in '<s> ĠE : ĠTrue </s>'.split()]
+        )
+        self.e_false = torch.tensor(
+            [self.dataset_reader.encode_token(tok, mode='retriever') for tok in '<s> ĠE : ĠFalse </s>'.split()]
+        )
 
     def forward(self, x) -> torch.Tensor:
         ''' Forward pass of the network. Outputs a distribution over sentences z. 
@@ -399,35 +496,6 @@ class _BaseSentenceClassifier(Model):
 
         return node_reprs
 
-
-class InferenceNetwork(_BaseSentenceClassifier):
-    def __init__(self, variant, vocab, dataset_reader, regularizer=None, num_labels=1):
-        super().__init__(variant, vocab, dataset_reader, regularizer, num_labels)
-        self.e_true = torch.tensor(
-            [self.dataset_reader.encode_token(tok, mode='retriever') for tok in '<s> ĠE : ĠTrue </s>'.split()]
-        )
-        self.e_false = torch.tensor(
-            [self.dataset_reader.encode_token(tok, mode='retriever') for tok in '<s> ĠE : ĠFalse </s>'.split()]
-        )
-
-    def forward(self, phrase, label, **kwargs) -> torch.Tensor:
-        ''' Forward pass of the network. Outputs a distribution over sentences z. 
-
-            - q(z|e,q,c) - variational distribution (infr_model)
-            - e: entailment relation [0,1] (i.e. does q follow from c (or z))
-            - z: retrievals (subset of c)
-            - c: context (rules + facts)
-            - q: claim
-        '''
-        e = label
-        qc = phrase['tokens']['token_ids']       # shape = (bsz, context_len)
-        self._d = qc.device
-
-        # Prepare model inputs by encoding and concatenating e
-        eqc = self._encode_and_append_label(qc, e)
-
-        return super().forward(eqc)
-
     def _encode_and_append_label(self, encoded, label):
         ''' Tokenizes and appends the label to the already 
             encoded context
@@ -447,11 +515,27 @@ class InferenceNetwork(_BaseSentenceClassifier):
                 
         return eqc
 
+class InferenceNetwork(_BaseSentenceClassifier):
+    def forward(self, phrase, label, **kwargs) -> torch.Tensor:
+        ''' Forward passw of the network. Outputs a distribution over sentences z. 
+
+            - q(z|e,q,c) - variational distribution (infr_model)
+            - e: entailment relation [0,1] (i.e. does q follow from c (or z))
+            - z: retrievals (subset of c)
+            - c: context (rules + facts)
+            - q: claim
+        '''
+        e = label
+        qc = phrase['tokens']['token_ids']       # shape = (bsz, context_len)
+        self._d = qc.device
+
+        # Prepare model inputs by encoding and concatenating e
+        eqc = self._encode_and_append_label(qc, e)
+
+        return super().forward(eqc)
+
 
 class GenerativeNetwork(_BaseSentenceClassifier):
-    def __init__(self, variant, vocab, dataset_reader, regularizer=None, num_labels=1):
-        super().__init__(variant, vocab, dataset_reader, regularizer, num_labels)
-
     def forward(self, phrase, **kwargs) -> torch.Tensor:
         ''' Forward pass of the network. Outputs a distribution over sentences z. 
 
@@ -464,6 +548,33 @@ class GenerativeNetwork(_BaseSentenceClassifier):
         self._d = qc.device
 
         return super().forward(qc)
+
+
+class BaselineNetwork(_BaseSentenceClassifier):
+    # def __init__(self, variant, vocab, dataset_reader, regularizer=None, num_labels=1):
+    #     super().__init__(variant, vocab, dataset_reader, regularizer, num_labels)
+
+    def forward(self, phrase, label, **kwargs) -> torch.Tensor:
+        ''' Forward pass of the network. Outputs a distribution over sentences z. 
+
+            - q(z|e,q,c) - variational distribution (infr_model)
+            - e: entailment relation [0,1] (i.e. does q follow from c (or z))
+            - z: retrievals (subset of c)
+            - c: context (rules + facts)
+            - q: claim
+        '''
+        e = label
+        qc = phrase['tokens']['token_ids']       # shape = (bsz, context_len)
+        self._d = qc.device
+
+        # Prepare model inputs by encoding and concatenating e
+        eqc = self._encode_and_append_label(qc, e)
+
+        # Forward pass
+        x = self.model(eqc)[0][:,0,:]       # Forward pass through model and use BOS token
+        out = self._W(x)       # Pass through classification head to obtain output
+
+        return out
 
 
 class Reinforce(nn.Module):
@@ -483,7 +594,7 @@ class Reinforce(nn.Module):
         self._reinforce_baseline = 0.0
         self._baseline_decay = baseline_decay
 
-    def forward(self, inputs, reward):
+    def forward(self, inputs, reward, *args):
         # Detach the reward term, we don't want gradients to flow to through it.
         centered_reward = reward.detach() - self._reinforce_baseline
 
@@ -493,14 +604,26 @@ class Reinforce(nn.Module):
 
 
 class TrainableReinforce(nn.Module):
-    def __init__(self):
+    ''' REINFORCE with learnable baselines. Uses the 
+        input-indepedent and input-dependent baselines
+        from https://arxiv.org/pdf/1402.0030.pdf.
+    '''
+    def __init__(self, baseline_network):
         super().__init__()
-        self._reinforce_baseline = nn.Parameter(torch.tensor(0.0), requires_grad=True)
+        self._reinforce_baseline = nn.Parameter(torch.tensor(-1.0), requires_grad=True)
+        self.model = baseline_network
+        self.sq_error = 0
 
-    def forward(self, inputs, reward):
+    def forward(self, inputs, reward, phrase, label):
+        input_dependent_baseline = self.model(phrase, label)
+
         # Detach the reward term, we don't want gradients to flow to through it.
-        self.centered_reward = reward.detach() - self._reinforce_baseline
-        return inputs * self.centered_reward.detach()
+        centered_reward = reward.detach() - self._reinforce_baseline - input_dependent_baseline
+
+        # Update the saved error term --> this is what is minimized
+        self.sq_error = centered_reward ** 2
+        # Detach here also else grads will flow from inference network (inputs) to baselines
+        return inputs * centered_reward.detach()
 
 
 class NodeClassificationHead(nn.Module):
