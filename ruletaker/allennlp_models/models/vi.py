@@ -46,6 +46,7 @@ class ELBO(Model):
         sentence_embedding_method: str = 'mean',
         dataset_reader = None,
         num_monte_carlo = 1,
+        do_mask_z = True,
     ) -> None:
         super().__init__(qa_model.vocab, regularizer)
         self.variant = variant
@@ -66,12 +67,14 @@ class ELBO(Model):
         self._beta = 0.1        # Scale factor for KL_div TODO: set dynamically
         self._p0 = torch.tensor(-float(1e9))        # TODO: set dynamically
         self._n_mc = num_monte_carlo          # Number of monte carlo steps
-        self._logprob_method = 'CE'#'log-sum-prob'      # TODO: set dynamically
+        self._logprob_method = 'CE'      # TODO: set dynamically
+        self._z_mask = -1
+        self._do_mask_z = do_mask_z     # TODO: set dynamically
         
         self.answers = {}
         self._ = 0
         self._reinforce = Reinforce(baseline_decay=0.99)
-        self._alpha = 0.1
+        self._alpha = 0.1       # TODO: check this
         self._smoothloss = LabelSmoothingLoss(self._alpha)
         self._supervised = False
         
@@ -92,10 +95,13 @@ class ELBO(Model):
         self._d = phrase['tokens']['token_ids'].device
         qlens = [m['QLen'] for m in metadata]
         qlens_ = [m['QLen'] for m in metadata for _ in range(self._n_mc)]
+        lens = torch.tensor(qlens_, device=self._d).unsqueeze(1)
         metadata_ = [m for m in metadata for _ in range(self._n_mc)]
         nodes = [torch.tensor(m['node_label'], device=self._d).nonzero().squeeze(1) for m in metadata]
         s = self.dataset_reader.decode(phrase['tokens']['token_ids'][0]).split('.')
         flag = False
+        # 1-1 --> not Neg In Head, pos; 1-0 --> not NIH, neg; 0-1 --> NIH, pos; 0-0 --> NIH, neg
+        annots = torch.tensor([[1-int('not' in m['question_text']), l.item()] for m,l in zip(metadata,label)], device=self._d)
 
         # Obtain retrieval logits
         infr_logits = self.infr_model(phrase, label)
@@ -106,7 +112,8 @@ class ELBO(Model):
         gen_logits_ = gen_logits.repeat_interleave(self._n_mc, dim=0)
         label_ = label.repeat_interleave(self._n_mc, dim=0)
 
-        z = self._draw_samples(infr_logits, random_chance=False)        # (bsz * mc steps, num retrievals)
+        z_ = self._draw_samples(infr_logits, random_chance=False)        # (bsz * mc steps, num retrievals)
+        z = self.mask_z(z_, lens) if self._do_mask_z else z_
         if flag:
             if self._ == 0:
             # z = one_hot(z.squeeze(-1), torch.tensor([16]*z.size(0)).view(-1,1).cuda())
@@ -126,12 +133,10 @@ class ELBO(Model):
         # Compute REINFORCE estimator for the inference network
         reinforce_reward = qa_logprobs - self._beta * (infr_logprobs - gen_logprobs)
         reinforce_likelihood = self._reinforce(infr_logprobs, reinforce_reward)
-        # reinforce_likelihood = self._reinforce(infr_logprobs, reinforce_reward.exp())
 
         # Compute elbo
-        # elbo = qa_logprobs.detach() + self._beta * (gen_logprobs - infr_logprobs) + reinforce_likelihood       # WORKS WITH BUG
-        # elbo = qa_logprobs.detach() + self._beta * gen_logprobs + reinforce_likelihood       # CORRECT ACCORING TO YISHU
-        elbo = qa_logprobs + self._beta * gen_logprobs + reinforce_likelihood       # CORRECT ACCORING TO YISHU
+        # elbo = qa_logprobs.detach() + self._beta * gen_logprobs + reinforce_likelihood
+        elbo = qa_logprobs + self._beta * gen_logprobs + reinforce_likelihood
 
         if self._supervised:
             # Use some labeled examples and train inference model using supervised learning
@@ -153,11 +158,12 @@ class ELBO(Model):
             correct_baseline = (qa_output_baseline["label_probs"].argmax(-1) == label)
 
         if True:
+            annots_ = [a.tolist() in [[1,1],[0,0]] for annot in annots for a in [annot]*self._n_mc]
             nodes_ = [n.tolist() for node in nodes for n in [node]*self._n_mc]
             correct = (qa_output["label_probs"].argmax(-1) == label_)
             correct_true = [set(n).issubset(set(row.tolist())) for n,row in zip(nodes_,z)]
-            tp = [c.item() and ct for c,ct in zip(correct, correct_true)]
-            fp = [c.item() and not ct for c,ct in zip(correct, correct_true)]
+            tp = [c.item() and ct for c,ct,a in zip(correct, correct_true, annots_) if a]
+            fp = [c.item() and not ct for c,ct,a in zip(correct, correct_true, annots_) if a]
             def decode(i):
                 return self.dataset_reader.decode(batch['phrase']['tokens']['token_ids'][i]).split('</s> </s>')
         self.log_results(qlens_, correct, tp, correct_baseline)
@@ -191,11 +197,13 @@ class ELBO(Model):
         elif self._logprob_method == 'CE':
             # Using CE loss (single-label): logprob = -CE loss
             # logprobs = [-self._loss(logit, z.squeeze(-1)) for logit in logits]
+            mask = 1-((z == self._z_mask).int() * self._z_mask * -1)
+            z += 1-mask
             logprobs = []
             for logit in logits:
-                # ce_losses = torch.cat([-self._smoothloss(logit, z[:, i]).unsqueeze(1) for i in range(z.size(1))], dim=1)
-                ce_losses = torch.cat([-self._loss(logit, z[:, i]).unsqueeze(1) for i in range(z.size(1))], dim=1)
-                logprobs.append(ce_losses.mean(-1))
+                # logprob = torch.cat([-self._smoothloss(logit, tmp[:, i]).unsqueeze(1) for i in range(tmp.size(1))], dim=1) * mask
+                logprob = torch.cat([-self._loss(logit, z[:, i]).unsqueeze(1) for i in range(z.size(1))], dim=1) * mask
+                logprobs.append(logprob.sum(-1)/mask.sum(-1))
         elif self._logprob_method == 'log-mean-prob':
             # Compute log mean probability. Generalizes CE loss for
             # when retrieving more than one z
@@ -266,7 +274,7 @@ class ELBO(Model):
         sentences = []
         for topk, meta, e in zip(z, metadata, label):
             question = meta['question_text']
-            sentence_idxs = topk.tolist()
+            sentence_idxs = [i for i in topk.tolist() if i != self._z_mask]
             context_rtr = [
                 toks + '.' for n, toks in enumerate(meta['context'].split('.')[:-1]) 
                 if n in sentence_idxs
@@ -299,6 +307,19 @@ class ELBO(Model):
             return torch.multinomial(p_.softmax(-1), self._n_z, replacement=False)
         else:
             return p_.argmax(-1).unsqueeze(1)
+
+    def mask_z(self, z_, lens):
+        ''' Mask samples z if the number of multinomial samples exceeds the
+            qlen.
+        '''
+        flag = (torch.arange(z_.size(1), device=self._d).unsqueeze(0).expand(z_.size(0),-1) < lens)
+        mask = torch.full_like(z_, -1) * (1-flag.int())
+        z = torch.where(
+            torch.arange(z_.size(1), device=self._d).unsqueeze(0).expand(z_.size(0),-1) < lens, 
+            z_, 
+            torch.tensor(-1, device=self._d)
+        )
+        return z
 
 
 class _BaseSentenceClassifier(Model):
@@ -499,11 +520,12 @@ class NodeClassificationHead(nn.Module):
 
 
 class LabelSmoothingLoss(nn.Module):
-    def __init__(self, smoothing=0.0, dim=-1):
+    def __init__(self, smoothing=0.0, dim=-1, reduction='sum'):
         super(LabelSmoothingLoss, self).__init__()
         self.confidence = 1.0 - smoothing
         self.smoothing = smoothing
         self.dim = dim
+        self.reduct = reduction
 
     def forward(self, pred, target):
         pred = pred.log_softmax(dim=self.dim)
@@ -511,4 +533,11 @@ class LabelSmoothingLoss(nn.Module):
             # true_dist = pred.data.clone()
             true_dist = torch.full_like(pred, self.smoothing / (pred.size(1) - 1))
             true_dist.scatter_(1, target.data.unsqueeze(1), self.confidence)
-        return torch.sum(-true_dist * pred, dim=self.dim)
+        
+        if self.reduct == 'sum':
+            return torch.sum(-true_dist * pred, dim=self.dim)
+        elif self.reduct == 'none':
+            return -true_dist * pred
+        else:
+            raise NotImplementedError
+

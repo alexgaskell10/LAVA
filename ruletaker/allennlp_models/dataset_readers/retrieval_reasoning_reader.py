@@ -115,8 +115,9 @@ class RetrievalReasoningReader(DatasetReader):
 
         for example in examples:
             example.qlen = sum(example.node_label[:-1])
-            
+
             if self._true_samples_only:
+                # TODO: fix this using above annot variable
                 # Filter so only positive correct questions and negative
                 # incorrect questions are used
                 if 'not' in example.question and example.label:
@@ -141,7 +142,7 @@ class RetrievalReasoningReader(DatasetReader):
                 debug=debug,
                 qdep=example.qdep,
                 qlen=example.qlen,
-                node_label=example.node_label
+                node_label=example.node_label,
             )
 
     @overrides
@@ -191,7 +192,7 @@ class RetrievalReasoningReader(DatasetReader):
             "QDep": qdep,
             "node_label": node_label,
             "exact_match": exact_match if not qa_only else None,
-            "QLen": qlen,
+            "QLen": qlen
         }
 
         if label is not None:
