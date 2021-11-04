@@ -28,7 +28,8 @@ local model_type = 'variational_inference_base';
         "longest_proof": longest_proof,
         "shortest_proof": shortest_proof,
         "concat_q_and_c": true,
-        "true_samples_only": false
+        "true_samples_only": false,
+        "add_NAF": false
     },
     "retrieval_reasoning_model": {
         "variant": retriever_variant,

@@ -48,11 +48,12 @@ class DataProcessor(object):
 
 
 class RRProcessor(DataProcessor):
-    def get_examples(self, data_dir, dset, get_proof=True):
+    def get_examples(self, data_dir, dset, get_proof=True, debug_num=-1):
         return self._create_examples(
             self._read_jsonl(os.path.join(data_dir, dset+".jsonl")),
             self._read_jsonl(os.path.join(data_dir, "meta-"+dset+".jsonl")),
-            get_proof=get_proof
+            get_proof=get_proof,
+            debug_num=debug_num,
         )
 
     def get_labels(self):
@@ -236,8 +237,9 @@ class RRProcessor(DataProcessor):
 
     #     return node_label, list(edge_label.flatten())
 
-    def _create_examples(self, records, meta_records, get_proof):
+    def _create_examples(self, records, meta_records, get_proof, debug_num):
         examples = []
+        idx = 0
         for (i, (record, meta_record)) in tqdm(enumerate(zip(records, meta_records))):
             #print(i)
             assert record["id"] == meta_record["id"]
@@ -268,6 +270,12 @@ class RRProcessor(DataProcessor):
                     node_label, edge_label = None, None
 
                 examples.append(RRInputExample(id, context, question, node_label, edge_label, label, qdep, qlen))
+
+                idx += 1 
+
+            if debug_num > 0 and idx >= debug_num:
+                print('DEBUG BREAK TRIGGERED @'+str(debug_num))
+                break
 
         return examples
 

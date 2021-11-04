@@ -134,7 +134,7 @@ class ELBO(Model):
         reinforce_reward = qa_logprobs - self._beta * (infr_logprobs - gen_logprobs)
         reinforce_likelihood = self._reinforce(infr_logprobs, reinforce_reward)
 
-        # Compute elbo
+        # Compute elbo (maximize this)
         # elbo = qa_logprobs.detach() + self._beta * gen_logprobs + reinforce_likelihood
         elbo = qa_logprobs + self._beta * gen_logprobs + reinforce_likelihood
 
@@ -162,8 +162,10 @@ class ELBO(Model):
             nodes_ = [n.tolist() for node in nodes for n in [node]*self._n_mc]
             correct = (qa_output["label_probs"].argmax(-1) == label_)
             correct_true = [set(n).issubset(set(row.tolist())) for n,row in zip(nodes_,z)]
-            tp = [c.item() and ct for c,ct,a in zip(correct, correct_true, annots_) if a]
-            fp = [c.item() and not ct for c,ct,a in zip(correct, correct_true, annots_) if a]
+            # tp = [c.item() and ct for c,ct in zip(correct, correct_true)]
+            # fp = [c.item() and not ct for c,ct in zip(correct, correct_true)]
+            tp = [c.item() and ct if a else -1 for c,ct,a in zip(correct, correct_true, annots_)]
+            fp = [c.item() and not ct if a else -1 for c,ct,a in zip(correct, correct_true, annots_)]
             def decode(i):
                 return self.dataset_reader.decode(batch['phrase']['tokens']['token_ids'][i]).split('</s> </s>')
         self.log_results(qlens_, correct, tp, correct_baseline)
@@ -253,7 +255,8 @@ class ELBO(Model):
                     self.answers[d] = [[], [], []]
                 self.answers[d][0].append(c.item())
                 self.answers[d][1].append(r.item())
-                self.answers[d][2].append(t)
+                if t != -1:
+                    self.answers[d][2].append(t)
 
             for d in sorted(self.answers.keys()):
                 all_score_a = self.answers[d][0].count(True) / len(self.answers[d][0])
@@ -365,7 +368,7 @@ class _BaseSentenceClassifier(Model):
         # Compute representations
         embs = self.model(x)[0]
 
-        # Concat first and last token idxs
+        # 
         max_num_sentences = (x == self.split_idx).nonzero()[:,0].bincount().max() - 1
         node_reprs = torch.full((x.size(0), max_num_sentences), self._p0).to(self._d)      # shape: (bsz, # sentences)
         for b in range(x.size(0)):
@@ -436,9 +439,9 @@ class InferenceNetwork(_BaseSentenceClassifier):
         # Add the encoded version of the label "<s> ĠE: [ĠTrue/ĠFalse] </s>"
         for b in range(label.size(0)):
             if label[b] == 1:
-                eqc[b, :len_e] = self.e_true.to(self._d)
+                eqc[b,:len_e] = self.e_true.to(self._d)
             elif label[b] == 0:
-                eqc[b, :len_e] = self.e_false.to(self._d)
+                eqc[b,:len_e] = self.e_false.to(self._d)
             else:
                 raise ValueError
                 

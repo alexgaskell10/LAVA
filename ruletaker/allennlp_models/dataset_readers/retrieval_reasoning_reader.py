@@ -43,6 +43,7 @@ class RetrievalReasoningReader(DatasetReader):
         shortest_proof: int = 1,
         concat_q_and_c: bool = None,
         true_samples_only: bool = False,
+        add_NAF: bool = False,
     ) -> None:
         super().__init__()
         
@@ -79,8 +80,9 @@ class RetrievalReasoningReader(DatasetReader):
         self._longest = longest_proof
         self._shortest = shortest_proof
         self._true_samples_only = true_samples_only
+        self._add_NAF = add_NAF
         tok = type(self).__name__
-        self.pkl_file = f'{tok}_{self._max_pieces}_{self._shortest}_{self._longest}_{int(self._true_samples_only)}_DSET.pkl'
+        self.pkl_file = f'{tok}_{self._max_pieces}_{self._shortest}_{self._longest}_{int(self._true_samples_only)}_{int(self._add_NAF)}_DSET.pkl'
 
     @overrides
     def _read(self, file_path: str):
@@ -108,11 +110,13 @@ class RetrievalReasoningReader(DatasetReader):
 
     def _read_internal(self, file_path: str):
         debug = -1
+        debug_num = -1 #100
 
         data_dir = '/'.join(file_path.split('/')[:-1])
         dset = file_path.split('/')[-1].split('.')[0]
-        examples = RRProcessor().get_examples(data_dir, dset)
+        examples = RRProcessor().get_examples(data_dir, dset, debug_num=debug_num)
 
+        i = 0
         for example in examples:
             example.qlen = sum(example.node_label[:-1])
 
@@ -157,9 +161,14 @@ class RetrievalReasoningReader(DatasetReader):
         qlen: int = None,
         qa_only: bool = False,
         node_label: list = [],
+        initial_tokenization: bool = True,
     ) -> Instance:
         # pylint: disable=arguments-differ
         fields: Dict[str, Field] = {}
+
+        if self._add_NAF and initial_tokenization:
+            # Add NAF node to allow model to attend to no sentence.
+            context += ' NAF. '
 
         # Tokenize for the qa model
         qa_tokens, _ = self.transformer_features_from_qa(question_text, context)
@@ -274,6 +283,7 @@ class RetrievalReasoningReader(DatasetReader):
                 context = already_retrieved,
                 qa_only = True,
                 label = label.item(),
+                initial_tokenization=False,
             )
             instance.index_fields(vocab)
             data.append(instance)
