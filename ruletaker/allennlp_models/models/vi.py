@@ -49,6 +49,7 @@ class VariationalObjective(Model):
         do_mask_z = True,
         baseline_type = 'decay',
         additional_qa_training = False,
+        objective = 'NVIL',
     ) -> None:
         super().__init__(qa_model.vocab, regularizer)
         self.variant = variant
@@ -64,6 +65,7 @@ class VariationalObjective(Model):
         self.regularizer = regularizer
         self.sentence_embedding_method = sentence_embedding_method
         self.num_labels = num_labels
+        self.objective = objective
         
         self._n_z = topk        # Number of latent retrievals
         self._beta = 0.1        # Scale factor for KL_div TODO: set dynamically
@@ -194,15 +196,8 @@ class VariationalObjective(Model):
         return outputs
         ((lens.squeeze().cpu() == 2).int() * (torch.tensor(tp) == True).int()).bool().any()
 
-    def forward_nvil(self, phrase=None, label=None, metadata=None, retrieval=None, **kwargs) -> torch.Tensor:
+    def forward_vimco(self, phrase=None, label=None, metadata=None, retrieval=None, **kwargs) -> torch.Tensor:
         ''' Forward pass of the network. 
-
-            - p(e|z,q) - answering term (qa_model)
-            - q(z|e,q,c) - variational distribution (infr_model)
-            - p(z|q,c) - generative distribution (gen_model)
-            - e: entailment relation [0,1] (i.e. does q follow from c (or z))
-            - z: retrievals (subset of c)
-            - c: context (rules + facts)
         '''
         self._d = phrase['tokens']['token_ids'].device
         qlens = [m['QLen'] for m in metadata]
@@ -233,32 +228,45 @@ class VariationalObjective(Model):
         qa_logprobs = -qa_output['loss']
         infr_logprobs, gen_logprobs = self._compute_logprobs(z, infr_logits_, gen_logits_)
 
-        # Compute REINFORCE estimator for the inference network
-        reinforce_reward = qa_logprobs - self._beta * (infr_logprobs - gen_logprobs)
-        reinforce_likelihood = self._reinforce(infr_logprobs, reinforce_reward, phrase, label)
+        # # Compute REINFORCE estimator for the inference network
+        # reinforce_reward = qa_logprobs - self._beta * (infr_logprobs - gen_logprobs)
+        # reinforce_likelihood = self._reinforce(infr_logprobs, reinforce_reward, phrase, label)
 
-        # Compute elbo (maximize this)
-        # elbo = qa_logprobs.detach() + self._beta * gen_logprobs + reinforce_likelihood
-        elbo = qa_logprobs + self._beta * gen_logprobs + reinforce_likelihood
-        aux_signals = 0
+        # # Compute elbo (maximize this)
+        # # elbo = qa_logprobs.detach() + self._beta * gen_logprobs + reinforce_likelihood
+        # elbo = qa_logprobs + self._beta * gen_logprobs + reinforce_likelihood
 
-        if self._supervised:
-            # Use some labeled examples and train inference model using supervised learning
-            sl_logprobs = torch.cat([self._compute_logprobs(node.unsqueeze(0), logit.unsqueeze(0))[0] 
-                            for node, logit in zip(nodes, infr_logits)], dim=-1)
-            aux_signals += sl_logprobs.mean()
+        # VIMCO multi-sample objective
+        qa_logprobs = torch.cat(qa_logprobs.unsqueeze(0).chunk(2,1), 0)
+        infr_logprobs = torch.cat(infr_logprobs.unsqueeze(0).chunk(2,1), 0)
+        gen_logprobs = torch.cat(gen_logprobs.unsqueeze(0).chunk(2,1), 0)
 
-        if self._baseline_type == 'NVIL':
-            # Train reinforce baseline to minimize distance from reward
-            # Minimize the error --> maximize the negative error
-            aux_signals -= self._reinforce.sq_error.mean()
+        qa_probs = torch.exp(qa_logprobs)
+        infr_probs = torch.exp(infr_logprobs)
+        gen_probs = torch.exp(gen_logprobs)
+        
+        # Detach infr_probs here as the gradients are computed explicitly below
+        f = torch.div(torch.mul(qa_probs, gen_probs), infr_probs.detach())       # f(x, h^i) = P(h, h^i) / Q(h^i | x)
+        f_sum = torch.sum(f, -1).unsqueeze(-1)
+        K = f.size(-1)
+        
+        L_hat = torch.log(torch.div(f_sum, K))      # L_hat(h^{1:K})
 
-        if self._additional_qa_training:
-            qa_output_full = self.qa_model(phrase=phrase, label=label, metadata=metadata)
-            qa_logprobs_full = -qa_output_full['loss']
-            aux_signals += qa_logprobs_full.mean()
+        w = torch.div(f, f_sum)         # w_tilde^j
+        
+        f_hat = torch.exp(torch.div(torch.log(f_sum) - torch.log(f), K))     # f_hat(x, h^-j)
 
-        outputs = {"loss": -(elbo.sum() / self._n_mc + aux_signals)}
+        sig = f + f_hat                                                     # f(x, h^i) + f_hat(x, h^-j)
+        local_signal = torch.sum(sig, -1).unsqueeze(-1) - sig
+        L_hat_notj = L_hat - torch.log(torch.div(local_signal, K))         # L_hat(h^i | h^-j)
+
+        # Detach L_hat_notj below as we don't want gradients to flow through this term
+        # when computing grads for inference params
+        grad_L_k = torch.sum(torch.mul(L_hat_notj.detach(), infr_logprobs) - w, -1)
+
+        vimco_estimator = L_hat + grad_L_k
+
+        outputs = {"loss": -vimco_estimator.sum() / self._n_mc}
 
         with torch.no_grad():
             z_baseline = self._draw_samples(infr_logits, random_chance=True)
@@ -415,8 +423,14 @@ class VariationalObjective(Model):
         )
         return z
 
-    # def forward(self, *args, **kwargs):
-    #     if self.setting == ''
+    def forward(self, *args, **kwargs):
+        if self.objective == 'NVIL':
+            return self.forward_nvil(*args, **kwargs)
+        elif self.objective == 'VIMCO':
+            return self.forward_vimco(*args, **kwargs)
+        else:
+            raise NotImplementedError
+
 
 class _BaseSentenceClassifier(Model):
     def __init__(self, variant, vocab, dataset_reader, regularizer=None, num_labels=1):

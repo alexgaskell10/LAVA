@@ -39,6 +39,7 @@ local model_type = 'variational_inference_base';
         "num_monte_carlo": num_monte_carlo,
         "do_mask_z": true,
         "additional_qa_training": true,
+        "objective": "VIMCO",
         "baseline_type": 'Prob-NMN'     # Prob-NMN; NVIL
     },
     "trainer": {
