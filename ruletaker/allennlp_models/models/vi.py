@@ -50,6 +50,7 @@ class VariationalObjective(Model):
         baseline_type = 'decay',
         additional_qa_training = False,
         objective = 'NVIL',
+        sampling_method = 'multinomial',
     ) -> None:
         super().__init__(qa_model.vocab, regularizer)
         self.variant = variant
@@ -66,6 +67,7 @@ class VariationalObjective(Model):
         self.sentence_embedding_method = sentence_embedding_method
         self.num_labels = num_labels
         self.objective = objective
+        self.objective_fn = getattr(self, objective.lower())
         
         self._n_z = topk        # Number of latent retrievals
         self._beta = 0.1        # Scale factor for KL_div TODO: set dynamically
@@ -86,15 +88,22 @@ class VariationalObjective(Model):
 
         self.answers = {}
         self._ = 0
-        self._alpha = 0.1       # TODO: check this
-        self._smoothloss = LabelSmoothingLoss(self._alpha)
+        self._smoothing_alpha = 0.1       # TODO: check this
+        self._smoothloss = LabelSmoothingLoss(self._smoothing_alpha)
         self._supervised = False
+        
+        self.alpha = 0.8
+        self.c = 0
+        self.v = 0
+        self.reinforce_baseline = nn.Parameter(torch.tensor(0.), requires_grad=True)
+
+        self._sampler = sampling_method
         
         set_dropout(self.infr_model, 0.0)
         set_dropout(self.gen_model, 0.0)
         set_dropout(self.qa_model, 0.0)
         
-    def forward_nvil(self, phrase=None, label=None, metadata=None, retrieval=None, **kwargs) -> torch.Tensor:
+    def forward(self, phrase=None, label=None, metadata=None, retrieval=None, **kwargs) -> torch.Tensor:
         ''' Forward pass of the network. 
 
             - p(e|z,q) - answering term (qa_model)
@@ -124,7 +133,7 @@ class VariationalObjective(Model):
         gen_logits_ = gen_logits.repeat_interleave(self._n_mc, dim=0)
         label_ = label.repeat_interleave(self._n_mc, dim=0)
 
-        z_ = self._draw_samples(infr_logits, random_chance=False)        # (bsz * mc steps, num retrievals)
+        logits, z_ = self._draw_samples(infr_logits, random_chance=False)        # (bsz * mc steps, num retrievals)
         z = self.mask_z(z_, lens) if self._do_mask_z else z_
         batch = self._prep_batch(z, metadata_, label_)
         qa_output = self.qa_model(**batch)
@@ -133,13 +142,7 @@ class VariationalObjective(Model):
         qa_logprobs = -qa_output['loss']
         infr_logprobs, gen_logprobs = self._compute_logprobs(z, infr_logits_, gen_logits_)
 
-        # Compute REINFORCE estimator for the inference network
-        reinforce_reward = qa_logprobs - self._beta * (infr_logprobs - gen_logprobs)
-        reinforce_likelihood = self._reinforce(infr_logprobs, reinforce_reward, phrase, label)
-
-        # Compute elbo (maximize this)
-        # elbo = qa_logprobs.detach() + self._beta * gen_logprobs + reinforce_likelihood
-        elbo = qa_logprobs + self._beta * gen_logprobs + reinforce_likelihood
+        estimator, info = self.objective_fn(qa_logprobs, infr_logprobs, gen_logprobs, phrase, label)
         aux_signals = 0
 
         if self._supervised:
@@ -148,17 +151,19 @@ class VariationalObjective(Model):
                             for node, logit in zip(nodes, infr_logits)], dim=-1)
             aux_signals += sl_logprobs.mean()
 
-        if self._baseline_type == 'NVIL':
-            # Train reinforce baseline to minimize distance from reward
-            # Minimize the error --> maximize the negative error
-            aux_signals -= self._reinforce.sq_error.mean()
+        # if self._baseline_type == 'NVIL':
+        #     # Train reinforce baseline to minimize distance from reward
+        #     # Minimize the error --> maximize the negative error
+        #     aux_signals -= self._reinforce.sq_error.mean()
 
         if self._additional_qa_training:
             qa_output_full = self.qa_model(phrase=phrase, label=label, metadata=metadata)
             qa_logprobs_full = -qa_output_full['loss']
             aux_signals += qa_logprobs_full.mean()
 
-        outputs = {"loss": -(elbo.sum() / self._n_mc + aux_signals)}
+        outputs = {"loss": -(estimator.sum() / self._n_mc + aux_signals)}
+
+        # print((estimator.sum() / self._n_mc + aux_signals).item())
 
         with torch.no_grad():
             z_baseline = self._draw_samples(infr_logits, random_chance=True)
@@ -196,55 +201,76 @@ class VariationalObjective(Model):
         return outputs
         ((lens.squeeze().cpu() == 2).int() * (torch.tensor(tp) == True).int()).bool().any()
 
-    def forward_vimco(self, phrase=None, label=None, metadata=None, retrieval=None, **kwargs) -> torch.Tensor:
-        ''' Forward pass of the network. 
+    def nvil(self, qa_logprobs, infr_logprobs, gen_logprobs, phrase=None, label=None, *args, **kwargs):
+        ''' NVIL ELBO from https://arxiv.org/pdf/1402.0030.pdf
         '''
-        self._d = phrase['tokens']['token_ids'].device
-        qlens = [m['QLen'] for m in metadata]
-        qlens_ = [m['QLen'] for m in metadata for _ in range(self._n_mc)]
-        lens = torch.tensor(qlens_, device=self._d).unsqueeze(1)
-        metadata_ = [m for m in metadata for _ in range(self._n_mc)]
-        nodes = [torch.tensor(m['node_label'], device=self._d).nonzero().squeeze(1) for m in metadata]
-        s = self.dataset_reader.decode(phrase['tokens']['token_ids'][0]).split('.')
-        flag = False
-        # 1-1 --> not Neg In Head, pos; 1-0 --> not NIH, neg; 0-1 --> NIH, pos; 0-0 --> NIH, neg
-        annots = torch.tensor([[1-int('not' in m['question_text']), l.item()] for m,l in zip(metadata,label)], device=self._d)
+        qa_logprobs = torch.cat(qa_logprobs.unsqueeze(0).chunk(2,1), 0)
+        infr_logprobs = torch.cat(infr_logprobs.unsqueeze(0).chunk(2,1), 0)
+        gen_logprobs = torch.cat(gen_logprobs.unsqueeze(0).chunk(2,1), 0)
+    
+        # Compute the unnormalized learning signal
+        l = qa_logprobs - torch.mul(self._beta, infr_logprobs.detach() - gen_logprobs)
+        ls_term = l
 
-        # Obtain retrieval logits
-        infr_logits = self.infr_model(phrase, label)
-        gen_logits = self.gen_model(phrase)
+        # Subtract the input-dependent baseline     # TODO: confirm whether using input-dependent baseline is better for n_z > 1
+        # input_dependent_baseline = self.baseline_model(phrase, label)
+        # l -= input_dependent_baseline.detach()
+        input_dependent_baseline = 0
 
-        # Take multiple monte carlo samples by tiling the logits
-        infr_logits_ = infr_logits.repeat_interleave(self._n_mc, dim=0)
-        gen_logits_ = gen_logits.repeat_interleave(self._n_mc, dim=0)
-        label_ = label.repeat_interleave(self._n_mc, dim=0)
+        # Update the learning signal statistics
+        cb = torch.mean(l)
+        vb = torch.var(l)
+        self.c = self.alpha * self.c + (1-self.alpha) * cb
+        self.v = self.alpha * self.v + (1-self.alpha) * vb
 
-        z_ = self._draw_samples(infr_logits, random_chance=False)        # (bsz * mc steps, num retrievals)
-        z = self.mask_z(z_, lens) if self._do_mask_z else z_
-        batch = self._prep_batch(z, metadata_, label_)
-        qa_output = self.qa_model(**batch)
+        l = (l - self.c) / max(1, self.v)
+        infr_term = torch.mul(l.detach(), infr_logprobs)
+        baseline_error = l.detach() - input_dependent_baseline - self.reinforce_baseline
+        baseline_term = -torch.pow(baseline_error, 2) #torch.mul(l.detach(), torch.pow(baseline_error, 2))      # Didn't work when rescaling by l as outlined in the original paper...
+        elbo = ls_term + infr_term + baseline_term
 
-        # Compute log probabilites from logits and sample. log probability = -loss
-        qa_logprobs = -qa_output['loss']
-        infr_logprobs, gen_logprobs = self._compute_logprobs(z, infr_logits_, gen_logits_)
+        return elbo, {
+            "input_dependent_baseline": input_dependent_baseline,
+        }
 
-        # # Compute REINFORCE estimator for the inference network
-        # reinforce_reward = qa_logprobs - self._beta * (infr_logprobs - gen_logprobs)
-        # reinforce_likelihood = self._reinforce(infr_logprobs, reinforce_reward, phrase, label)
-
-        # # Compute elbo (maximize this)
-        # # elbo = qa_logprobs.detach() + self._beta * gen_logprobs + reinforce_likelihood
-        # elbo = qa_logprobs + self._beta * gen_logprobs + reinforce_likelihood
-
+    def vimco(self, qa_logprobs, infr_logprobs, gen_logprobs, *args, **kwargs):
+        ''' VIMCO multi-sample estimator from https://arxiv.org/pdf/1602.06725.pdf
+        '''
         # VIMCO multi-sample objective
         qa_logprobs = torch.cat(qa_logprobs.unsqueeze(0).chunk(2,1), 0)
         infr_logprobs = torch.cat(infr_logprobs.unsqueeze(0).chunk(2,1), 0)
         gen_logprobs = torch.cat(gen_logprobs.unsqueeze(0).chunk(2,1), 0)
 
+        K = torch.tensor([float(self._n_mc)], device=self._d)
+
+        l = qa_logprobs + gen_logprobs - infr_logprobs
+
+        # Compute the multi-sample stochastic bound
+        L_hat = torch.unsqueeze(torch.logsumexp(l, -1) - torch.log(K), 1)
+
+        # Precompute the sum of log f
+        s = torch.unsqueeze(torch.sum(l, -1), 1)
+
+        ## Compute the baseline for each sample
+        # Save the current log f for future use and replace it with the average of the other K-1 log f terms
+        temp = l
+        l = (s - l) / (K - 1)
+        L_hat_noti = torch.unsqueeze(torch.logsumexp(l, -1) - torch.log(K), 1)
+        # Restore the saved value
+        l = temp
+
+        # Compute the importance weights
+        w = torch.softmax(l, -1)
+
+        # Gradient contributions
+        estimator = torch.mul(w.detach(), l) + torch.mul((L_hat - L_hat_noti).detach(), infr_logprobs)
+
+        return estimator, {}
+
         qa_probs = torch.exp(qa_logprobs)
         infr_probs = torch.exp(infr_logprobs)
         gen_probs = torch.exp(gen_logprobs)
-        
+
         # Detach infr_probs here as the gradients are computed explicitly below
         f = torch.div(torch.mul(qa_probs, gen_probs), infr_probs.detach())       # f(x, h^i) = P(h, h^i) / Q(h^i | x)
         f_sum = torch.sum(f, -1).unsqueeze(-1)
@@ -266,26 +292,7 @@ class VariationalObjective(Model):
 
         vimco_estimator = L_hat + grad_L_k
 
-        outputs = {"loss": -vimco_estimator.sum() / self._n_mc}
-
-        with torch.no_grad():
-            z_baseline = self._draw_samples(infr_logits, random_chance=True)
-            batch_baseline = self._prep_batch(z_baseline, metadata, label)
-            qa_output_baseline = self.qa_model(**batch_baseline)
-            correct_baseline = (qa_output_baseline["label_probs"].argmax(-1) == label)
-
-        if True:
-            annots_ = [a.tolist() in [[1,1],[0,0]] for annot in annots for a in [annot]*self._n_mc]
-            nodes_ = [n.tolist() for node in nodes for n in [node]*self._n_mc]
-            correct = (qa_output["label_probs"].argmax(-1) == label_)
-            correct_true = [set(n).issubset(set(row.tolist())) for n,row in zip(nodes_,z)]
-            tp = [c.item() and ct if a else -1 for c,ct,a in zip(correct, correct_true, annots_)]
-            fp = [c.item() and not ct if a else -1 for c,ct,a in zip(correct, correct_true, annots_)]
-            def decode(i):
-                return self.dataset_reader.decode(batch['phrase']['tokens']['token_ids'][i]).split('</s> </s>')
-        self.log_results(qlens_, correct, tp, correct_baseline)
-
-        return outputs
+        return vimco_estimator, {}
 
     def _compute_logprobs(self, z, *logits):
         ''' Compute the log probability of sample z from
@@ -387,12 +394,7 @@ class VariationalObjective(Model):
         batch = self.dataset_reader.encode_batch(sentences, self.qa_vocab)
         return self.dataset_reader.move(batch, self._d)
 
-    def _gs(self, logits, tau=1):
-        ''' Sample using Gumbel Softmax. Ingests raw logits.
-        '''
-        return F.gumbel_softmax(logits, tau=tau, hard=True, eps=1e-10, dim=-1)
-
-    def _draw_samples(self, p, random_chance=False):
+    def _draw_samples(self, logits, random_chance=False):
         ''' Obtain samples from a distribution
             - p: probability distribution
 
@@ -400,15 +402,21 @@ class VariationalObjective(Model):
         '''
         if random_chance:
             # Overwrite all weights with uniform weight (for masked positions)
-            p_ = torch.where(p != self._p0, torch.zeros_like(p), self._p0.to(self._d))
+            logits = torch.where(logits != self._p0, torch.zeros_like(logits), self._p0.to(self._d))
         else:
             # Duplicate tensor for multiple monte carlo samples
-            p_ = p.repeat_interleave(self._n_mc, dim=0)        # (bsz * mc steps, num retrievals)
+            logits = logits.repeat_interleave(self._n_mc, dim=0)        # (bsz * mc steps, num retrievals)
         
         if self.training:
-            return torch.multinomial(p_.softmax(-1), self._n_z, replacement=False)
+            if self._sampler == 'multinomial':
+                return logits, torch.multinomial(logits.softmax(-1), self._n_z, replacement=False)
+            elif self._sampler == 'gumbel_softmax':
+                return self.sample_gs(logits, self._n_z)
+            else:
+                raise NotImplementedError
         else:
-            return p_.argmax(-1).unsqueeze(1)
+            raise NotImplementedError("Need to turn this into topk...")
+            return p_, p_.argmax(-1).unsqueeze(1)
 
     def mask_z(self, z_, lens):
         ''' Mask samples z if the number of multinomial samples exceeds the
@@ -423,13 +431,15 @@ class VariationalObjective(Model):
         )
         return z
 
-    def forward(self, *args, **kwargs):
-        if self.objective == 'NVIL':
-            return self.forward_nvil(*args, **kwargs)
-        elif self.objective == 'VIMCO':
-            return self.forward_vimco(*args, **kwargs)
-        else:
-            raise NotImplementedError
+    def sample_gs(self, logits_, n_draws, replacement=False):
+        logits = logits_.clone()
+        zs = []
+        for _ in range(n_draws):
+            z = gs(logits)
+            # Mask sampled idxs
+            logits += z * -1e20
+            zs.append(z.argmax(-1).unsqueeze(1))
+        return logits, torch.cat(zs, 1)
 
 
 class _BaseSentenceClassifier(Model):
@@ -529,6 +539,7 @@ class _BaseSentenceClassifier(Model):
                 
         return eqc
 
+
 class InferenceNetwork(_BaseSentenceClassifier):
     def forward(self, phrase, label, **kwargs) -> torch.Tensor:
         ''' Forward passw of the network. Outputs a distribution over sentences z. 
@@ -624,7 +635,7 @@ class TrainableReinforce(nn.Module):
     '''
     def __init__(self, baseline_network):
         super().__init__()
-        self._reinforce_baseline = nn.Parameter(torch.tensor(-1.0), requires_grad=True)
+        self._reinforce_baseline = nn.Parameter(torch.tensor(0.), requires_grad=True)
         self.model = baseline_network
         self.sq_error = 0
 
@@ -681,3 +692,8 @@ class LabelSmoothingLoss(nn.Module):
         else:
             raise NotImplementedError
 
+
+def gs(logits, tau=1):
+    ''' Sample using Gumbel Softmax. Ingests raw logits.
+    '''
+    return F.gumbel_softmax(logits, tau=tau, hard=True, eps=1e-10, dim=-1)

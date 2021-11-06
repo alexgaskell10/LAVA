@@ -44,6 +44,7 @@ from typing import Any, Dict, List, Optional
 import torch
 import torch.distributed as dist
 import torch.multiprocessing as mp
+from torch import nn
 from overrides import overrides
 
 from allennlp.commands.subcommand import Subcommand
@@ -740,6 +741,7 @@ class TrainModel(Registrable):
             vocab=vocabulary_,
             dataset_reader=dataset_reader,
         )
+        # model_ = nn.DataParallel(model)
 
         # Initializing the model can have side effect of expanding the vocabulary.
         # Save the vocab only in the master. In the degenerate non-distributed
