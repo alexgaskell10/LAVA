@@ -51,6 +51,7 @@ class VariationalObjective(Model):
         additional_qa_training = False,
         objective = 'NVIL',
         sampling_method = 'multinomial',
+        infr_supervision = False,
     ) -> None:
         super().__init__(qa_model.vocab, regularizer)
         self.variant = variant
@@ -90,7 +91,7 @@ class VariationalObjective(Model):
         self._ = 0
         self._smoothing_alpha = 0.1       # TODO: check this
         self._smoothloss = LabelSmoothingLoss(self._smoothing_alpha)
-        self._supervised = False
+        self._supervised = infr_supervision
         
         self.alpha = 0.8
         self.c = 0
@@ -149,12 +150,7 @@ class VariationalObjective(Model):
             # Use some labeled examples and train inference model using supervised learning
             sl_logprobs = torch.cat([self._compute_logprobs(node.unsqueeze(0), logit.unsqueeze(0))[0] 
                             for node, logit in zip(nodes, infr_logits)], dim=-1)
-            aux_signals += sl_logprobs.mean()
-
-        # if self._baseline_type == 'NVIL':
-        #     # Train reinforce baseline to minimize distance from reward
-        #     # Minimize the error --> maximize the negative error
-        #     aux_signals -= self._reinforce.sq_error.mean()
+            aux_signals += sl_logprobs.mean()       # (nodes[0] == torch.tensor([3]).cuda() and nodes[1] == torch.tensor([14, 18]).cuda()).all()
 
         if self._additional_qa_training:
             qa_output_full = self.qa_model(phrase=phrase, label=label, metadata=metadata)
@@ -163,10 +159,8 @@ class VariationalObjective(Model):
 
         outputs = {"loss": -(estimator.sum() / self._n_mc + aux_signals)}
 
-        # print((estimator.sum() / self._n_mc + aux_signals).item())
-
         with torch.no_grad():
-            z_baseline = self._draw_samples(infr_logits, random_chance=True)
+            logits_baseline, z_baseline = self._draw_samples(infr_logits, random_chance=True)
             batch_baseline = self._prep_batch(z_baseline, metadata, label)
             qa_output_baseline = self.qa_model(**batch_baseline)
             correct_baseline = (qa_output_baseline["label_probs"].argmax(-1) == label)
@@ -174,8 +168,9 @@ class VariationalObjective(Model):
         if True:
             annots_ = [a.tolist() in [[1,1],[0,0]] for annot in annots for a in [annot]*self._n_mc]
             nodes_ = [n.tolist() for node in nodes for n in [node]*self._n_mc]
-            correct = (qa_output["label_probs"].argmax(-1) == label_)
-            correct_true = [set(n).issubset(set(row.tolist())) for n,row in zip(nodes_,z)]
+            correct = (qa_output["label_probs"].argmax(-1) == label_)     # TODO
+            # correct = label
+            correct_true = [set(n).issubset(set(row.tolist())) for n,row in zip(nodes_, z)]
             tp = [c.item() and ct if a else -1 for c,ct,a in zip(correct, correct_true, annots_)]
             fp = [c.item() and not ct if a else -1 for c,ct,a in zip(correct, correct_true, annots_)]
             def decode(i):
@@ -190,13 +185,13 @@ class VariationalObjective(Model):
             self._pytorch_model.qa_model._transformer_model.encoder.layer[0].attention.self.key.weight.grad
             infr_logits.softmax(-1)[0,nodes[0]]
 
-        if self._n_z == 1 and self._n_mc == 1:
-            e = [m['exact_match'] for m in metadata]
-            z_ = z.squeeze(-1)
-            p = infr_logits.argmax(-1)
-            p_ = infr_logits.softmax(-1)
-            argmax_ps = p_.gather(1, p.unsqueeze(1)).squeeze()
-            action_ps = p_.gather(1, z_.unsqueeze(1)).squeeze()
+        # if self._n_z == 1 and self._n_mc == 1:
+        #     e = [m['exact_match'] for m in metadata]
+        #     z_ = z.squeeze(-1)
+        #     p = infr_logits.argmax(-1)
+        #     p_ = infr_logits.softmax(-1)
+        #     argmax_ps = p_.gather(1, p.unsqueeze(1)).squeeze()
+        #     action_ps = p_.gather(1, z_.unsqueeze(1)).squeeze()
 
         return outputs
         ((lens.squeeze().cpu() == 2).int() * (torch.tensor(tp) == True).int()).bool().any()
@@ -209,7 +204,8 @@ class VariationalObjective(Model):
         gen_logprobs = torch.cat(gen_logprobs.unsqueeze(0).chunk(2,1), 0)
     
         # Compute the unnormalized learning signal
-        l = qa_logprobs - torch.mul(self._beta, infr_logprobs.detach() - gen_logprobs)
+        # l = qa_logprobs - torch.mul(self._beta, infr_logprobs.detach() - gen_logprobs)
+        l = qa_logprobs.detach() - torch.mul(self._beta, infr_logprobs.detach() - gen_logprobs)
         ls_term = l
 
         # Subtract the input-dependent baseline     # TODO: confirm whether using input-dependent baseline is better for n_z > 1
@@ -236,6 +232,8 @@ class VariationalObjective(Model):
     def vimco(self, qa_logprobs, infr_logprobs, gen_logprobs, *args, **kwargs):
         ''' VIMCO multi-sample estimator from https://arxiv.org/pdf/1602.06725.pdf
         '''
+        ## Not currently working... (model doesn't learn anything)
+
         # VIMCO multi-sample objective
         qa_logprobs = torch.cat(qa_logprobs.unsqueeze(0).chunk(2,1), 0)
         infr_logprobs = torch.cat(infr_logprobs.unsqueeze(0).chunk(2,1), 0)
@@ -244,55 +242,37 @@ class VariationalObjective(Model):
         K = torch.tensor([float(self._n_mc)], device=self._d)
 
         l = qa_logprobs + gen_logprobs - infr_logprobs
+        # l = qa_logprobs - torch.mul(self._beta, infr_logprobs.detach() - gen_logprobs)
 
         # Compute the multi-sample stochastic bound
         L_hat = torch.unsqueeze(torch.logsumexp(l, -1) - torch.log(K), 1)
 
         # Precompute the sum of log f
-        s = torch.unsqueeze(torch.sum(l, -1), 1)
+        s = torch.sum(l, -1)
 
-        ## Compute the baseline for each sample
-        # Save the current log f for future use and replace it with the average of the other K-1 log f terms
-        temp = l
-        l = (s - l) / (K - 1)
-        L_hat_noti = torch.unsqueeze(torch.logsumexp(l, -1) - torch.log(K), 1)
-        # Restore the saved value
-        l = temp
+        # Compute the baseline for each sample
+        L_hat_noti = torch.zeros_like(l)
+        for i in range(self._n_mc):
+            # Save the current log f for future use and replace it with the average of the other K-1 log f terms
+            tmp = l
+            l[:,i] = (s - l[:,i]) / (K - 1)
+            L_hat_noti_ = torch.logsumexp(l, -1) - torch.log(K)
+            L_hat_noti[:,i] = L_hat_noti_
+            # Restore the saved value
+            l = tmp
 
         # Compute the importance weights
         w = torch.softmax(l, -1)
 
         # Gradient contributions
-        estimator = torch.mul(w.detach(), l) + torch.mul((L_hat - L_hat_noti).detach(), infr_logprobs)
+        qa_term = torch.mul(w.detach(), qa_logprobs)
+        gen_term = torch.mul(w.detach(), gen_logprobs)
+        infr_term_1 = torch.mul(w.detach(), -infr_logprobs)
+        infr_term_2 = torch.mul((L_hat - L_hat_noti).detach(), infr_logprobs)
+        infr_term = infr_term_1 + infr_term_2
+        estimator = qa_term + gen_term + infr_term
 
         return estimator, {}
-
-        qa_probs = torch.exp(qa_logprobs)
-        infr_probs = torch.exp(infr_logprobs)
-        gen_probs = torch.exp(gen_logprobs)
-
-        # Detach infr_probs here as the gradients are computed explicitly below
-        f = torch.div(torch.mul(qa_probs, gen_probs), infr_probs.detach())       # f(x, h^i) = P(h, h^i) / Q(h^i | x)
-        f_sum = torch.sum(f, -1).unsqueeze(-1)
-        K = f.size(-1)
-        
-        L_hat = torch.log(torch.div(f_sum, K))      # L_hat(h^{1:K})
-
-        w = torch.div(f, f_sum)         # w_tilde^j
-        
-        f_hat = torch.exp(torch.div(torch.log(f_sum) - torch.log(f), K))     # f_hat(x, h^-j)
-
-        sig = f + f_hat                                                     # f(x, h^i) + f_hat(x, h^-j)
-        local_signal = torch.sum(sig, -1).unsqueeze(-1) - sig
-        L_hat_notj = L_hat - torch.log(torch.div(local_signal, K))         # L_hat(h^i | h^-j)
-
-        # Detach L_hat_notj below as we don't want gradients to flow through this term
-        # when computing grads for inference params
-        grad_L_k = torch.sum(torch.mul(L_hat_notj.detach(), infr_logprobs) - w, -1)
-
-        vimco_estimator = L_hat + grad_L_k
-
-        return vimco_estimator, {}
 
     def _compute_logprobs(self, z, *logits):
         ''' Compute the log probability of sample z from
@@ -306,9 +286,10 @@ class VariationalObjective(Model):
             # Using CE loss (single-label): logprob = -CE loss
             # logprobs = [-self._loss(logit, z.squeeze(-1)) for logit in logits]
             mask = 1-((z == self._z_mask).int() * self._z_mask * -1)
-            z += 1-mask
+            z += 1 - mask
             logprobs = []
             for logit in logits:
+                assert z.max() < logit.size(1)
                 # logprob = torch.cat([-self._smoothloss(logit, tmp[:, i]).unsqueeze(1) for i in range(tmp.size(1))], dim=1) * mask
                 logprob = torch.cat([-self._loss(logit, z[:, i]).unsqueeze(1) for i in range(z.size(1))], dim=1) * mask
                 logprobs.append(logprob.sum(-1)/mask.sum(-1))
@@ -365,11 +346,11 @@ class VariationalObjective(Model):
                     self.answers[d][2].append(t)
 
             for d in sorted(self.answers.keys()):
-                all_score_a = self.answers[d][0].count(True) / len(self.answers[d][0])
-                last_100_a = self.answers[d][0][-n:].count(True) / len(self.answers[d][0][-n:])
-                last_100_tp = self.answers[d][2][-n:].count(True) / len(self.answers[d][2][-n:])
-                all_score_r = self.answers[d][1].count(True) / len(self.answers[d][1])
-                last_100_r = self.answers[d][1][-n:].count(True) / len(self.answers[d][1][-n:])
+                all_score_a = self.answers[d][0].count(True) / max(len(self.answers[d][0]), 1)
+                last_100_a = self.answers[d][0][-n:].count(True) / max(len(self.answers[d][0][-n:]),1)
+                last_100_tp = self.answers[d][2][-n:].count(True) / max(len(self.answers[d][2][-n:]),1)
+                all_score_r = self.answers[d][1].count(True) / max(len(self.answers[d][1]),1)
+                last_100_r = self.answers[d][1][-n:].count(True) / max(len(self.answers[d][1][-n:]),1)
                 print(f'\nM:\tL: {d}\tAll: {all_score_a:.3f}\tLast {n}: {last_100_a:.2f}\t'
                     f'Last {n} tp: {last_100_tp:.2f}\t'
                     f'B:\tAll: {all_score_r:.3f}\tLast {n}: {last_100_r:.2f}\tN: {len(self.answers[d][0])}')
@@ -412,6 +393,8 @@ class VariationalObjective(Model):
                 return logits, torch.multinomial(logits.softmax(-1), self._n_z, replacement=False)
             elif self._sampler == 'gumbel_softmax':
                 return self.sample_gs(logits, self._n_z)
+            elif self._sampler == 'argmax':
+                return logits, logits.topk(self._n_z).indices
             else:
                 raise NotImplementedError
         else:
