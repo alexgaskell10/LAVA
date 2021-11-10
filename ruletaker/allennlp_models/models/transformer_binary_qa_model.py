@@ -28,15 +28,17 @@ logger = logging.getLogger(__name__)
 class TransformerBinaryQA(Model):
     """
     """
-    def __init__(self,
-                 vocab: Vocabulary,
-                 pretrained_model: str = None,
-                 requires_grad: bool = True,
-                 transformer_weights_model: str = None,
-                 num_labels: int = 2,
-                 predictions_file=None,
-                 layer_freeze_regexes: List[str] = None,
-                 regularizer: Optional[RegularizerApplicator] = None) -> None:
+    def __init__(
+        self,
+        vocab: Vocabulary,
+        pretrained_model: str = None,
+        requires_grad: bool = True,
+        transformer_weights_model: str = None,
+        num_labels: int = 2,
+        predictions_file=None,
+        layer_freeze_regexes: List[str] = None,
+        regularizer: Optional[RegularizerApplicator] = None
+    ):
         super().__init__(vocab, regularizer)
 
         self._predictions = []
@@ -167,7 +169,7 @@ class TransformerBinaryQA(Model):
             output_dict["label"] = label
 
             # Hack to use wandb logging
-            if os.environ['WANDB_LOG'] == 'true':
+            if getattr(os.environ, "WANDB_LOG", "false") == 'true':
                 self.wandb_log(metadata, label_logits, label, loss)
 
             for e, example in enumerate(metadata):
@@ -258,4 +260,3 @@ class TransformerBinaryQA(Model):
             return {
                 'EM': self._accuracy.get_metric(reset),
             }
-

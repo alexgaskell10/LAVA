@@ -27,7 +27,8 @@ class RetrievalReasoningReader(DatasetReader):
     ----------
     """
 
-    def __init__(self,
+    def __init__(
+        self,
         pretrained_model: str = None,
         max_pieces: int = 512,
         syntax: str = "rulebase",
@@ -44,8 +45,8 @@ class RetrievalReasoningReader(DatasetReader):
         concat_q_and_c: bool = None,
         true_samples_only: bool = False,
         add_NAF: bool = False,
-    ) -> None:
-        super().__init__()
+    ):
+        super().__init__(cache_directory=None, max_instances=None)
         
         # Init reasoning tokenizer
         self._tokenizer_qamodel = PretrainedTransformerTokenizer(pretrained_model, max_length=max_pieces)
@@ -54,18 +55,13 @@ class RetrievalReasoningReader(DatasetReader):
         self._token_indexers_qamodel = {'tokens': token_indexer}
         
         # Initalize retriever tokenizer
-        if retriever_variant == 'spacy':
-            self._tokenizer_retriever = SpacyTokenizer()
-            self._token_indexers_retriever = {"tokens": SingleIdTokenIndexer()}
-        elif 'roberta' in retriever_variant:
+        if 'roberta' in retriever_variant:
             self._tokenizer_retriever = PretrainedTransformerTokenizer(retriever_variant, max_length=max_pieces)
             self._tokenizer_retriever_internal = self._tokenizer_retriever.tokenizer
             token_indexer = PretrainedTransformerIndexer(retriever_variant)
             self._token_indexers_retriever = {'tokens': token_indexer}
         else:
-            raise ValueError(
-                f"Invalid retriever_variant = {retriever_variant}.\nInvestigate!"
-            )
+            raise ValueError(f"Invalid retriever_variant = {retriever_variant}.\nInvestigate!")
 
         self._max_pieces = max_pieces
         self._add_prefix = add_prefix

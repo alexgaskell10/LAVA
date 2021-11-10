@@ -26,6 +26,7 @@ from .retriever_embedders import (
 from .utils import safe_log, right_pad, batch_lookup, EPSILON, make_dot, set_dropout, one_hot, lmap, lfilter
 from .transformer_binary_qa_model import TransformerBinaryQA
 from .baseline import Baseline
+# from .model import RobertaForPRVI
 
 torch.manual_seed(0)
 
@@ -52,6 +53,7 @@ class VariationalObjective(Model):
         objective = 'NVIL',
         sampling_method = 'multinomial',
         infr_supervision = False,
+        add_NAF = False,
     ) -> None:
         super().__init__(qa_model.vocab, regularizer)
         self.variant = variant
@@ -61,8 +63,8 @@ class VariationalObjective(Model):
         self._mlloss = nn.BCEWithLogitsLoss(reduction='none')
         self.qa_vocab = qa_model.vocab
         self.dataset_reader = dataset_reader
-        self.infr_model = InferenceNetwork(variant=variant, vocab=vocab, dataset_reader=dataset_reader, num_labels=1)
-        self.gen_model = GenerativeNetwork(variant=variant, vocab=vocab, dataset_reader=dataset_reader, num_labels=1)
+        self.infr_model = InferenceNetwork(variant=variant, vocab=vocab, dataset_reader=dataset_reader, has_naf=add_NAF, num_labels=1)
+        self.gen_model = GenerativeNetwork(variant=variant, vocab=vocab, dataset_reader=dataset_reader, has_naf=add_NAF, num_labels=1)
         self.vocab = vocab
         self.regularizer = regularizer
         self.sentence_embedding_method = sentence_embedding_method
@@ -157,7 +159,8 @@ class VariationalObjective(Model):
             qa_logprobs_full = -qa_output_full['loss']
             aux_signals += qa_logprobs_full.mean()
 
-        outputs = {"loss": -(estimator.sum() / self._n_mc + aux_signals)}
+        # outputs = {"loss": -(estimator.sum() / self._n_mc + aux_signals)}
+        outputs = {"loss": -(estimator.mean()*0 + aux_signals.mean())}
 
         with torch.no_grad():
             logits_baseline, z_baseline = self._draw_samples(infr_logits, random_chance=True)
@@ -205,7 +208,7 @@ class VariationalObjective(Model):
     
         # Compute the unnormalized learning signal
         # l = qa_logprobs - torch.mul(self._beta, infr_logprobs.detach() - gen_logprobs)
-        l = qa_logprobs.detach() - torch.mul(self._beta, infr_logprobs.detach() - gen_logprobs)
+        l = qa_logprobs.detach() - self._beta * (infr_logprobs.detach() - gen_logprobs)
         ls_term = l
 
         # Subtract the input-dependent baseline     # TODO: confirm whether using input-dependent baseline is better for n_z > 1
@@ -283,6 +286,16 @@ class VariationalObjective(Model):
             target = torch.full_like(logits[0], 0).scatter_(1, z, 1.)
             logprobs = [-self._mlloss(logit, target).mean(-1) for logit in logits]
         elif self._logprob_method == 'CE':
+            # # Using CE loss (single-label): logprob = -CE loss
+            # # logprobs = [-self._loss(logit, z.squeeze(-1)) for logit in logits]
+            # mask = 1-((z == self._z_mask).int() * self._z_mask * -1)
+            # z += 1 - mask
+            # logprobs = []
+            # for logit in logits:
+            #     assert z.max() < logit.size(1)
+            #     # logprob = torch.cat([-self._smoothloss(logit, tmp[:, i]).unsqueeze(1) for i in range(tmp.size(1))], dim=1) * mask
+            #     logprob = torch.cat([-self._loss(logit, z[:, i]).unsqueeze(1) for i in range(z.size(1))], dim=1) * mask
+            #     logprobs.append(logprob.sum(-1)/mask.sum(-1))
             # Using CE loss (single-label): logprob = -CE loss
             # logprobs = [-self._loss(logit, z.squeeze(-1)) for logit in logits]
             mask = 1-((z == self._z_mask).int() * self._z_mask * -1)
@@ -426,7 +439,7 @@ class VariationalObjective(Model):
 
 
 class _BaseSentenceClassifier(Model):
-    def __init__(self, variant, vocab, dataset_reader, regularizer=None, num_labels=1):
+    def __init__(self, variant, vocab, dataset_reader, has_naf, regularizer=None, num_labels=1):
         super().__init__(vocab, regularizer)
         self._predictions = []
 
@@ -441,8 +454,10 @@ class _BaseSentenceClassifier(Model):
 
         # unifing all model classification layer
         self.node_class_method = 'mean'     # ['mean', 'concat_first_last']
-        self.node_class_k = 1 if self.node_class_method == 'mean' else 2
-        self._W = NodeClassificationHead(self._output_dim * self.node_class_k, 0, num_labels)
+        self.node_class_k = 1 #if self.node_class_method == 'mean' else 2
+        self.node_classifier = NodeClassificationHead(self._output_dim * self.node_class_k, 0, num_labels)
+        self.naf_layer = nn.Linear(self._output_dim, self._output_dim)
+        self.has_naf = has_naf
 
         self._accuracy = CategoricalAccuracy()
         self._loss = nn.CrossEntropyLoss()
@@ -471,9 +486,10 @@ class _BaseSentenceClassifier(Model):
         '''
         # Compute representations
         embs = self.model(x)[0]
+        cls_emb = embs[:,0,:]
+        naf_repr = self.naf_layer(cls_emb)
 
-        # 
-        max_num_sentences = (x == self.split_idx).nonzero()[:,0].bincount().max() - 1
+        max_num_sentences = (x == self.split_idx).nonzero()[:,0].bincount().max() - int(self.has_naf)
         node_reprs = torch.full((x.size(0), max_num_sentences), self._p0).to(self._d)      # shape: (bsz, # sentences)
         for b in range(x.size(0)):
             # Create list of end idxs of each context item
@@ -482,8 +498,9 @@ class _BaseSentenceClassifier(Model):
             end_idxs.insert(0, q_end + 4)   # Tokenizer adds four "decorative" tokens at the beginning of the context
 
             # Form tensor containing embedding of first and last token for each sentence
-            reprs = torch.zeros(len(end_idxs)-1, self.node_class_k, embs.size(-1)).to(self._d)      # shape: (# context items, 2, model_dim)
-            for i in range(len(end_idxs)-1):
+            n_sentences = len(end_idxs) - 1 - int(self.has_naf)
+            reprs = torch.zeros(n_sentences, self.node_class_k, embs.size(-1)).to(self._d)      # shape: (# context items, 2, model_dim)
+            for i in range(n_sentences):
                 start_idx = end_idxs[i] + 1            # +1 to skip full stop at beginning
                 end_idx = end_idxs[i+1] + 1            # +1 to include full stop at end
                 
@@ -497,8 +514,8 @@ class _BaseSentenceClassifier(Model):
                     raise NotImplementedError
 
             # Pass through classifier
-            reprs_ = reprs.view(reprs.size(0), -1)
-            node_logits = self._W(reprs_).squeeze(-1)                
+            reprs_ = torch.cat((reprs.view(reprs.size(0), -1), naf_repr[b].unsqueeze(0)), 0)
+            node_logits = self.node_classifier(reprs_).squeeze(-1)                
             node_reprs[b, :len(node_logits)] = node_logits
 
         return node_reprs
@@ -559,9 +576,6 @@ class GenerativeNetwork(_BaseSentenceClassifier):
 
 
 class BaselineNetwork(_BaseSentenceClassifier):
-    # def __init__(self, variant, vocab, dataset_reader, regularizer=None, num_labels=1):
-    #     super().__init__(variant, vocab, dataset_reader, regularizer, num_labels)
-
     def forward(self, phrase, label, **kwargs) -> torch.Tensor:
         ''' Forward pass of the network. Outputs a distribution over sentences z. 
 
