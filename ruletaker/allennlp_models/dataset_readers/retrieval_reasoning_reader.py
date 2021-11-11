@@ -45,6 +45,7 @@ class RetrievalReasoningReader(DatasetReader):
         concat_q_and_c: bool = None,
         true_samples_only: bool = False,
         add_NAF: bool = False,
+        one_proof: bool = False,
     ):
         super().__init__(cache_directory=None, max_instances=None)
         
@@ -77,8 +78,9 @@ class RetrievalReasoningReader(DatasetReader):
         self._shortest = shortest_proof
         self._true_samples_only = true_samples_only
         self._add_NAF = add_NAF
+        self._one_proof = one_proof     # Limits the dataset to questions with a single proof. Cuts dataset size by c. 12%
         tok = type(self).__name__
-        self.pkl_file = f'{tok}_{self._max_pieces}_{self._shortest}_{self._longest}_{int(self._true_samples_only)}_{int(self._add_NAF)}_DSET.pkl'
+        self.pkl_file = f'{tok}_{self._max_pieces}_{self._shortest}_{self._longest}_{int(self._true_samples_only)}_{int(self._add_NAF)}_{int(self._one_proof)}_DSET.pkl'
 
     @overrides
     def _read(self, file_path: str):
@@ -110,7 +112,7 @@ class RetrievalReasoningReader(DatasetReader):
 
         data_dir = '/'.join(file_path.split('/')[:-1])
         dset = file_path.split('/')[-1].split('.')[0]
-        examples = RRProcessor().get_examples(data_dir, dset, debug_num=debug_num)
+        examples = RRProcessor().get_examples(data_dir, dset, debug_num=debug_num, one_proof=self._one_proof)
 
         i = 0
         for example in examples:

@@ -136,7 +136,7 @@ class VariationalObjective(Model):
         gen_logits_ = gen_logits.repeat_interleave(self._n_mc, dim=0)
         label_ = label.repeat_interleave(self._n_mc, dim=0)
 
-        logits, z_ = self._draw_samples(infr_logits, random_chance=False)        # (bsz * mc steps, num retrievals)
+        logits, z_ = self._draw_samples(infr_logits)        # (bsz * mc steps, num retrievals)
         z = self.mask_z(z_, lens) if self._do_mask_z else z_
         batch = self._prep_batch(z, metadata_, label_)
         qa_output = self.qa_model(**batch)
@@ -159,20 +159,26 @@ class VariationalObjective(Model):
             qa_logprobs_full = -qa_output_full['loss']
             aux_signals += qa_logprobs_full.mean()
 
-        # outputs = {"loss": -(estimator.sum() / self._n_mc + aux_signals)}
-        outputs = {"loss": -(estimator.mean()*0 + aux_signals.mean())}
+        outputs = {"loss": -(estimator.sum() / self._n_mc + aux_signals)}
+        # outputs = {"loss": -(aux_signals.mean())}
 
         with torch.no_grad():
             logits_baseline, z_baseline = self._draw_samples(infr_logits, random_chance=True)
             batch_baseline = self._prep_batch(z_baseline, metadata, label)
             qa_output_baseline = self.qa_model(**batch_baseline)
             correct_baseline = (qa_output_baseline["label_probs"].argmax(-1) == label)
+        # correct_baseline = label
 
         if True:
             annots_ = [a.tolist() in [[1,1],[0,0]] for annot in annots for a in [annot]*self._n_mc]
             nodes_ = [n.tolist() for node in nodes for n in [node]*self._n_mc]
+
+            # correct = label #torch.full_like(label, True)
+            # correct_true = [set(n).issubset(set(row.tolist())) for n,row in zip(nodes_, z)]
+            # tp = [ct if a else -1 for ct,a in zip(correct_true, annots_)]
+            # fp = [not ct if a else -1 for ct,a in zip(correct_true, annots_)]
+
             correct = (qa_output["label_probs"].argmax(-1) == label_)     # TODO
-            # correct = label
             correct_true = [set(n).issubset(set(row.tolist())) for n,row in zip(nodes_, z)]
             tp = [c.item() and ct if a else -1 for c,ct,a in zip(correct, correct_true, annots_)]
             fp = [c.item() and not ct if a else -1 for c,ct,a in zip(correct, correct_true, annots_)]
@@ -207,8 +213,8 @@ class VariationalObjective(Model):
         gen_logprobs = torch.cat(gen_logprobs.unsqueeze(0).chunk(2,1), 0)
     
         # Compute the unnormalized learning signal
-        # l = qa_logprobs - torch.mul(self._beta, infr_logprobs.detach() - gen_logprobs)
-        l = qa_logprobs.detach() - self._beta * (infr_logprobs.detach() - gen_logprobs)
+        l = qa_logprobs - self._beta * (infr_logprobs.detach() - gen_logprobs)
+        # l = qa_logprobs.detach() - self._beta * (infr_logprobs.detach() - gen_logprobs)
         ls_term = l
 
         # Subtract the input-dependent baseline     # TODO: confirm whether using input-dependent baseline is better for n_z > 1
