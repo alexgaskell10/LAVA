@@ -119,7 +119,6 @@ class RetrievalReasoningReader(DatasetReader):
             example.qlen = sum(example.node_label[:-1])
 
             if self._true_samples_only:
-                # TODO: fix this using above annot variable
                 # Filter so only positive correct questions and negative
                 # incorrect questions are used
                 if 'not' in example.question and example.label:

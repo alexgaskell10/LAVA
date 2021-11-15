@@ -54,6 +54,7 @@ class VariationalObjective(Model):
         sampling_method = 'multinomial',
         infr_supervision = False,
         add_NAF = False,
+        threshold_sampling = False,
     ) -> None:
         super().__init__(qa_model.vocab, regularizer)
         self.variant = variant
@@ -80,6 +81,7 @@ class VariationalObjective(Model):
         self._z_mask = -1
         self._do_mask_z = do_mask_z     # TODO: set dynamically
         self._additional_qa_training = additional_qa_training
+        self.threshold_sampling = threshold_sampling
 
         self._baseline_type = baseline_type
         if baseline_type == 'Prob-NMN':
@@ -123,7 +125,6 @@ class VariationalObjective(Model):
         metadata_ = [m for m in metadata for _ in range(self._n_mc)]
         nodes = [torch.tensor(m['node_label'], device=self._d).nonzero().squeeze(1) for m in metadata]
         s = self.dataset_reader.decode(phrase['tokens']['token_ids'][0]).split('.')
-        flag = False
         # 1-1 --> not Neg In Head, pos; 1-0 --> not NIH, neg; 0-1 --> NIH, pos; 0-0 --> NIH, neg
         annots = torch.tensor([[1-int('not' in m['question_text']), l.item()] for m,l in zip(metadata,label)], device=self._d)
 
@@ -137,13 +138,14 @@ class VariationalObjective(Model):
         label_ = label.repeat_interleave(self._n_mc, dim=0)
 
         logits, z_ = self._draw_samples(infr_logits)        # (bsz * mc steps, num retrievals)
-        z = self.mask_z(z_, lens) if self._do_mask_z else z_
+        z = self.mask_z(z_, lens) if self._do_mask_z or not self.threshold_sampling else z_
         batch = self._prep_batch(z, metadata_, label_)
         qa_output = self.qa_model(**batch)
 
         # Compute log probabilites from logits and sample. log probability = -loss
         qa_logprobs = -qa_output['loss']
-        infr_logprobs, gen_logprobs = self._compute_logprobs(z, infr_logits_, gen_logits_)
+        qa_logprobs = torch.where(torch.isnan(qa_logprobs), torch.tensor(0., device=self._d), qa_logprobs)
+        infr_logprobs, gen_logprobs = self._compute_logprobs(z_, infr_logits_, gen_logits_)
 
         estimator, info = self.objective_fn(qa_logprobs, infr_logprobs, gen_logprobs, phrase, label)
         aux_signals = 0
@@ -159,15 +161,17 @@ class VariationalObjective(Model):
             qa_logprobs_full = -qa_output_full['loss']
             aux_signals += qa_logprobs_full.mean()
 
+        if self.threshold_sampling:
+            aux_signals -= 0.1*infr_logits.sigmoid().mean() # + gen_logits.sigmoid()
+
         outputs = {"loss": -(estimator.sum() / self._n_mc + aux_signals)}
-        # outputs = {"loss": -(aux_signals.mean())}
+        # outputs = {"loss": -(estimator.sum()*0 + aux_signals.mean())}
 
         with torch.no_grad():
             logits_baseline, z_baseline = self._draw_samples(infr_logits, random_chance=True)
             batch_baseline = self._prep_batch(z_baseline, metadata, label)
             qa_output_baseline = self.qa_model(**batch_baseline)
             correct_baseline = (qa_output_baseline["label_probs"].argmax(-1) == label)
-        # correct_baseline = label
 
         if True:
             annots_ = [a.tolist() in [[1,1],[0,0]] for annot in annots for a in [annot]*self._n_mc]
@@ -179,7 +183,7 @@ class VariationalObjective(Model):
             # fp = [not ct if a else -1 for ct,a in zip(correct_true, annots_)]
 
             correct = (qa_output["label_probs"].argmax(-1) == label_)     # TODO
-            correct_true = [set(n).issubset(set(row.tolist())) for n,row in zip(nodes_, z)]
+            correct_true = [set(n) == set([x.item() for x in row if x!=-1]) for n,row in zip(nodes_, z)]
             tp = [c.item() and ct if a else -1 for c,ct,a in zip(correct, correct_true, annots_)]
             fp = [c.item() and not ct if a else -1 for c,ct,a in zip(correct, correct_true, annots_)]
             def decode(i):
@@ -205,6 +209,16 @@ class VariationalObjective(Model):
         return outputs
         ((lens.squeeze().cpu() == 2).int() * (torch.tensor(tp) == True).int()).bool().any()
 
+        def get_text(i):
+            return f"Q: {batch['metadata'][i]['question_text']} C: {batch['metadata'][i]['context']}"
+
+        def write_example(i):
+            text = get_text(i)
+            with open('fooled_examples.txt','a') as f:
+                f.write('\n'+text)
+
+        write_example(0)
+
     def nvil(self, qa_logprobs, infr_logprobs, gen_logprobs, phrase=None, label=None, *args, **kwargs):
         ''' NVIL ELBO from https://arxiv.org/pdf/1402.0030.pdf
         '''
@@ -213,8 +227,8 @@ class VariationalObjective(Model):
         gen_logprobs = torch.cat(gen_logprobs.unsqueeze(0).chunk(2,1), 0)
     
         # Compute the unnormalized learning signal
-        l = qa_logprobs - self._beta * (infr_logprobs.detach() - gen_logprobs)
-        # l = qa_logprobs.detach() - self._beta * (infr_logprobs.detach() - gen_logprobs)
+        # l = qa_logprobs - self._beta * (infr_logprobs.detach() - gen_logprobs)
+        l = qa_logprobs.detach() - self._beta * (infr_logprobs.detach() - gen_logprobs)
         ls_term = l
 
         # Subtract the input-dependent baseline     # TODO: confirm whether using input-dependent baseline is better for n_z > 1
@@ -310,7 +324,7 @@ class VariationalObjective(Model):
             for logit in logits:
                 assert z.max() < logit.size(1)
                 # logprob = torch.cat([-self._smoothloss(logit, tmp[:, i]).unsqueeze(1) for i in range(tmp.size(1))], dim=1) * mask
-                logprob = torch.cat([-self._loss(logit, z[:, i]).unsqueeze(1) for i in range(z.size(1))], dim=1) * mask
+                logprob = torch.cat([-self._loss(logit, z[:, i].long()).unsqueeze(1) for i in range(z.size(1))], dim=1) * mask
                 logprobs.append(logprob.sum(-1)/mask.sum(-1))
         elif self._logprob_method == 'log-mean-prob':
             # Compute log mean probability. Generalizes CE loss for
@@ -407,6 +421,25 @@ class VariationalObjective(Model):
             # Duplicate tensor for multiple monte carlo samples
             logits = logits.repeat_interleave(self._n_mc, dim=0)        # (bsz * mc steps, num retrievals)
         
+        if self.threshold_sampling:
+            l = logits.sigmoid().unsqueeze(-1)
+            logits_ = torch.cat((1-l, l), -1)
+            # samples = gs(logits_)[:,:,1]
+            samples = torch.multinomial(logits_.view(-1,2), 1).view(logits_.shape[:2])
+            z = torch.full_like(samples, -1)[:,:max(samples.sum(-1).max().int(),1)]
+            row, idx = samples.nonzero(as_tuple=True)
+            counts = row.bincount()
+            # for n,count in enumerate():
+            for n in range(z.size(0)):
+                if n not in row:
+                    z[n, 0] = l.squeeze(-1)[n].argmax()
+                else:
+                    count = counts[n]
+                    z[n, :count] = idx[:count]
+                    idx = idx[count:]
+
+            return l, z.int()
+
         if self.training:
             if self._sampler == 'multinomial':
                 return logits, torch.multinomial(logits.softmax(-1), self._n_z, replacement=False)
@@ -428,8 +461,8 @@ class VariationalObjective(Model):
         mask = torch.full_like(z_, -1) * (1-flag.int())
         z = torch.where(
             torch.arange(z_.size(1), device=self._d).unsqueeze(0).expand(z_.size(0),-1) < lens, 
-            z_, 
-            torch.tensor(-1, device=self._d)
+            z_.int(), 
+            torch.tensor(-1, device=self._d).int()
         )
         return z
 

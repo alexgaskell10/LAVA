@@ -110,7 +110,7 @@ class TransformerBinaryQA(Model):
         ) -> torch.Tensor:
 
         self._debug -= 1
-        input_ids = phrase['tokens']['token_ids']       # TODO sort for both forward passes
+        input_ids = phrase['tokens']['token_ids']
         segment_ids = phrase['tokens']['type_ids']
 
         question_mask = (input_ids != self._padding_value).long()

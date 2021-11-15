@@ -47,7 +47,7 @@ def main(prog: Optional[str] = None) -> None:
         #     '-s', 'bin/runs/pretrained_retriever_ruletaker/roberta/tmp', '--include-package', 'ruletaker.allennlp_models']
         # RL/GS
         sys.argv[1:] = ['custom_train', 'bin/config/vi_1_tmp.jsonnet', #'bin/config/gs_progressive_deepening_lk_tmp.jsonnet', #'bin/config/gumbel_softmax_tmp.jsonnet', # {'bin/config/tmp_new.jsonnet', 'bin/config/spacy_retriever.jsonnet', 'bin/config/pretrain_retriever_tmp.jsonnet'},
-            '-s', 'bin/runs/pretrained_retriever_ruletaker/roberta/tmp1', '--include-package', 'ruletaker.allennlp_models']
+            '-s', 'bin/runs/pretrained_retriever_ruletaker/roberta/tmp2', '--include-package', 'ruletaker.allennlp_models']
 
         # sys.argv[1:] = ['evaluate', 'ruletaker/runs/depth-5-base/model.tar.gz', 'dev', '--output-file', '_results.json', 
         #     '-o', "{'trainer': {'cuda_device': 0}, 'validation_data_loader': {'batch_sampler': {'batch_size': 64, 'type': 'bucket'}}}", 
