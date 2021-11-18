@@ -114,9 +114,8 @@ class RetrievalReasoningReader(DatasetReader):
         dset = file_path.split('/')[-1].split('.')[0]
         examples = RRProcessor().get_examples(data_dir, dset, debug_num=debug_num, one_proof=self._one_proof)
 
-        i = 0
         for example in examples:
-            example.qlen = sum(example.node_label[:-1])
+            example.qlen = sum(example.node_label)
 
             if self._true_samples_only:
                 # Filter so only positive correct questions and negative
