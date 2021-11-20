@@ -12,3 +12,9 @@ F.gumbel_softmax(logits.repeat(n, 1), tau=100, hard=True, eps=1e-10, dim=-1).arg
 # gumbels = -torch.empty_like(logits, memory_format=torch.legacy_contiguous_format).exponential_().log()  # ~Gumbel(0,1)
 # gumbels = (logits + gumbels) / tau  # ~Gumbel(logits,tau)
 # y_soft = gumbels.softmax(dim)
+
+
+from rouge_score.rouge_scorer import RougeScorer
+
+scorer = RougeScorer(["rouge1"])
+print(scorer.score("the cat sat on the mat", "the cold dark dog was brown")["rouge1"].fmeasure)

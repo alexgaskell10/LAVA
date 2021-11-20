@@ -7,13 +7,14 @@ local pretrained_model = "bin/runs/pretrain_retriever/rb-base/model.tar.gz";
 local cuda_device = 4;  #7
 local batch_size = 8;
 local num_gradient_accumulation_steps = 1;
-local topk = 2;
-local num_monte_carlo = 1; #8;
+local topk = 10;
+local num_monte_carlo = 8;
 local longest_proof = topk;
 local shortest_proof = 1;
 local lr = 1e-5;
 local model_type = 'adversarial_base';
 local add_naf = false;
+local compute_word_overlap_scores = true;
 
 {
     "ruletaker_archive": ruletaker_archive,
@@ -29,9 +30,10 @@ local add_naf = false;
         "longest_proof": longest_proof,
         "shortest_proof": shortest_proof,
         "concat_q_and_c": true,
-        "true_samples_only": false,
+        "true_samples_only": true,
         "add_NAF": add_naf,
-        "one_proof": true
+        "one_proof": true,
+        "word_overlap_scores": compute_word_overlap_scores
     },
     "retrieval_reasoning_model": {
         "variant": retriever_variant,
@@ -46,7 +48,10 @@ local add_naf = false;
         "baseline_type": "Prob-NMN",
         "infr_supervision": false,
         "add_NAF": add_naf,
-        "threshold_sampling": true
+        "threshold_sampling": true,
+        "word_overlap_scores": compute_word_overlap_scores,
+        "benchmark_type": "word_score",      # word_score, random
+        "bernoulli_node_prediiction_level": "sequence-level",       # sequence-level, node-level
     },
     "trainer": {
         "cuda_device": cuda_device,

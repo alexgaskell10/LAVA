@@ -717,6 +717,9 @@ class TrainModel(Registrable):
             test_data_path=test_data_path,
         )
 
+        if dataset_reader._word_overlap_scores_lst == []:
+            dataset_reader._word_overlap_scores_lst = [i for instance in datasets['train'].instances for i in instance.fields["word_overlap_scores"].array]
+
         if datasets_for_vocab_creation:
             for key in datasets_for_vocab_creation:
                 if key not in datasets:

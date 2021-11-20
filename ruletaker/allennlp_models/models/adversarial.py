@@ -56,6 +56,9 @@ class AdversarialGenerator(Model):
         infr_supervision = False,
         add_NAF = False,
         threshold_sampling = False,
+        word_overlap_scores = False,
+        benchmark_type = "random",
+        bernoulli_node_prediiction_level = 'node-level',
     ) -> None:
         super().__init__(qa_model.vocab, regularizer)
         self.variant = variant
@@ -65,13 +68,16 @@ class AdversarialGenerator(Model):
         self._mlloss = nn.BCEWithLogitsLoss(reduction='none')
         self.qa_vocab = qa_model.vocab
         self.dataset_reader = dataset_reader
-        # self.infr_model = InferenceNetwork(variant=variant, vocab=vocab, dataset_reader=dataset_reader, has_naf=add_NAF, num_labels=1)
-        self.gen_model = GenerativeNetwork(variant=variant, vocab=vocab, dataset_reader=dataset_reader, has_naf=add_NAF, num_labels=2)
+        if bernoulli_node_prediiction_level == 'sequence-level':
+            self.gen_model = GenerativeBaselineNetwork(variant=variant, vocab=vocab, dataset_reader=dataset_reader, num_labels=1)
+        elif bernoulli_node_prediiction_level == 'node-level':
+            self.gen_model = GenerativeNetwork(variant=variant, vocab=vocab, dataset_reader=dataset_reader, has_naf=add_NAF, num_labels=2)
         self.vocab = vocab
         self.regularizer = regularizer
         self.sentence_embedding_method = sentence_embedding_method
         self.num_labels = num_labels
         self.objective = objective
+        self.word_overlap_scores = word_overlap_scores
         # self.objective_fn = getattr(self, objective.lower())
         
         self._n_z = topk        # Number of latent retrievals
@@ -109,6 +115,14 @@ class AdversarialGenerator(Model):
         set_dropout(self.qa_model, 0.0)
 
         self.records = []
+
+        self.benchmark_type = benchmark_type
+        if self.benchmark_type == 'random':
+            self.benchmark = self.random_benchmark
+        elif self.benchmark_type == 'word_score':
+            self.benchmark = self.wordscore_benchmark
+            self.all_word_overlap_scores = torch.tensor(self.dataset_reader._word_overlap_scores_lst)
+            self.mean_overlap_score = self.all_word_overlap_scores.mean()
         
     def forward_prover(self, phrase=None, label=None, metadata=None, retrieval=None, **kwargs) -> torch.Tensor:
         ''' Forward pass of the network. 
@@ -201,7 +215,7 @@ class AdversarialGenerator(Model):
 
         return outputs
 
-    def forward_(self, phrase=None, label=None, metadata=None, retrieval=None, **kwargs) -> torch.Tensor:
+    def forward(self, phrase=None, label=None, metadata=None, retrieval=None, word_overlap_scores=None, **kwargs) -> torch.Tensor:
         ''' Forward pass of the network. 
 
             - p(e|z,q) - answering term (qa_model)
@@ -254,12 +268,11 @@ class AdversarialGenerator(Model):
         preds = probs.argmax(-1)
         qa_logits = qa_output['label_logits']
         qa_logprobs = -self.qa_model._loss(qa_logits, modified_label_)
-        # qa_logprobs = torch.where(torch.isnan(qa_logprobs), torch.tensor(0., device=self._d), qa_logprobs)
+        qa_logprobs = torch.where(torch.isnan(qa_logprobs), torch.tensor(0., device=self._d), qa_logprobs)
         gen_logprobs = self._compute_logprobs(z_onehot, gen_logits_)
 
         # Compute objective function
-        # l = qa_logprobs.detach()      # Using Jensen's inquaity
-        l = qa_probs.detach()           # Without Jensen's inquaity
+        l = qa_logprobs.detach()      # Using Jensen's inquaity
         l[torch.isnan(l)] = 0
 
         # Update the learning signal statistics
@@ -276,22 +289,26 @@ class AdversarialGenerator(Model):
         estimator = reinforce_reward + baseline_term
         aux_signals = 0
         # aux_signals -= 0.012 * gen_logits.softmax(-1)[:,:,1].mean()
-        nodes_onehot = F.one_hot(nodes+1, gen_logits.size(1)+1)[:,:,1:].sum(1)
-        aux_signals += 0.1*self._compute_logprobs(nodes_onehot, gen_logits).mean()
+        # nodes_onehot = F.one_hot(nodes+1, gen_logits.size(1)+1)[:,:,1:].sum(1)
+        # aux_signals += 0.05*self._compute_logprobs(nodes_onehot, gen_logits).mean()
 
         assert not torch.isnan(estimator).any()
         outputs = {"loss": -(estimator.mean() + aux_signals)}
-
-        # with torch.no_grad():
-        #     logits_baseline, z_baseline = self._draw_samples(gen_logits, random_chance=True)
-        #     batch_baseline = self._prep_batch(z_baseline, metadata, label)
-        #     qa_output_baseline = self.qa_model(**batch_baseline)
-        #     correct_baseline = (qa_output_baseline["label_probs"].argmax(-1) == label)
  
+        qa_output_baseline, modified_label_bl, z_bl_onehot = self.benchmark(
+            gen_logits=gen_logits,
+            metadata=metadata,
+            label=label,
+            polarity=polarity,
+            nodes=nodes,
+            word_overlap_scores=word_overlap_scores,
+        )
+
         if True:
             sentences = [[m['question_text']] + m['context'].split('.') for m in batch['metadata']]
             correct = (preds == modified_label_)
-        self.log_results(qlens_, correct)
+            correct_bl = (qa_output_baseline["label_probs"].argmax(-1) == modified_label_bl)
+        self.log_results(qlens_, correct, ref=correct_bl)
 
         if True:
             for i in range(len(correct)):
@@ -472,10 +489,10 @@ class AdversarialGenerator(Model):
             last_100_tp = self.answers[d][2][-n:].count(True) / max(len(self.answers[d][2][-n:]),1)
             all_score_r = self.answers[d][1].count(True) / max(len(self.answers[d][1]),1)
             last_100_r = self.answers[d][1][-n:].count(True) / max(len(self.answers[d][1][-n:]),1)
-            print(f'\nM:\tL: {d}\tAll: {all_score_a:.3f}\tLast {n}: {last_100_a:.2f}\t')
-            # print(f'\nM:\tL: {d}\tAll: {all_score_a:.3f}\tLast {n}: {last_100_a:.2f}\t'
-            #     f'Last {n} tp: {last_100_tp:.2f}\t'
-            #     f'B:\tAll: {all_score_r:.3f}\tLast {n}: {last_100_r:.2f}\tN: {len(self.answers[d][0])}')
+            # print(f'\nM:\tL: {d}\tAll: {all_score_a:.3f}\tLast {n}: {last_100_a:.2f}\tN: {len(self.answers[d][0])}')
+            print(f'\nM:\tL: {d}\tAll: {all_score_a:.3f}\tLast {n}: {last_100_a:.2f}\t'
+                # f'Last {n} tp: {last_100_tp:.2f}\t'
+                f'B:\tAll: {all_score_r:.3f}\tLast {n}: {last_100_r:.2f}\tN: {len(self.answers[d][0])}')
             
     def _prep_batch(self, z, metadata, label):
         ''' Concatenate the latest retrieval to the current 
@@ -494,7 +511,7 @@ class AdversarialGenerator(Model):
             meta['context_str'] = f"q: {question} c: {''.join(context_rtr).strip()}"
             sentences.append((question, ''.join(context_rtr).strip(), e))
 
-        batch = self.dataset_reader.encode_batch(sentences, self.qa_vocab)
+        batch = self.dataset_reader.encode_batch(sentences, self.qa_vocab, disable=True)
         return self.dataset_reader.move(batch, self._d)
 
     def _rebatch(self, metadata, label):
@@ -546,8 +563,73 @@ class AdversarialGenerator(Model):
 
         return logits_, z, samples
 
+    def _draw_samples_wordscore(self, logits, word_overlap_scores, random_chance=False):
+        ''' Obtain samples from a distribution
+            - p: probability distribution
+
+            random_chance: sample from uniform distribution
+        '''
+        mask = (logits == self._p0).all(-1).int()
+
+        tmp = torch.zeros_like(mask, dtype=torch.float)
+        tmp[:,:word_overlap_scores.size(1)] = word_overlap_scores
+        logits_ = tmp
+        scores = torch.clamp(0.5 + logits_ - self.mean_overlap_score, 0, 1)
+        samples = torch.bernoulli(scores)
+        samples *= 1 - mask       # Ensure padding sentences are not sampled
+
+        # logits_ = logits.view(-1, logits.size(-1))
+        # samples = gs(logits_).argmax(-1)
+        # mask = (logits_ == -1e9).all(-1).int()
+        # samples *= 1 - mask       # Ensure padding sentences are not sampled
+        # samples = samples.view(logits.shape[:-1])
+
+        max_draws = samples.sum(-1).max().int()
+        z = torch.full_like(samples, -1)[:,:max_draws]
+        row, idx = samples.nonzero(as_tuple=True)
+        counts = row.bincount()
+        for n in range(z.size(0)):
+            if n not in row:
+                continue
+            count = counts[n]
+            z[n, :count] = idx[:count]
+            idx = idx[count:]
+
+        # Replace padding sentences with -1
+        samples = samples * (1-mask.view(samples.shape)) - mask.view(samples.shape)
+
+        return logits_, z, samples
+
     def decode(self, i, batch):
         return self.dataset_reader.decode(batch['phrase']['tokens']['token_ids'][i]).split('</s> </s>')
+
+    def random_benchmark(self, gen_logits=False, metadata=False, label=False, polarity=False, nodes=False, **kwargs):
+        with torch.no_grad():
+            logits_baseline, z_baseline, z_bl_onehot = self._draw_samples(gen_logits, random_chance=True)
+            batch_baseline = self._prep_batch(z_baseline, metadata, label)
+            qa_output_baseline = self.qa_model(**batch_baseline)
+            correct_baseline = (qa_output_baseline["label_probs"].argmax(-1) == label)
+
+            # Flip baseline labels as above
+            sampled_proof_nodes_bl = torch.tensor([all([n in _z for n in node if n!=-1]) for _z,node in zip(z_baseline, nodes)], device=self._d)
+            flip_mask = 1 - (polarity == label).int() * (1-sampled_proof_nodes_bl.int())
+            modified_label_bl = (label != flip_mask).long()
+
+        return qa_output_baseline, modified_label_bl, z_bl_onehot
+
+    def wordscore_benchmark(self, gen_logits=False, metadata=False, label=False, polarity=False, nodes=False, word_overlap_scores=False, **kwargs):
+        with torch.no_grad():
+            logits_baseline, z_baseline, z_bl_onehot = self._draw_samples_wordscore(gen_logits, word_overlap_scores, random_chance=True)
+            batch_baseline = self._prep_batch(z_baseline, metadata, label)
+            qa_output_baseline = self.qa_model(**batch_baseline)
+            correct_baseline = (qa_output_baseline["label_probs"].argmax(-1) == label)
+
+            # Flip baseline labels as above
+            sampled_proof_nodes_bl = torch.tensor([all([n in _z for n in node if n!=-1]) for _z,node in zip(z_baseline, nodes)], device=self._d)
+            flip_mask = 1 - (polarity == label).int() * (1-sampled_proof_nodes_bl.int())
+            modified_label_bl = (label != flip_mask).long()
+
+        return qa_output_baseline, modified_label_bl, z_bl_onehot
 
 
 class _BaseSentenceClassifier(Model):
@@ -661,21 +743,28 @@ class GenerativeNetwork(_BaseSentenceClassifier):
         return super().forward(qc)
 
 
-class Reinforce(nn.Module):
-    """ TODO: from probnmn
-    """
-    def __init__(self, baseline_decay: float = 0.99):
-        super().__init__()
-        self._reinforce_baseline = 0.0
-        self._baseline_decay = baseline_decay
+class GenerativeBaselineNetwork(Model):
+    def __init__(self, variant, vocab, dataset_reader, regularizer=None, num_labels=1):
+        super().__init__(vocab, regularizer)
 
-    def forward(self, inputs, reward, *args):
-        # Detach the reward term, we don't want gradients to flow to through it.
-        centered_reward = reward.detach() - self._reinforce_baseline
+        self.dataset_reader = dataset_reader
+        self.model = AutoModel.from_pretrained(variant)
+        assert 'roberta' in variant     # Only implemented for roberta currently
 
-        # Update moving average baseline.
-        self._reinforce_baseline += self._baseline_decay * centered_reward.mean().item()
-        return inputs * centered_reward
+        transformer_config = self.model.config
+        transformer_config.num_labels = num_labels
+        self._output_dim = self.model.config.hidden_size
+
+        self.out_layer = NodeClassificationHead(self._output_dim, 0, num_labels)
+        self.num_labels = num_labels
+
+    def forward(self, phrase, **kwargs) -> torch.Tensor:
+        
+        x = phrase['tokens']['token_ids']
+        final_layer_hidden_states = self.model(x)[0]
+        out = self.out_layer(final_layer_hidden_states[:,0,:])
+        
+        return out
 
 
 class NodeClassificationHead(nn.Module):

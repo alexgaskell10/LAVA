@@ -1,6 +1,7 @@
 from typing import Dict, Any
 import random, re, os, json, logging, pickle
 
+import numpy as np
 from torch import Tensor
 from overrides import overrides
 
@@ -8,7 +9,7 @@ from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import (
     Field, TextField, LabelField, MetadataField, SequenceLabelField,
-    ListField
+    ListField, ArrayField
 )
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import PretrainedTransformerIndexer, SingleIdTokenIndexer
@@ -46,6 +47,7 @@ class RetrievalReasoningReader(DatasetReader):
         true_samples_only: bool = False,
         add_NAF: bool = False,
         one_proof: bool = False,
+        word_overlap_scores: bool = False,
     ):
         super().__init__(cache_directory=None, max_instances=None)
         
@@ -64,6 +66,11 @@ class RetrievalReasoningReader(DatasetReader):
         else:
             raise ValueError(f"Invalid retriever_variant = {retriever_variant}.\nInvestigate!")
 
+        if word_overlap_scores:
+            from rouge_score.rouge_scorer import RougeScorer
+            self.rouge_scorer = RougeScorer(["rouge1"])
+            self._word_overlap_scores_lst = []
+
         self._max_pieces = max_pieces
         self._add_prefix = add_prefix
         self._scramble_context = scramble_context
@@ -79,8 +86,9 @@ class RetrievalReasoningReader(DatasetReader):
         self._true_samples_only = true_samples_only
         self._add_NAF = add_NAF
         self._one_proof = one_proof     # Limits the dataset to questions with a single proof. Cuts dataset size by c. 12%
+        self._word_overlap_scores = word_overlap_scores
         tok = type(self).__name__
-        self.pkl_file = f'{tok}_{self._max_pieces}_{self._shortest}_{self._longest}_{int(self._true_samples_only)}_{int(self._add_NAF)}_{int(self._one_proof)}_DSET.pkl'
+        self.pkl_file = f'{tok}_{self._max_pieces}_{self._shortest}_{self._longest}_{int(self._true_samples_only)}_{int(self._add_NAF)}_{int(self._one_proof)}_{int(self._word_overlap_scores)}_DSET.pkl'
 
     @overrides
     def _read(self, file_path: str):
@@ -146,7 +154,7 @@ class RetrievalReasoningReader(DatasetReader):
             )
 
     @overrides
-    def text_to_instance(self,  # type: ignore
+    def text_to_instance(self,
         item_id: str,
         question_text: str,
         label: int = None,
@@ -158,6 +166,7 @@ class RetrievalReasoningReader(DatasetReader):
         qa_only: bool = False,
         node_label: list = [],
         initial_tokenization: bool = True,
+        disable: bool = False,
     ) -> Instance:
         # pylint: disable=arguments-differ
         fields: Dict[str, Field] = {}
@@ -189,6 +198,11 @@ class RetrievalReasoningReader(DatasetReader):
         if True:
             exact_match = self._get_exact_match(question_text, context)
 
+        if self._word_overlap_scores and not disable:
+            scores = [self.rouge_scorer.score(question_text, c)["rouge1"].fmeasure for c in context.split('.')[:-1]]
+            fields["word_overlap_scores"] = ArrayField(np.array(scores))
+            self._word_overlap_scores_lst.extend(scores)
+
         metadata = {
             "id": item_id,
             "question_text": question_text,
@@ -197,7 +211,7 @@ class RetrievalReasoningReader(DatasetReader):
             "QDep": qdep,
             "node_label": node_label,
             "exact_match": exact_match if not qa_only else None,
-            "QLen": qlen
+            "QLen": qlen,
         }
 
         if label is not None:
@@ -266,20 +280,21 @@ class RetrievalReasoningReader(DatasetReader):
 
         return allennlp_collate(data)
 
-    def encode_batch(self, sentences, vocab):
+    def encode_batch(self, sentences, vocab, disable):
         ''' Convert question + context strings into a batch
             which is ready for the qa model.
         '''
         # TODO: dynamically set which model the batch is being prepped for
         data = []
         for question, already_retrieved, label in sentences:
-            instance = self.text_to_instance(
-                item_id = "", 
-                question_text = question, 
-                context = already_retrieved,
-                qa_only = True,
-                label = label.item(),
+            instance=self.text_to_instance(
+                item_id="", 
+                question_text=question, 
+                context=already_retrieved,
+                qa_only=True,
+                label=label.item(),
                 initial_tokenization=False,
+                disable=disable
             )
             instance.index_fields(vocab)
             data.append(instance)
