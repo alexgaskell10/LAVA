@@ -58,39 +58,39 @@ class AdversarialGenerator(Model):
         threshold_sampling = False,
         word_overlap_scores = False,
         benchmark_type = "random",
-        bernoulli_node_prediiction_level = 'node-level',
+        bernoulli_node_prediction_level = 'node-level',
     ) -> None:
         super().__init__(qa_model.vocab, regularizer)
         self.variant = variant
-        self.qa_model = qa_model        # TODO: replace with fresh transformerbinaryqa
+        self.qa_model = qa_model
         self.qa_model._loss = nn.CrossEntropyLoss(reduction='none')
         self._loss = nn.CrossEntropyLoss(reduction='none')
         self._mlloss = nn.BCEWithLogitsLoss(reduction='none')
         self.qa_vocab = qa_model.vocab
         self.dataset_reader = dataset_reader
-        if bernoulli_node_prediiction_level == 'sequence-level':
-            self.gen_model = GenerativeBaselineNetwork(variant=variant, vocab=vocab, dataset_reader=dataset_reader, num_labels=1)
-        elif bernoulli_node_prediiction_level == 'node-level':
+        if bernoulli_node_prediction_level == 'sequence-level':
+            self.gen_model = GenerativeBaselineNetwork(variant=variant, vocab=vocab, dataset_reader=dataset_reader, num_labels=2)
+        elif bernoulli_node_prediction_level == 'node-level':
             self.gen_model = GenerativeNetwork(variant=variant, vocab=vocab, dataset_reader=dataset_reader, has_naf=add_NAF, num_labels=2)
         self.vocab = vocab
         self.regularizer = regularizer
         self.sentence_embedding_method = sentence_embedding_method
         self.num_labels = num_labels
-        self.objective = objective
+        # self.objective = objective
         self.word_overlap_scores = word_overlap_scores
         # self.objective_fn = getattr(self, objective.lower())
         
         self._n_z = topk        # Number of latent retrievals
         self._beta = 0.1        # Scale factor for KL_div TODO: set dynamically
         self._p0 = torch.tensor(-float(1e9))        # TODO: set dynamically
-        self._n_mc = num_monte_carlo          # Number of monte carlo steps
+        self.n_mc = num_monte_carlo          # Number of monte carlo steps
         self._logprob_method = 'CE'      # TODO: set dynamically
         self._z_mask = -1
         self._do_mask_z = do_mask_z     # TODO: set dynamically
-        self._additional_qa_training = additional_qa_training
-        self.threshold_sampling = threshold_sampling
+        # self._additional_qa_training = additional_qa_training
+        # self.threshold_sampling = threshold_sampling
 
-        self._baseline_type = baseline_type
+        # self._baseline_type = baseline_type
         # if baseline_type == 'Prob-NMN':
         #     self._reinforce = Reinforce(baseline_decay=0.99)
         # elif baseline_type == 'NVIL':
@@ -99,6 +99,7 @@ class AdversarialGenerator(Model):
         #     set_dropout(self.baseline_model, 0.0)
 
         self.answers = {}
+        self.prev_answers = {'train': [], 'val': []}
         self._ = 0
         self._smoothing_alpha = 0.1       # TODO: check this
         # self._smoothloss = LabelSmoothingLoss(self._smoothing_alpha)
@@ -225,6 +226,7 @@ class AdversarialGenerator(Model):
             - z: retrievals (subset of c)
             - c: context (rules + facts)
         '''
+        self._n_mc = self.n_mc if self.training else 1
         self._d = phrase['tokens']['token_ids'].device
         qlens = [m['QLen'] for m in metadata]
         qlens_ = [m['QLen'] for m in metadata for _ in range(self._n_mc)]
@@ -267,7 +269,7 @@ class AdversarialGenerator(Model):
         probs = qa_output["label_probs"]
         preds = probs.argmax(-1)
         qa_logits = qa_output['label_logits']
-        qa_logprobs = -self.qa_model._loss(qa_logits, modified_label_)
+        # qa_logprobs = -self.qa_model._loss(qa_logits, modified_label_)
         qa_logprobs = torch.where(torch.isnan(qa_logprobs), torch.tensor(0., device=self._d), qa_logprobs)
         gen_logprobs = self._compute_logprobs(z_onehot, gen_logits_)
 
@@ -474,7 +476,6 @@ class AdversarialGenerator(Model):
         if ref is None:
             ref = torch.full_like(acc, False)
 
-        n = self._n_mc * 100
         for d, c, r, t in zip(qlens, acc, ref.repeat_interleave(self._n_mc, dim=0), tp):
             if d not in self.answers:
                 self.answers[d] = [[], [], []]
@@ -483,17 +484,22 @@ class AdversarialGenerator(Model):
             if t != -1:
                 self.answers[d][2].append(t)
 
+        if self.training:
+            self.print_results()
+
+    def print_results(self):
+        n = self._n_mc * 100
         for d in sorted(self.answers.keys()):
             all_score_a = self.answers[d][0].count(True) / max(len(self.answers[d][0]), 1)
             last_100_a = self.answers[d][0][-n:].count(True) / max(len(self.answers[d][0][-n:]),1)
-            last_100_tp = self.answers[d][2][-n:].count(True) / max(len(self.answers[d][2][-n:]),1)
+            # last_100_tp = self.answers[d][2][-n:].count(True) / max(len(self.answers[d][2][-n:]),1)
             all_score_r = self.answers[d][1].count(True) / max(len(self.answers[d][1]),1)
             last_100_r = self.answers[d][1][-n:].count(True) / max(len(self.answers[d][1][-n:]),1)
             # print(f'\nM:\tL: {d}\tAll: {all_score_a:.3f}\tLast {n}: {last_100_a:.2f}\tN: {len(self.answers[d][0])}')
             print(f'\nM:\tL: {d}\tAll: {all_score_a:.3f}\tLast {n}: {last_100_a:.2f}\t'
                 # f'Last {n} tp: {last_100_tp:.2f}\t'
                 f'B:\tAll: {all_score_r:.3f}\tLast {n}: {last_100_r:.2f}\tN: {len(self.answers[d][0])}')
-            
+
     def _prep_batch(self, z, metadata, label):
         ''' Concatenate the latest retrieval to the current 
             query+retrievals. Also update the tensors for the next
@@ -542,9 +548,19 @@ class AdversarialGenerator(Model):
             logits = logits.repeat_interleave(self._n_mc, dim=0)        # (bsz * mc steps, num retrievals)
         
         logits_ = logits.view(-1, logits.size(-1))
-        samples = gs(logits_).argmax(-1)
-        mask = (logits_ == -1e9).all(-1).int()
-        samples *= 1 - mask       # Ensure padding sentences are not sampled
+
+        # Obtain samples
+        # During validation, use argmax unless prob = 0.5, in which case sample
+        draws = gs(logits_).argmax(-1)
+        if self.training:
+            samples = draws
+        else:
+            greedy = logits_.argmax(-1)
+            samples = torch.where((logits_ == 0).all(-1), greedy, draws)
+
+        # Ensure padding sentences are not sampled
+        mask = (logits_ == self._p0).all(-1).int()
+        samples *= 1 - mask
         samples = samples.view(logits.shape[:-1])
 
         max_draws = samples.sum(-1).max()
@@ -631,6 +647,25 @@ class AdversarialGenerator(Model):
 
         return qa_output_baseline, modified_label_bl, z_bl_onehot
 
+    def get_metrics(self, reset: bool = False) -> Dict[str, float]:
+        answers = [v for value in self.answers.values() for v in value[0]]      # Flatten lists for main model
+        if reset == True and not self.training:
+            return {
+                'EM': answers.count(True)/len(answers),
+                'predictions': None,
+            }
+        else:
+            return {
+                'EM': answers.count(True)/len(answers),
+            }
+    
+    def reset(self, dset, epoch):
+        if len(self.answers) > 0:
+            self.prev_answers[dset].append(self.answers)
+            print(f'\n\n{dset} results for epoch {epoch}: \n\n')
+            self.print_results()
+        self.answers = {}
+
 
 class _BaseSentenceClassifier(Model):
     def __init__(self, variant, vocab, dataset_reader, has_naf, regularizer=None, num_labels=1):
@@ -683,16 +718,16 @@ class _BaseSentenceClassifier(Model):
         cls_emb = embs[:,0,:]
         naf_repr = self.naf_layer(cls_emb)
 
-        max_num_sentences = (x == self.split_idx).nonzero()[:,0].bincount().max() - int(self.has_naf)
+        max_num_sentences = (x == self.split_idx).nonzero()[:,0].bincount().max()
         node_reprs = torch.full((x.size(0), max_num_sentences, self.num_labels), self._p0).to(self._d)      # shape: (bsz, # sentences)
         for b in range(x.size(0)):
             # Create list of end idxs of each context item
-            end_idxs = (x[b] == self.split_idx).nonzero().squeeze().tolist()
+            end_idxs = (x[b] == self.split_idx).nonzero().squeeze(1).tolist()
             q_end = end_idxs.pop(0)     # Remove first item as this is the question
             end_idxs.insert(0, q_end + 4)   # Tokenizer adds four "decorative" tokens at the beginning of the context
 
             # Form tensor containing embedding of first and last token for each sentence
-            n_sentences = len(end_idxs) - 1 - int(self.has_naf)
+            n_sentences = len(end_idxs) - 1
             reprs = torch.zeros(n_sentences, self.node_class_k, embs.size(-1)).to(self._d)      # shape: (# context items, 2, model_dim)
             for i in range(n_sentences):
                 start_idx = end_idxs[i] + 1            # +1 to skip full stop at beginning
@@ -707,25 +742,6 @@ class _BaseSentenceClassifier(Model):
             node_reprs[b, :len(node_logits)] = node_logits
 
         return node_reprs
-
-    def _encode_and_append_label(self, encoded, label):
-        ''' Tokenizes and appends the label to the already 
-            encoded context
-        '''
-        len_e = len(self.e_true)
-        eqc = torch.zeros(encoded.size(0), encoded.size(1) + len_e, dtype=torch.long).to(self._d)
-        eqc[:, len_e:] = encoded
-
-        # Add the encoded version of the label "<s> ĠE: [ĠTrue/ĠFalse] </s>"
-        for b in range(label.size(0)):
-            if label[b] == 1:
-                eqc[b,:len_e] = self.e_true.to(self._d)
-            elif label[b] == 0:
-                eqc[b,:len_e] = self.e_false.to(self._d)
-            else:
-                raise ValueError
-                
-        return eqc
 
 
 class GenerativeNetwork(_BaseSentenceClassifier):
@@ -744,6 +760,9 @@ class GenerativeNetwork(_BaseSentenceClassifier):
 
 
 class GenerativeBaselineNetwork(Model):
+    ''' Predicts a single Bernoulli parameter for the whole sample
+        (rather than per sentence, as is the case in above GenerativeNetwork)
+    '''
     def __init__(self, variant, vocab, dataset_reader, regularizer=None, num_labels=1):
         super().__init__(vocab, regularizer)
 
@@ -757,14 +776,27 @@ class GenerativeBaselineNetwork(Model):
 
         self.out_layer = NodeClassificationHead(self._output_dim, 0, num_labels)
         self.num_labels = num_labels
+        
+        self.split_idx = self.dataset_reader.encode_token('.', mode='retriever')
+        self._p0 = torch.tensor(-float(1e9))
 
     def forward(self, phrase, **kwargs) -> torch.Tensor:
         
         x = phrase['tokens']['token_ids']
         final_layer_hidden_states = self.model(x)[0]
         out = self.out_layer(final_layer_hidden_states[:,0,:])
-        
-        return out
+
+        num_sentences = (x == self.split_idx).nonzero()[:,0].bincount()
+        node_reprs = torch.cat([out.unsqueeze(1)]*num_sentences.max(), dim=1)
+        num_padding = num_sentences.max() - num_sentences
+
+        for n,i in enumerate(num_padding):
+            if i == 0:
+                continue
+            for m in range(1,i+1):
+                node_reprs[n,-m] = self._p0
+
+        return node_reprs
 
 
 class NodeClassificationHead(nn.Module):

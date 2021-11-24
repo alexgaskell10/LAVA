@@ -36,31 +36,25 @@ def main(prog: Optional[str] = None) -> None:
         # Ruletaker
         # sys.argv[1:] = ['train', 'ruletaker/allennlp_models/config/tmp.jsonnet', 
         #     '-s', 'ruletaker/runs/t16', '--include-package', 'ruletaker.allennlp_models']
-        ## Retrieval + ruletaker
-        # sys.argv[1:] = ['custom_train', 'bin/config/spacy_tmp.jsonnet', # {'bin/config/tmp_new.jsonnet', 'bin/config/spacy_retriever.jsonnet', 'bin/config/pretrain_retriever_tmp.jsonnet'},
-        #     '-s', 'bin/runs/pretrain_retriever/tmp', '--include-package', 'ruletaker.allennlp_models']
-        # # Pretrain retriever
-        # sys.argv[1:] = ['train', 'bin/config/pretrain_retriever.jsonnet', # {'bin/config/tmp_new.jsonnet', 'bin/config/spacy_retriever.jsonnet', 'bin/config/pretrain_retriever_tmp.jsonnet'},
-        #     '-s', 'bin/runs/pretrain_retriever/rb-base', '--include-package', 'ruletaker.allennlp_models']
-        # Pretrained retrieval + ruletaker
-        # sys.argv[1:] = ['custom_train', 'bin/config/trained_roberta_retriever.jsonnet', # {'bin/config/tmp_new.jsonnet', 'bin/config/spacy_retriever.jsonnet', 'bin/config/pretrain_retriever_tmp.jsonnet'},
-        #     '-s', 'bin/runs/pretrained_retriever_ruletaker/roberta/tmp', '--include-package', 'ruletaker.allennlp_models']
         # RL/GS
-        sys.argv[1:] = ['custom_train', 'bin/config/adv_tmp.jsonnet',#'bin/config/vi_1_tmp.jsonnet', #'bin/config/gs_progressive_deepening_lk_tmp.jsonnet', #'bin/config/gumbel_softmax_tmp.jsonnet', # {'bin/config/tmp_new.jsonnet', 'bin/config/spacy_retriever.jsonnet', 'bin/config/pretrain_retriever_tmp.jsonnet'},
-            '-s', 'bin/runs/pretrained_retriever_ruletaker/roberta/tmp1', '--include-package', 'ruletaker.allennlp_models']
+        sys.argv[1:] = ['custom_train', 'bin/config/adv_tmp.jsonnet',#'bin/config/vi_1_tmp.jsonnet',
+            '-s', 'bin/runs/adversarial/tmp', '--include-package', 'ruletaker.allennlp_models']
 
         # sys.argv[1:] = ['evaluate', 'ruletaker/runs/depth-5-base/model.tar.gz', 'dev', '--output-file', '_results.json', 
         #     '-o', "{'trainer': {'cuda_device': 0}, 'validation_data_loader': {'batch_sampler': {'batch_size': 64, 'type': 'bucket'}}}", 
         #     '--cuda-device', '0', '--include-package', 'ruletaker.allennlp_models']
 
-        if sys.argv[1] == 'evaluate':
-            dset = re.search(r'/(depth-.+?)[/-]', sys.argv[2]).group(1)
-            sys.argv[3] = f"ruletaker/inputs/dataset/rule-reasoning-dataset-V2020.2.4/{dset}/{sys.argv[3]}.jsonl"
-            sys.argv[5] = f"{'/'.join(sys.argv[2].split('/')[:3])}/{sys.argv[3].strip('.jsonl') + sys.argv[5]}"
+        # if sys.argv[1] == 'evaluate':
+        #     dset = re.search(r'/(depth-.+?)[/-]', sys.argv[2]).group(1)
+        #     sys.argv[3] = f"ruletaker/inputs/dataset/rule-reasoning-dataset-V2020.2.4/{dset}/{sys.argv[3]}.jsonl"
+        #     sys.argv[5] = f"{'/'.join(sys.argv[2].split('/')[:3])}/{sys.argv[3].strip('.jsonl') + sys.argv[5]}"
 
         if 'tmp' in sys.argv[2] or 'tmp' in sys.argv[4]:
-            if os.path.isdir(sys.argv[4]):
-                os.system(f"rm -rf {sys.argv[4]}")
+            while os.path.isdir(sys.argv[4]):
+                if os.path.isdir(sys.argv[4]):
+                    os.system(f"rm -rf {sys.argv[4]}")
+                if os.path.isdir(sys.argv[4]):
+                    sys.argv[4] += '.1'
 
     parser = create_parser(prog)
     args = parser.parse_args()

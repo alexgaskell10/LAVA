@@ -29,14 +29,15 @@ def lrange(*args):
 def read_pkl(dataset_reader, data_path):
     dset = data_path.split('/')[-1].replace('.jsonl','')
     pkl_file = os.path.join(*data_path.split('/')[:-1], dataset_reader.pkl_file.replace('DSET', dset))
-    if os.path.exists(pkl_file):
+    if os.path.exists(pkl_file) and (dataset_reader.max_instances is None or dataset_reader.max_instances > 1e3):
         print('Loading pickle file: '+pkl_file)
         with open(pkl_file, 'rb') as f:
             train_data = pkl.load(f)
     else:
         train_data = dataset_reader.read(data_path)
-        with open(pkl_file, 'wb') as f:
-            pkl.dump(train_data, f)
+        if dataset_reader.max_instances is None:
+            with open(pkl_file, 'wb') as f:
+                pkl.dump(train_data, f)
     return train_data
 
 

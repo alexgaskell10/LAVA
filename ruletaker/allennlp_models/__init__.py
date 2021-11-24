@@ -32,3 +32,4 @@ except:
     from ruletaker.allennlp_models.models.utils import *
     from ruletaker.allennlp_models.models.vi import VariationalObjective
     from ruletaker.allennlp_models.models.adversarial import AdversarialGenerator
+    from ruletaker.allennlp_models.train.adv_trainer import AdversarialTrainer

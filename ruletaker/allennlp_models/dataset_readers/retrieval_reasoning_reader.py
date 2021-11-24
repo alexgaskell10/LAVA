@@ -48,8 +48,10 @@ class RetrievalReasoningReader(DatasetReader):
         add_NAF: bool = False,
         one_proof: bool = False,
         word_overlap_scores: bool = False,
+        max_instances: int = None,
     ):
-        super().__init__(cache_directory=None, max_instances=None)
+        max_instances = None if not max_instances else max_instances
+        super().__init__(cache_directory=None, max_instances=max_instances)
         
         # Init reasoning tokenizer
         self._tokenizer_qamodel = PretrainedTransformerTokenizer(pretrained_model, max_length=max_pieces)
@@ -94,25 +96,6 @@ class RetrievalReasoningReader(DatasetReader):
     def _read(self, file_path: str):
         instances = self._read_internal(file_path)
         return instances
-
-    def _read_internal_(self, file_path: str):
-        debug = -1
-
-        data_dir = '/'.join(file_path.split('/')[:-1])
-        dset = file_path.split('/')[-1].split('.')[0]
-        examples = RRProcessor().get_examples(data_dir, dset)
-
-        for example in examples:
-            yield self.text_to_instance(
-                item_id=example.id,
-                question_text=example.question.strip(),
-                context=example.context,
-                label=example.label,
-                debug=debug,
-                qdep=example.qdep,
-                qlen=example.qlen,
-                node_label=example.node_label
-            )
 
     def _read_internal(self, file_path: str):
         debug = -1

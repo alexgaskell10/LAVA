@@ -1,17 +1,17 @@
 local max_pieces = 512;
 local skip_id_regex = "$none";
-local ruletaker_archive = "ruletaker/runs/depth-5-base/model.tar.gz"; #"ruletaker/runs/depth-5-base/model.tar.gz";
+local ruletaker_archive = "ruletaker/runs/depth-5/model.tar.gz"; #"ruletaker/runs/depth-5-base/model.tar.gz";
 local dataset_dir = "ruletaker/inputs/dataset/rule-reasoning-dataset-V2020.2.4/depth-5/"; #"ruletaker/inputs/dataset/tiny-rule-reasoning/challenge/";
-local retriever_variant = "roberta-base";      # {roberta-base, roberta-large}
+local retriever_variant = "roberta-large";      # {roberta-base, roberta-large}
 local pretrained_model = "bin/runs/pretrain_retriever/rb-base/model.tar.gz";
-local cuda_device = 4;  #7
+local cuda_device = 1;
 local batch_size = 8;
 local num_gradient_accumulation_steps = 1;
 local topk = 10;
 local num_monte_carlo = 8;
 local longest_proof = topk;
 local shortest_proof = 1;
-local lr = 1e-5;
+local lr = 5e-6;
 local model_type = 'adversarial_base';
 local add_naf = false;
 local compute_word_overlap_scores = true;
@@ -33,7 +33,8 @@ local compute_word_overlap_scores = true;
         "true_samples_only": true,
         "add_NAF": add_naf,
         "one_proof": true,
-        "word_overlap_scores": compute_word_overlap_scores
+        "word_overlap_scores": compute_word_overlap_scores,
+        "max_instances": false,
     },
     "retrieval_reasoning_model": {
         "variant": retriever_variant,
@@ -50,12 +51,14 @@ local compute_word_overlap_scores = true;
         "add_NAF": add_naf,
         "threshold_sampling": true,
         "word_overlap_scores": compute_word_overlap_scores,
-        "benchmark_type": "word_score",      # word_score, random
-        "bernoulli_node_prediiction_level": "sequence-level",       # sequence-level, node-level
+        "benchmark_type": "random",      # word_score, random
+        "bernoulli_node_prediction_level": "node-level",       # sequence-level, node-level
     },
     "trainer": {
         "cuda_device": cuda_device,
-        "num_gradient_accumulation_steps": num_gradient_accumulation_steps
+        "num_gradient_accumulation_steps": num_gradient_accumulation_steps,
+        "type": "adversarial_trainer",
+        "save_best_model": false,
     },
     "data_loader": {
         "batch_sampler": {
