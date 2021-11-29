@@ -1,5 +1,6 @@
 from typing import Dict, Any
 import random, re, os, json, logging, pickle
+from copy import deepcopy
 
 import numpy as np
 from torch import Tensor
@@ -134,6 +135,8 @@ class RetrievalReasoningReader(DatasetReader):
                 qdep=example.qdep,
                 qlen=example.qlen,
                 node_label=example.node_label,
+                meta_record=example.meta_record,
+                sentence_scramble=example.sentence_scramble,
             )
 
     @overrides
@@ -150,6 +153,8 @@ class RetrievalReasoningReader(DatasetReader):
         node_label: list = [],
         initial_tokenization: bool = True,
         disable: bool = False,
+        meta_record: dict = {},
+        sentence_scramble: list = [],
     ) -> Instance:
         # pylint: disable=arguments-differ
         fields: Dict[str, Field] = {}
@@ -162,6 +167,9 @@ class RetrievalReasoningReader(DatasetReader):
         qa_tokens, _ = self.transformer_features_from_qa(question_text, context)
         qa_field = TextField(qa_tokens, self._token_indexers_qamodel)
         fields['phrase'] = qa_field
+
+        if not disable:
+            meta_record = self.append_flipped_question(item_id, meta_record)
 
         # if not qa_only:
         if False:
@@ -195,6 +203,8 @@ class RetrievalReasoningReader(DatasetReader):
             "node_label": node_label,
             "exact_match": exact_match if not qa_only else None,
             "QLen": qlen,
+            "meta_record": meta_record,
+            "sentence_scramble": sentence_scramble,
         }
 
         if label is not None:
@@ -210,6 +220,24 @@ class RetrievalReasoningReader(DatasetReader):
         fields["metadata"] = MetadataField(metadata)
 
         return Instance(fields)
+
+    def append_flipped_question(self, item_id, meta_record_):
+        meta_record = deepcopy(meta_record_)
+        qid = 'Q'+item_id.split('-')[-1]
+        ques_record = meta_record['questions'][qid]
+        ques = ques_record['question']
+        ques_rep = ques_record['representation'].lstrip('("').rstrip('")').split('" "')
+        pred = ques_rep[1]
+        polarity = ques_rep[-1]
+        anti_pred = 'is not' if pred == 'is' else f'does not {pred.rstrip("s")}'      # needs --> does not need
+        if polarity == '+':
+            assert pred in ques
+            flipped_ques = ques.replace(pred, anti_pred)
+        elif polarity == '-':
+            assert anti_pred in ques
+            flipped_ques = ques.replace(anti_pred, pred)
+        meta_record['questions'][qid]['flipped_ques'] = flipped_ques
+        return meta_record
 
     def transformer_features_from_qa(self, question: str, context: str):
         if self._add_prefix is not None:

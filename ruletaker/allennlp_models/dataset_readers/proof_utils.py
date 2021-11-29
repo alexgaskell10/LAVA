@@ -1,6 +1,6 @@
 
 class RRInputExample(object):
-    def __init__(self, id, context, question, node_label, edge_label, label, qdep, qlen):
+    def __init__(self, id, context, question, node_label, edge_label, label, qdep, qlen, meta_record, sentence_scramble):
         self.id = id
         self.context = context
         self.question = question
@@ -9,6 +9,8 @@ class RRInputExample(object):
         self.label = label
         self.qdep = qdep
         self.qlen = qlen
+        self.meta_record = meta_record
+        self.sentence_scramble = sentence_scramble
 
 
 class Node:

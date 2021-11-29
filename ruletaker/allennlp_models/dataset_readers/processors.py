@@ -213,7 +213,7 @@ class RRProcessor(DataProcessor):
                 else:
                     node_label, edge_label = None, None
 
-                examples.append(RRInputExample(id, context, question, node_label, edge_label, label, qdep, qlen))
+                examples.append(RRInputExample(id, context, question, node_label, edge_label, label, qdep, qlen, meta_record, sentence_scramble))
 
                 idx += 1 
 

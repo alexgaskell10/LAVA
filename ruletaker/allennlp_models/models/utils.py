@@ -29,8 +29,10 @@ def batch_lookup(M, idx, vector_output=True):
     pass
     return samples
 
+
 def safe_log(x):
     return torch.log(x + EPSILON)
+
 
 def right_pad(x, y, value=0.0):
     if x.size(-1) >= y.size(-1):
@@ -106,3 +108,4 @@ def flatten_list(l):
 
 def lrange(*args):
     return list(range(*args))
+
