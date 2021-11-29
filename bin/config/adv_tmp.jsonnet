@@ -1,10 +1,10 @@
 local max_pieces = 512;
 local skip_id_regex = "$none";
-local ruletaker_archive = "ruletaker/runs/depth-5/model.tar.gz"; #"ruletaker/runs/depth-5-base/model.tar.gz";
+local ruletaker_archive = "ruletaker/runs/depth-5-base/model.tar.gz"; #"ruletaker/runs/depth-5-base/model.tar.gz";
 local dataset_dir = "ruletaker/inputs/dataset/rule-reasoning-dataset-V2020.2.4/depth-5/"; #"ruletaker/inputs/dataset/tiny-rule-reasoning/challenge/";
 local retriever_variant = "roberta-base";      # {roberta-base, roberta-large}
 local pretrained_model = "bin/runs/pretrain_retriever/rb-base/model.tar.gz";
-local cuda_device = 4;
+local cuda_device = 3;
 local batch_size = 8;
 local num_gradient_accumulation_steps = 1;
 local topk = 10;
@@ -53,7 +53,7 @@ local compute_word_overlap_scores = true;
         "word_overlap_scores": compute_word_overlap_scores,
         "benchmark_type": "random",      # word_score, random
         "bernoulli_node_prediction_level": "node-level",       # sequence-level, node-level
-        "adversarial_perturbations": "sentence_elimination,question_flip"       # sentence_elimination,question_flip
+        "adversarial_perturbations": "equivalence_substitution"       # sentence_elimination,question_flip,equivalence_substitution
     },
     "trainer": {
         "cuda_device": cuda_device,

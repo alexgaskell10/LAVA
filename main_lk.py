@@ -62,17 +62,23 @@ def main(prog: Optional[str] = None) -> None:
     print('\n'*3,'Args loaded', '\n'*3)
 
     # Hack to use wandb logging
-    if 'train' in sys.argv[1] and 'tmp' not in sys.argv[2]:
+    if 'train' in sys.argv[1]:# and 'tmp' not in sys.argv[2]:
         import wandb
 
         if 'pretrain_retriever' in sys.argv[2]:
             project = "re-re_pretrain-ret"  
         elif 'gumbel_softmax' in sys.argv[2]:
             project = "re-re_gumbel-softmax"
+        elif 'adv' in sys.argv[2]:
+            project = "adversarial"
         else:
             project = "re-re"
 
-        wandb.init(project=project, config=vars(args))
+        from _jsonnet import evaluate_file
+        import json
+        file_dict = json.loads(evaluate_file(args.param_path))
+
+        wandb.init(project=project, config={**vars(args), **file_dict})
         os.environ['WANDB_LOG'] = 'true'
     else:
         os.environ['WANDB_LOG'] = 'false'
