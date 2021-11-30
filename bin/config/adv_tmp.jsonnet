@@ -13,7 +13,7 @@ local lr = 5e-6;
 local model_type = 'adversarial_base';
 local add_naf = false;
 local compute_word_overlap_scores = true;
-local epochs = 3;
+local epochs = 1;
 
 {
     "ruletaker_archive": ruletaker_archive,
@@ -30,7 +30,7 @@ local epochs = 3;
         "concat_q_and_c": true,
         "true_samples_only": false,
         "add_NAF": add_naf,
-        "one_proof": true,
+        "one_proof": false,
         "word_overlap_scores": compute_word_overlap_scores,
         "max_instances": 10,     # 10, 100, false
     },
