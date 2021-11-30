@@ -4,6 +4,7 @@ import argparse
 import logging
 import re
 from typing import Any, Optional
+from datetime import datetime
 
 from overrides import overrides
 
@@ -23,6 +24,10 @@ from ruletaker.allennlp_models.train.custom_train import CustomTrain
 logger = logging.getLogger(__name__)
 
 
+def datetime_now():
+    return datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+
+
 def main(prog: Optional[str] = None) -> None:
     """
     The :mod:`~allennlp.run` command only knows about the registered classes in the ``allennlp``
@@ -32,13 +37,17 @@ def main(prog: Optional[str] = None) -> None:
     """
     import_plugins()
 
+    outdir = 'bin/runs/adversarial/'+datetime_now()
+
     if len(sys.argv) == 1:
         # Ruletaker
         # sys.argv[1:] = ['train', 'ruletaker/allennlp_models/config/tmp.jsonnet', 
         #     '-s', 'ruletaker/runs/t16', '--include-package', 'ruletaker.allennlp_models']
-        # RL/GS
-        sys.argv[1:] = ['custom_train', 'bin/config/adv_tmp.jsonnet',#'bin/config/vi_1_tmp.jsonnet',
-            '-s', 'bin/runs/adversarial/tmp', '--include-package', 'ruletaker.allennlp_models']
+
+        # sys.argv[1:] = ['custom_train', 'bin/config/adv_tmp.jsonnet', '-s', 'bin/runs/adversarial/tmp', 
+        #     '--include-package', 'ruletaker.allennlp_models']
+        sys.argv[1:] = ['custom_train', 'bin/config/adv_tmp.jsonnet', '-s', outdir, 
+            '--include-package', 'ruletaker.allennlp_models']
 
         # sys.argv[1:] = ['evaluate', 'ruletaker/runs/depth-5-base/model.tar.gz', 'dev', '--output-file', '_results.json', 
         #     '-o', "{'trainer': {'cuda_device': 0}, 'validation_data_loader': {'batch_sampler': {'batch_size': 64, 'type': 'bucket'}}}", 
@@ -62,7 +71,8 @@ def main(prog: Optional[str] = None) -> None:
     print('\n'*3,'Args loaded', '\n'*3)
 
     # Hack to use wandb logging
-    if 'train' in sys.argv[1]:# and 'tmp' not in sys.argv[2]:
+    if False:
+    # if 'train' in sys.argv[1]:# and 'tmp' not in sys.argv[2]:
         import wandb
 
         if 'pretrain_retriever' in sys.argv[2]:
@@ -80,6 +90,7 @@ def main(prog: Optional[str] = None) -> None:
 
         wandb.init(project=project, config={**vars(args), **file_dict})
         os.environ['WANDB_LOG'] = 'true'
+        args.wandb_name = wandb.run.name
     else:
         os.environ['WANDB_LOG'] = 'false'
 

@@ -1,20 +1,19 @@
 local max_pieces = 512;
-local skip_id_regex = "$none";
 local ruletaker_archive = "ruletaker/runs/depth-5-base/model.tar.gz"; #"ruletaker/runs/depth-5-base/model.tar.gz";
 local dataset_dir = "ruletaker/inputs/dataset/rule-reasoning-dataset-V2020.2.4/depth-5/"; #"ruletaker/inputs/dataset/tiny-rule-reasoning/challenge/";
-local retriever_variant = "roberta-base";      # {roberta-base, roberta-large}
+local inference_model = "roberta-base";      # {roberta-base, roberta-large}
 local pretrained_model = "bin/runs/pretrain_retriever/rb-base/model.tar.gz";
-local cuda_device = 3;
+local cuda_device = 4;
 local batch_size = 8;
 local num_gradient_accumulation_steps = 1;
-local topk = 10;
 local num_monte_carlo = 8;
-local longest_proof = topk;
+local longest_proof = 10;
 local shortest_proof = 1;
 local lr = 5e-6;
 local model_type = 'adversarial_base';
 local add_naf = false;
 local compute_word_overlap_scores = true;
+local epochs = 3;
 
 {
     "ruletaker_archive": ruletaker_archive,
@@ -24,9 +23,8 @@ local compute_word_overlap_scores = true;
     "lr": lr,
     "dataset_reader": {
         "type": "retriever_reasoning",
-        "retriever_variant": retriever_variant,
+        "retriever_variant": inference_model,
         "pretrained_retriever_model": pretrained_model,
-        "topk": topk,
         "longest_proof": longest_proof,
         "shortest_proof": shortest_proof,
         "concat_q_and_c": true,
@@ -34,32 +32,28 @@ local compute_word_overlap_scores = true;
         "add_NAF": add_naf,
         "one_proof": true,
         "word_overlap_scores": compute_word_overlap_scores,
-        "max_instances": false,     # 10, false
+        "max_instances": 10,     # 10, 100, false
     },
     "retrieval_reasoning_model": {
-        "variant": retriever_variant,
+        "variant": inference_model,
         "type": model_type,
-        "sentence_embedding_method": "mean",
-        "topk": topk,
         "num_monte_carlo": num_monte_carlo,
-        "do_mask_z": true,
-        "additional_qa_training": false,
-        "objective": "NVIL",       # VIMCO; NVIL
-        "sampling_method": "multinomial",        # multinomial; gumbel_softmax; argmax
-        "baseline_type": "Prob-NMN",
-        "infr_supervision": false,
         "add_NAF": add_naf,
-        "threshold_sampling": true,
         "word_overlap_scores": compute_word_overlap_scores,
-        "benchmark_type": "random",      # word_score, random
+        "benchmark_type": "random",      # word_score, random, none
         "bernoulli_node_prediction_level": "node-level",       # sequence-level, node-level
-        "adversarial_perturbations": "equivalence_substitution"       # sentence_elimination,question_flip,equivalence_substitution
+        "adversarial_perturbations": "sentence_elimination,question_flip,equivalence_substitution"       # sentence_elimination,question_flip,equivalence_substitution
     },
     "trainer": {
         "cuda_device": cuda_device,
         "num_gradient_accumulation_steps": num_gradient_accumulation_steps,
         "type": "adversarial_trainer",
         "save_best_model": false,
+        "num_epochs": epochs,
+        "learning_rate_scheduler": {
+            'cut_frac': 0.06,
+            'type': 'slanted_triangular',
+        }
     },
     "data_loader": {
         "batch_sampler": {

@@ -571,15 +571,15 @@ def main():
         with open('config/run_gen.yml', 'w') as f:
             yaml.dump(args.__dict__, f)
 
-    with open(args.input_file, "r") as ip, open(args.output_file, "w") as op:
-        run_theorem_prover(
-            args.theorem_prover,
-            ip,
-            args.input_format,
-            op,
-            args.exclude_mismatches,
-            args.report_metrics,
-        )
+    # with open(args.input_file, "r") as ip, open(args.output_file, "w") as op:
+    #     run_theorem_prover(
+    #         args.theorem_prover,
+    #         ip,
+    #         args.input_format,
+    #         op,
+    #         args.exclude_mismatches,
+    #         args.report_metrics,
+    #     )
 
 
 if __name__ == "__main__":

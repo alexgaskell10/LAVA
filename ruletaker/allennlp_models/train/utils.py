@@ -72,3 +72,23 @@ def read_all_datasets(
         datasets["test"] = test_data
 
     return datasets
+
+
+def description_from_metrics(metrics) -> str:
+    return (
+        ", ".join(
+            [
+                "%s: %.4f" % (name, value)
+                for name, value in metrics.items()
+                if name in ['EM', 'loss']
+            ]
+        )
+        + " ||"
+    )
+
+
+def write_records(records, dset, epoch, serialization_dir):
+    outfile = os.path.join(serialization_dir, f'{dset}-records_epoch{epoch}.pkl')
+    logger.info('Writing records to: ' + outfile)
+    with open(outfile, 'wb') as f:
+        pkl.dump(records, f)

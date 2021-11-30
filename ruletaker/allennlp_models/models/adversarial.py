@@ -9,12 +9,9 @@ import numpy as np
 
 from transformers.tokenization_auto import AutoTokenizer
 import wandb
-import random
 
 import torch
-from torch.nn.modules.linear import Linear
-from torch import batch_norm_gather_stats_with_counts, nn
-import torch.nn.functional as F
+from torch import nn
 
 from allennlp.data import Vocabulary
 from allennlp.models.model import Model
@@ -23,16 +20,12 @@ from allennlp.training.metrics import CategoricalAccuracy
 
 from transformers import AutoModel
 
-from .retriever_embedders import (
-    SpacyRetrievalEmbedder, TransformerRetrievalEmbedder
+from .utils import (
+    safe_log, right_pad, batch_lookup, EPSILON, make_dot, set_dropout, one_hot, lmap, lfilter, print_results, gs
 )
-from .utils import safe_log, right_pad, batch_lookup, EPSILON, make_dot, set_dropout, one_hot, lmap, lfilter
-from .transformer_binary_qa_model import TransformerBinaryQA
-from .baseline import Baseline
 from .ruletaker.theory_label_generator import call_theorem_prover_from_lst
 
 import logging
-# logging.basicConfig(level=logging.CRITICAL)
 
 torch.manual_seed(0)
 
@@ -42,88 +35,52 @@ class AdversarialGenerator(Model):
         qa_model: Model,
         variant: str,
         vocab: Vocabulary = None,
-        # pretrained_model: str = None,
-        requires_grad: bool = True,
-        transformer_weights_model: str = None,
         num_labels: int = 2,
-        predictions_file=None,
-        layer_freeze_regexes: List[str] = None,
         regularizer: Optional[RegularizerApplicator] = None,
-        topk: int = 5,
-        sentence_embedding_method: str = 'mean',
         dataset_reader = None,
         num_monte_carlo = 1,
-        do_mask_z = True,
-        baseline_type = 'decay',
-        additional_qa_training = False,
-        objective = 'NVIL',
-        sampling_method = 'multinomial',
-        infr_supervision = False,
         add_NAF = False,
-        threshold_sampling = False,
         word_overlap_scores = False,
         benchmark_type = "random",
         bernoulli_node_prediction_level = 'node-level',
         adversarial_perturbations = '',
+        **kwargs,
     ) -> None:
         super().__init__(qa_model.vocab, regularizer)
         self.variant = variant
         self.qa_model = qa_model
         self.qa_model._loss = nn.CrossEntropyLoss(reduction='none')
         self._loss = nn.CrossEntropyLoss(reduction='none')
-        self._mlloss = nn.BCEWithLogitsLoss(reduction='none')
         self.qa_vocab = qa_model.vocab
         self.dataset_reader = dataset_reader
+        self.vocab = vocab
+        self.regularizer = regularizer
+        self.num_labels = num_labels
+        self.word_overlap_scores = word_overlap_scores
+
         if bernoulli_node_prediction_level == 'sequence-level':
             self.gen_model = GenerativeBaselineNetwork(variant=variant, vocab=vocab, dataset_reader=dataset_reader, num_labels=2, dropout=0.1)
         elif bernoulli_node_prediction_level == 'node-level':
             self.gen_model = GenerativeNetwork(variant=variant, vocab=vocab, dataset_reader=dataset_reader, has_naf=add_NAF, num_labels=2, dropout=0.1)
-        self.vocab = vocab
-        self.regularizer = regularizer
-        self.sentence_embedding_method = sentence_embedding_method
-        self.num_labels = num_labels
-        # self.objective = objective
-        self.word_overlap_scores = word_overlap_scores
-        # self.objective_fn = getattr(self, objective.lower())
-        
-        self._n_z = topk        # Number of latent retrievals
-        self._beta = 0.1        # Scale factor for KL_div TODO: set dynamically
+
         self._p0 = torch.tensor(-float(1e9))        # TODO: set dynamically
         self.n_mc = num_monte_carlo          # Number of monte carlo steps
         self._logprob_method = 'CE'      # TODO: set dynamically
         self._z_mask = -1
-        self._do_mask_z = do_mask_z     # TODO: set dynamically
-        # self._additional_qa_training = additional_qa_training
-        # self.threshold_sampling = threshold_sampling
-
-        # self._baseline_type = baseline_type
-        # if baseline_type == 'Prob-NMN':
-        #     self._reinforce = Reinforce(baseline_decay=0.99)
-        # elif baseline_type == 'NVIL':
-        #     self.baseline_model = BaselineNetwork(variant=variant, vocab=vocab, dataset_reader=dataset_reader, num_labels=1)
-        #     self._reinforce = TrainableReinforce(self.baseline_model)
-        #     set_dropout(self.baseline_model, 0.0)
 
         self.answers = {}
+        self.records = []
         self.prev_answers = {'train': [], 'val': []}
-        self._ = 0
-        self._smoothing_alpha = 0.1       # TODO: check this
-        # self._smoothloss = LabelSmoothingLoss(self._smoothing_alpha)
-        self._supervised = infr_supervision
         
-        self.alpha = 0.8
+        self.alpha = 0.8        # TODO: some hparam validation on this
         self.c = 0
         self.v = 0
         self.reinforce_baseline = nn.Parameter(torch.tensor(0.), requires_grad=True)
-
-        self._sampler = sampling_method
         
         set_dropout(self.gen_model, 0.0)
         set_dropout(self.qa_model, 0.0)
 
-        self.records = []
-
-        self.benchmark_type = benchmark_type
+        self.benchmark_type = None if benchmark_type == 'none' else benchmark_type
         if self.benchmark_type == 'random':
             self.benchmark = self.random_benchmark
         elif self.benchmark_type == 'word_score':
@@ -157,7 +114,7 @@ class AdversarialGenerator(Model):
         lens = torch.tensor(qlens_, device=self._d).unsqueeze(1)
         metadata_orig = [m for m in metadata for _ in range(self._n_mc)]
         orig_sentences = [[m['question_text']] + m['context'].split('.') for m in metadata]
-        meta_records = [m.pop('meta_record') for m in metadata]
+        meta_records = [m['meta_record'] for m in metadata]
         meta_records_orig = [m for m in meta_records for _ in range(self._n_mc)]
         
         polarity = torch.tensor([1-int('not' in m['question_text']) for m in metadata], device=self._d)
@@ -249,7 +206,7 @@ class AdversarialGenerator(Model):
         outputs = {"loss": -(estimator.mean() + aux_signals), "estimator": estimator.mean()}
  
         correct_bl = None
-        if True: 
+        if self.benchmark_type != None: 
             qa_output_baseline, z_bl, z_bl_onehot, batch_bl, meta_records_bl = self.benchmark(
                 sent_logits=sent_logits,
                 ques_logits=ques_logits,
@@ -272,9 +229,10 @@ class AdversarialGenerator(Model):
                 records_sentences_bl = [[i['text'] for i in list(record['triples'].values()) + list(record['rules'].values()) if not i['mask']] for record in meta_records_bl]
                 assert all([all([sent in meta['context'] for sent in sentences]) for meta, sentences in zip(metadata_bl, records_sentences_bl)])
 
-            correct = (preds == modified_label_)
-            correct[skip_ids] = False
             correct_bl = (qa_output_baseline["label_probs"].argmax(-1) == modified_label_bl)
+        
+        correct = (preds == modified_label_)
+        correct[skip_ids] = False
         self.log_results(qlens_, correct, outputs, ref=correct_bl)
 
         if True:
@@ -283,6 +241,7 @@ class AdversarialGenerator(Model):
             for i in range(len(correct)):
                 i_ = floor(i / self._n_mc)
                 record = {
+                    "id": metadata_[i_]['id'],
                     "qa_fooled": correct[i].item(),
                     "label": label[i_].item(),
                     "mod_label": modified_label_[i].item(),     # Target label (i.e. 1-correct label)
@@ -291,8 +250,11 @@ class AdversarialGenerator(Model):
                     "orig_sentences": orig_sentences[i_],
                     "sampled_sentences": sentences[i],
                     "proof_sentences": proof_sentences[i_][1:],
-                    "qa_probs": probs[i].cpu(),
+                    "qa_probs": probs[i].cpu().tolist(),
                     "qa_preds": preds[i].item(),
+                    "z_sent": z_sent[i].tolist() if z_sent is not None else None,
+                    "z_ques": z_ques[i].tolist() if z_ques is not None else None,
+                    "z_eqiv": z_eqiv[i].tolist() if z_eqiv is not None else None,
                 }
                 records.append(record)
                 record["label"], record["polarity"], record["mod_label"], record["qa_probs"]
@@ -413,7 +375,7 @@ class AdversarialGenerator(Model):
                 self.answers[d][2].append(t)
 
         if self.training and not self.wandb:
-            self.print_results()
+            print_results(self.answers, self._n_mc)
 
         if self.wandb:
             self.log_wandb(qlens, acc, outputs)
@@ -428,17 +390,6 @@ class AdversarialGenerator(Model):
             **{prefix + k: v for k,v in outputs.items()},
         }
         wandb.log(metrics)
-
-    def print_results(self):
-        n = self._n_mc * 100
-        for d in sorted(self.answers.keys()):
-            all_score_a = self.answers[d][0].count(True) / max(len(self.answers[d][0]), 1)
-            last_100_a = self.answers[d][0][-n:].count(True) / max(len(self.answers[d][0][-n:]),1)
-            all_score_r = self.answers[d][1].count(True) / max(len(self.answers[d][1]),1)
-            last_100_r = self.answers[d][1][-n:].count(True) / max(len(self.answers[d][1][-n:]),1)
-            print(f'\nM:\tL: {d}\tAll: {all_score_a:.3f}\tLast {n}: {last_100_a:.2f}\t'
-                # f'Last {n} tp: {last_100_tp:.2f}\t'
-                f'B:\tAll: {all_score_r:.3f}\tLast {n}: {last_100_r:.2f}\tN: {len(self.answers[d][0])}')
 
     def _prep_batch(self, metadata, label, z=None):
         ''' Concatenate the latest retrieval to the current 
@@ -601,24 +552,30 @@ class AdversarialGenerator(Model):
         return qa_output_baseline, z_baseline, z_bl_onehot, batch_baseline
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
-        answers = [v for value in self.answers.values() for v in value[0]]      # Flatten lists for main model
-        if reset == True and not self.training:
-            return {
-                'EM': answers.count(True)/len(answers),
-                'predictions': None,
-            }
-        else:
-            return {
-                'EM': answers.count(True)/len(answers),
-            }
-    
-    def reset(self, dset, epoch):
-        if len(self.answers) > 0:
-            self.prev_answers[dset].append(self.answers)
-            print(f'\n\n{dset} results for epoch {epoch}: \n\n')
-            self.print_results()
-        self.answers = {}
+        if len(self.answers) == 0:
+            self._precomputed_metrics.pop('predictions', None)
+            return self._precomputed_metrics
 
+        prefix = 'tr_' if self.training else 'val_'
+        grouped = {k: v[0] for k,v in self.answers.items()}
+        grouped['all'] = [v for lst in grouped.values() for v in lst]
+
+        metrics = {
+            'EM': grouped['all'].count(True) / len(grouped['all']),
+            **{prefix + 'acc_' + str(k): v.count(True) / len(v) for k,v in grouped.items()},
+            **{prefix + 'N_' + str(k): len(v) for k,v in grouped.items()},
+        }
+
+        self._precomputed_metrics = metrics
+
+        if reset:
+            print_results(self.answers, self._n_mc)
+            metrics['predictions'] = self.records
+            self.answers = {}
+            self.records = []
+
+        return metrics
+    
 
 class _BaseSentenceClassifier(Model):
     def __init__(self, variant, vocab, dataset_reader, has_naf, regularizer=None, num_labels=1, dropout=0.):
@@ -756,7 +713,7 @@ class GenerativeBaselineNetwork(Model):
             for m in range(1,i+1):
                 node_reprs[n,-m] = self._p0
 
-        return node_reprs, _
+        return node_reprs, None
 
 
 class NodeClassificationHead(nn.Module):
@@ -776,10 +733,4 @@ class NodeClassificationHead(nn.Module):
         x = self.dropout(x)
         x = self.out_proj(x)
         return x
-
-
-def gs(logits, tau=1):
-    ''' Sample using Gumbel Softmax. Ingests raw logits.
-    '''
-    return F.gumbel_softmax(logits, tau=tau, hard=True, eps=1e-10, dim=-1)
 

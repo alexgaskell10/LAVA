@@ -178,6 +178,8 @@ def load_file(args: argparse.Namespace):
         else:
             params.__dict__["params"].update({k:v})
     
+    params['wandb_runname'] = vars(args).get('wandb_name', None)
+
     return params, archive
 
 
@@ -308,6 +310,8 @@ def train_model(
     """
     training_util.create_serialization_dir(params, serialization_dir, recover, force)
     params.to_file(os.path.join(serialization_dir, CONFIG_NAME))
+
+    params.pop('wandb_runname')
 
     if archive is not None:
         params["archive"] = archive
@@ -699,15 +703,6 @@ class TrainModel(Registrable):
             that we do not recommend using this for actual test data in every-day experimentation;
             you should only very rarely evaluate your model on actual test data.
         """
-
-        # datasets = training_util.read_all_datasets(
-        #     train_data_path=train_data_path,
-        #     dataset_reader=dataset_reader,
-        #     validation_dataset_reader=validation_dataset_reader,
-        #     validation_data_path=validation_data_path,
-        #     test_data_path=test_data_path,
-        # )
-
         from ruletaker.allennlp_models.train.utils import read_all_datasets
         datasets = read_all_datasets(
             train_data_path=train_data_path,

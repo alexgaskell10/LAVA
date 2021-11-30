@@ -41,7 +41,6 @@ class RetrievalReasoningReader(DatasetReader):
         sample: int = -1,
         retriever_variant: str = None,
         pretrained_retriever_model = None,
-        topk: int = None,
         longest_proof: int = 100,
         shortest_proof: int = 1,
         concat_q_and_c: bool = None,
@@ -83,7 +82,6 @@ class RetrievalReasoningReader(DatasetReader):
         self._skip_id_regex = skip_id_regex
         self._retriever_variant = retriever_variant
         self._concat = concat_q_and_c if concat_q_and_c is not None else (pretrained_retriever_model is not None)       # TODO
-        self._topk = topk
         self._longest = longest_proof
         self._shortest = shortest_proof
         self._true_samples_only = true_samples_only
@@ -121,8 +119,6 @@ class RetrievalReasoningReader(DatasetReader):
                 if example.node_label[-1] == 1:
                     continue
 
-            # if not (example.qlen == '' or int(example.qlen) <= self._topk):
-            # if not int(example.qlen) == self._topk:
             if not (self._shortest <= int(example.qlen) <= self._longest):
                 continue
 

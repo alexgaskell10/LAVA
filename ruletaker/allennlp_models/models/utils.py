@@ -3,9 +3,12 @@ import numpy as np
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
+import torch.nn.functional as F
 
 from graphviz import Digraph
 
+import logging
+logger = logging.getLogger(__name__)
 
 EPSILON = float(np.finfo(float).eps)
 HUGE_INT = 1e31
@@ -109,3 +112,17 @@ def flatten_list(l):
 def lrange(*args):
     return list(range(*args))
 
+def print_results(answers, scale_n):
+    n = scale_n
+    for d in sorted(answers.keys()):
+        all_score_a = answers[d][0].count(True) / max(len(answers[d][0]), 1)
+        last_100_a = answers[d][0][-n:].count(True) / max(len(answers[d][0][-n:]),1)
+        all_score_r = answers[d][1].count(True) / max(len(answers[d][1]),1)
+        last_100_r = answers[d][1][-n:].count(True) / max(len(answers[d][1][-n:]),1)
+        print(f'\nM:\tL: {d}\tAll: {all_score_a:.3f}\tLast {n}: {last_100_a:.2f}\t'
+            f'B:\tAll: {all_score_r:.3f}\tLast {n}: {last_100_r:.2f}\tN: {len(answers[d][0])}')
+
+def gs(logits, tau=1):
+    ''' Sample using Gumbel Softmax. Ingests raw logits.
+    '''
+    return F.gumbel_softmax(logits, tau=tau, hard=True, eps=1e-10, dim=-1)
