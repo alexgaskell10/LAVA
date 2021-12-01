@@ -71,8 +71,8 @@ def main(prog: Optional[str] = None) -> None:
     print('\n'*3,'Args loaded', '\n'*3)
 
     # Hack to use wandb logging
-    if False:
-    # if 'train' in sys.argv[1]:# and 'tmp' not in sys.argv[2]:
+    # if False:
+    if 'train' in sys.argv[1]:# and 'tmp' not in sys.argv[2]:
         import wandb
 
         if 'pretrain_retriever' in sys.argv[2]:

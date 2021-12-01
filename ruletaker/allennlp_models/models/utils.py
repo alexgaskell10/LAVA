@@ -113,7 +113,7 @@ def lrange(*args):
     return list(range(*args))
 
 def print_results(answers, scale_n):
-    n = scale_n
+    n = scale_n * 100
     for d in sorted(answers.keys()):
         all_score_a = answers[d][0].count(True) / max(len(answers[d][0]), 1)
         last_100_a = answers[d][0][-n:].count(True) / max(len(answers[d][0][-n:]),1)

@@ -5,6 +5,7 @@ import sys
 import time
 from math import floor
 from copy import deepcopy
+from random import shuffle
 import numpy as np
 
 from transformers.tokenization_auto import AutoTokenizer
@@ -28,6 +29,7 @@ from .ruletaker.theory_label_generator import call_theorem_prover_from_lst
 import logging
 
 torch.manual_seed(0)
+np.random.seed(0)
 
 @Model.register("adversarial_base")
 class AdversarialGenerator(Model):
@@ -138,17 +140,17 @@ class AdversarialGenerator(Model):
         z_sent, z_1hot_sent = self._draw_samples(sent_logits)        # (bsz * mc steps, num retrievals)
         z_ques, z_1hot_ques = self._draw_samples(ques_logits)        # (bsz * mc steps, num retrievals)
         z_eqiv, z_1hot_eqiv = self._draw_samples(eqiv_logits)        # (bsz * mc steps, num retrievals)
-        if 'sentence_elimination' not in self.adv_perturbations:
-            z_sent = None
+        # if 'sentence_elimination' not in self.adv_perturbations:
+        #     z_sent = None
 
         meta_records_ = meta_records_orig
         metadata_ = metadata_orig
         if 'sentence_elimination' in self.adv_perturbations:
-            meta_records_, metadata_ = self.update_meta_sentelim(z_sent, meta_records_, metadata_)
+            meta_records_ = self.update_meta_sentelim(z_sent, meta_records_, metadata_)
         if 'question_flip' in self.adv_perturbations:
-            meta_records_, metadata_ = self.update_meta_quesflip(z_ques, meta_records_, metadata_)
+            meta_records_ = self.update_meta_quesflip(z_ques, meta_records_, metadata_)
         if 'equivalence_substitution' in self.adv_perturbations:
-            meta_records_, metadata_ = self.update_meta_eqivsubt(z_eqiv, meta_records_, metadata_)
+            meta_records_ = self.update_meta_eqivsubt(z_eqiv, meta_records_, metadata_)
 
         engine_labels = call_theorem_prover_from_lst(instances=meta_records_)
         if self.training:
@@ -159,11 +161,14 @@ class AdversarialGenerator(Model):
             skip_ids = [n for n,e in enumerate(engine_labels) if e is None]
         modified_label_ = 1 - torch.tensor(new_labels, device=self._d, dtype=torch.int)
 
-        batch = self._prep_batch(metadata_, modified_label_, z_sent)
-        if True and 'sentence_elimination' in self.adv_perturbations:
-            # Verify batched sentences are same as those in new meta records
-            records_sentences = [[i['text'] for i in list(record['triples'].values()) + list(record['rules'].values()) if not i['mask']] for record in meta_records_]
-            assert all([all([sent in meta['context'] for sent in sentences]) for meta, sentences in zip(metadata_, records_sentences)])
+        batch = self._prep_batch(meta_records_, modified_label_)
+        new_metadata = batch['metadata']
+        if True:
+            # Verify meta records sentences are in metadata
+            records_sentences = [[i['text'] for i in list(record['triples'].values()) + list(record['rules'].values()) if not i.get('mask',0)] for record in meta_records_]
+            assert all([all([sent in meta['context'] for sent in sentences]) for meta, sentences in zip(new_metadata, records_sentences)])
+            # Verify all metadata sentences are in meta records
+            assert all([all([(sent+'.').strip() in sentences for sent in meta['context'].split('.')[:-1]]) for meta, sentences in zip(new_metadata, records_sentences)])
 
         with torch.no_grad():
             qa_output = self.qa_model(**batch)
@@ -200,6 +205,7 @@ class AdversarialGenerator(Model):
         baseline_term = -torch.pow(baseline_error, 2) #torch.mul(l.detach(), torch.pow(baseline_error, 2))      # Didn't work when rescaling by l as outlined in the original paper...
 
         estimator = reinforce_reward + baseline_term
+        # TODO: explore adding KL term for prior: https://math.stackexchange.com/questions/2604566/kl-divergence-between-two-multivariate-bernoulli-distribution
         aux_signals = 0
 
         assert not torch.isnan(estimator).any()
@@ -219,24 +225,26 @@ class AdversarialGenerator(Model):
                 meta_records=meta_records,
             )
 
-            metadata_bl = batch_bl['metadata']
+            new_metadata_bl = batch_bl['metadata']
             engine_labels_bl = call_theorem_prover_from_lst(instances=meta_records_bl)
             new_labels_bl = [bool(l.item()) if nl is None else nl for nl,l in zip(engine_labels_bl, label)]     # TODO: this is a hack to catch cases where problog cannot solve the logic program. Find a better solution here.
             modified_label_bl = 1 - torch.tensor(new_labels_bl, device=self._d, dtype=torch.int)
 
-            if False and 'sentence_elimination' in self.adv_perturbations:
-                # Verify batched sentences are same as those in new meta records
-                records_sentences_bl = [[i['text'] for i in list(record['triples'].values()) + list(record['rules'].values()) if not i['mask']] for record in meta_records_bl]
-                assert all([all([sent in meta['context'] for sent in sentences]) for meta, sentences in zip(metadata_bl, records_sentences_bl)])
+            if True:
+                # Verify meta records sentences are in metadata
+                records_sentences_bl = [[i['text'] for i in list(record['triples'].values()) + list(record['rules'].values()) if not i.get('mask',0)] for record in meta_records_bl]
+                assert all([all([sent in meta['context'] for sent in sentences]) for meta, sentences in zip(new_metadata_bl, records_sentences_bl)])
+                # Verify all metadata sentences are in meta records
+                assert all([all([(sent+'.').strip() in sentences for sent in meta['context'].split('.')[:-1]]) for meta, sentences in zip(new_metadata_bl, records_sentences_bl)])
 
-            correct_bl = (qa_output_baseline["label_probs"].argmax(-1) == modified_label_bl)
+                correct_bl = (qa_output_baseline["label_probs"].argmax(-1) == modified_label_bl)
         
         correct = (preds == modified_label_)
         correct[skip_ids] = False
         self.log_results(qlens_, correct, outputs, ref=correct_bl)
 
         if True:
-            sentences = [[m['question_text']] + m['context'].split('.') for m in batch['metadata']]
+            sentences = [[m['question_text']] + m['context'].split('.') for m in new_metadata]
             records = []
             for i in range(len(correct)):
                 i_ = floor(i / self._n_mc)
@@ -255,6 +263,7 @@ class AdversarialGenerator(Model):
                     "z_sent": z_sent[i].tolist() if z_sent is not None else None,
                     "z_ques": z_ques[i].tolist() if z_ques is not None else None,
                     "z_eqiv": z_eqiv[i].tolist() if z_eqiv is not None else None,
+                    "orig_proof_depth": metadata_[i]["QDep"],
                 }
                 records.append(record)
                 record["label"], record["polarity"], record["mod_label"], record["qa_probs"]
@@ -262,14 +271,15 @@ class AdversarialGenerator(Model):
 
         return outputs
 
-    def update_meta_sentelim(self, z, meta_records_, metadata):
+    def update_meta_sentelim(self, z, meta_records_, metadata_):
         meta_records = [deepcopy(m) for m in meta_records_]
+        metadata = [deepcopy(m) for m in metadata_]
         for n, (nodes, meta) in enumerate(zip(z, metadata)):
             qid = 'Q' + meta['id'].split('-')[-1]
             meta_records[n]['questions'] = {qid: meta_records[n]['questions'][qid]}
             sentence_scramble = meta['sentence_scramble']
             n_sents = len(sentence_scramble)
-            scrambled_nodes = [sentence_scramble[i] for i in nodes if i not in [-1, n_sents]]
+            scrambled_nodes = [sentence_scramble[i] for i in nodes if i not in [self._z_mask, n_sents]]
             nfacts = len(meta_records[n]['triples'])
             nrules = len(meta_records[n]['rules'])
             assert meta_records[n]['questions'][qid]['question'] == meta['question_text']
@@ -278,7 +288,7 @@ class AdversarialGenerator(Model):
             for i in range(1, nrules+1):
                 meta_records[n]['rules'][f'rule{i}']['mask'] = 0 if i + nfacts in scrambled_nodes else 1
             continue
-        return meta_records, metadata
+        return meta_records
 
     def update_meta_quesflip(self, z, meta_records_, metadata_):
         meta_records = [deepcopy(m) for m in meta_records_]
@@ -297,7 +307,7 @@ class AdversarialGenerator(Model):
             meta_records[n]['questions'][qid]['representation'] = qrepr_new
             meta_records[n]['questions'][qid]['orig_question'] = qtext_old
             metadata[n]['question_text'] = qtext_new
-        return meta_records, metadata
+        return meta_records
 
     def update_meta_eqivsubt(self, z, meta_records_, metadata_):
         meta_records = [deepcopy(m) for m in meta_records_]
@@ -329,22 +339,27 @@ class AdversarialGenerator(Model):
                     body_text = meta_records[n]['triples'][body_factid]['text']
                     body_factids.append(body_factid)
                     body_reprs.append(body_repr)
-                    body_texts.append(body_text.rstrip('.').lower())
+                    body_texts.append(body_text.rstrip('.'))
 
                 assert body_reprs and body_texts
                 body_repr = '(' + ' '.join(body_reprs) + ')'
                 body_text = ' and '.join(body_texts)
                 repr = '(' + body_repr + ' -> ' + head_fact['representation'] + ')'
-                text = f"If {body_text} then {head_fact['text'].lower()}"
+                text = f"If {body_text} then {head_fact['text']}"
 
                 meta_records[n]['rules'][ruleid] = {'text': text, 'representation': repr, 'mask': 0}
                 meta_records[n]['equivalence_substitution'][ruleid] = body_factids
-                metadata[n]['context'] += ' ' + text
+
+                # # Strip the head fact from the context and insert the new rule at a random position
+                # new_text = metadata[n]['context'].replace(head_fact['text'], '').replace('  ',' ')
+                # insert_at = np.random.choice([pos for pos, char in enumerate(new_text) if char == '.']) + 1
+                # new_text = new_text[:insert_at] + ' ' + text + new_text[insert_at:]
+                # metadata[n]['context'] = new_text
 
                 fact_tracker -= 1
                 rule_tracker += 1
 
-        return meta_records, metadata
+        return meta_records
 
     def _compute_logprobs(self, z, logits):
         ''' Compute the log probability of sample z from
@@ -391,31 +406,14 @@ class AdversarialGenerator(Model):
         }
         wandb.log(metrics)
 
-    def _prep_batch(self, metadata, label, z=None):
-        ''' Concatenate the latest retrieval to the current 
-            query+retrievals. Also update the tensors for the next
-            rollout pass.
-        '''
+    def _prep_batch(self, meta_records, label):
         sentences = []
-        if z == None:
-            # Concatenate query + retrival to make new query_retrieval matrix of idxs
-            for meta, e in zip(metadata, label):
-                question = meta['question_text']
-                context_rtr = [toks + '.' for toks in meta['context'].split('.')[:-1]]
-                meta['context_str'] = f"q: {question} c: {''.join(context_rtr).strip()}"
-                sentences.append((question, ''.join(context_rtr).strip(), e))
-
-        else:
-            # Concatenate query + retrival to make new query_retrieval matrix of idxs
-            for topk, meta, e in zip(z, metadata, label):
-                question = meta['question_text']
-                sentence_idxs = [i for i in topk.tolist() if i != self._z_mask]
-                context_rtr = [
-                    toks + '.' for n, toks in enumerate(meta['context'].split('.')[:-1]) 
-                    if n in sentence_idxs
-                ]
-                meta['context_str'] = f"q: {question} c: {''.join(context_rtr).strip()}"
-                sentences.append((question, ''.join(context_rtr).strip(), e))
+        for meta_record, e in zip(meta_records, label):
+            qid = list(meta_record['questions'].keys())[0]
+            question = meta_record['questions'][qid]['question']
+            context = [i['text'] for i in list(meta_record['triples'].values()) + list(meta_record['rules'].values()) if not i.get('mask')]
+            shuffle(context)
+            sentences.append((question, ' '.join(context).strip(), e))
 
         batch = self.dataset_reader.encode_batch(sentences, self.qa_vocab, disable=True)
         return self.dataset_reader.move(batch, self._d)
@@ -532,13 +530,13 @@ class AdversarialGenerator(Model):
             meta_records_bl = meta_records
             metadata_bl = metadata
             if 'sentence_elimination' in self.adv_perturbations:
-                meta_records_bl, metadata_bl = self.update_meta_sentelim(z_sent_bl, meta_records_bl, metadata_bl)
+                meta_records_bl = self.update_meta_sentelim(z_sent_bl, meta_records_bl, metadata_bl)
             if 'question_flip' in self.adv_perturbations:
-                meta_records_bl, metadata_bl = self.update_meta_quesflip(z_ques_bl, meta_records_bl, metadata_bl)
+                meta_records_bl = self.update_meta_quesflip(z_ques_bl, meta_records_bl, metadata_bl)
             if 'equivalence_substitution' in self.adv_perturbations:
-                meta_records_bl, metadata_bl = self.update_meta_eqivsubt(z_eqiv_bl, meta_records_bl, metadata_bl)
+                meta_records_bl = self.update_meta_eqivsubt(z_eqiv_bl, meta_records_bl, metadata_bl)
 
-            batch_bl = self._prep_batch(metadata_bl, label, z_sent_bl)
+            batch_bl = self._prep_batch(meta_records_bl, label)
             qa_output_baseline = self.qa_model(**batch_bl)
 
         return qa_output_baseline, z_sent_bl, z_sent_bl_onehot, batch_bl, meta_records_bl

@@ -1,9 +1,9 @@
 local max_pieces = 512;
-local ruletaker_archive = "ruletaker/runs/depth-5-base/model.tar.gz"; #"ruletaker/runs/depth-5-base/model.tar.gz";
+local ruletaker_archive = "ruletaker/runs/depth-5/model.tar.gz"; #"ruletaker/runs/depth-5-base/model.tar.gz";
 local dataset_dir = "ruletaker/inputs/dataset/rule-reasoning-dataset-V2020.2.4/depth-5/"; #"ruletaker/inputs/dataset/tiny-rule-reasoning/challenge/";
 local inference_model = "roberta-base";      # {roberta-base, roberta-large}
 local pretrained_model = "bin/runs/pretrain_retriever/rb-base/model.tar.gz";
-local cuda_device = 4;
+local cuda_device = 5;
 local batch_size = 8;
 local num_gradient_accumulation_steps = 1;
 local num_monte_carlo = 8;
@@ -13,7 +13,7 @@ local lr = 5e-6;
 local model_type = 'adversarial_base';
 local add_naf = false;
 local compute_word_overlap_scores = true;
-local epochs = 1;
+local epochs = 3;
 
 {
     "ruletaker_archive": ruletaker_archive,
@@ -30,9 +30,9 @@ local epochs = 1;
         "concat_q_and_c": true,
         "true_samples_only": false,
         "add_NAF": add_naf,
-        "one_proof": false,
+        "one_proof": true,
         "word_overlap_scores": compute_word_overlap_scores,
-        "max_instances": 10,     # 10, 100, false
+        "max_instances": false,     # 10, 100, false
     },
     "retrieval_reasoning_model": {
         "variant": inference_model,
@@ -40,15 +40,15 @@ local epochs = 1;
         "num_monte_carlo": num_monte_carlo,
         "add_NAF": add_naf,
         "word_overlap_scores": compute_word_overlap_scores,
-        "benchmark_type": "random",      # word_score, random, none
+        "benchmark_type": "none",      # word_score, random, none
         "bernoulli_node_prediction_level": "node-level",       # sequence-level, node-level
-        "adversarial_perturbations": "sentence_elimination,question_flip,equivalence_substitution"       # sentence_elimination,question_flip,equivalence_substitution
+        "adversarial_perturbations": "equivalence_substitution"       # sentence_elimination,question_flip,equivalence_substitution
     },
     "trainer": {
         "cuda_device": cuda_device,
         "num_gradient_accumulation_steps": num_gradient_accumulation_steps,
         "type": "adversarial_trainer",
-        "save_best_model": false,
+        "save_best_model": true,
         "num_epochs": epochs,
         "learning_rate_scheduler": {
             'cut_frac': 0.06,
