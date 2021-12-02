@@ -201,7 +201,7 @@ class AdversarialTrainer(GradientDescentTrainer):
                 val_loss,
                 val_reg_loss,
                 batches_this_epoch,
-                reset=True,
+                reset=False,
                 world_size=self._world_size,
                 cuda_device=[self.cuda_device],
             )
@@ -219,8 +219,35 @@ class AdversarialTrainer(GradientDescentTrainer):
                     is_training=False,
                 )
 
+        val_metrics = training_util.get_metrics(
+            self.model,
+            val_loss,
+            val_reg_loss,
+            batches_this_epoch,
+            reset=True,
+            world_size=self._world_size,
+            cuda_device=[self.cuda_device],
+        )
         if 'predictions' in val_metrics:
             write_records(val_metrics.pop('predictions'), 'val', epoch, self._serialization_dir)
 
         return val_loss, val_reg_loss, batches_this_epoch, val_metrics
 
+    def train(self):
+        outputs = super().train()
+        self.form_preds_on_train()
+        return outputs
+
+    def form_preds_on_train(self):
+        # Store val dataset temporarily
+        dl = self._validation_data_loader
+        
+        # Set train dataset in place of val dataset
+        self._validation_data_loader = self.data_loader
+        
+        # Form predictions over the train dataset
+        self._validation_loss(-1)
+
+        # Restor val dataset
+        self._validation_data_loader = dl
+        

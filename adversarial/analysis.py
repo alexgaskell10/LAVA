@@ -3,8 +3,8 @@ import sys, os, pickle
 import pandas as pd
 import numpy as np
 
-train_path = 'bin/runs/adversarial/2021-11-30_18-23-33/train-records_epoch0.pkl'
-val_path = 'bin/runs/adversarial/2021-11-30_18-23-33/val-records_epoch1.pkl'
+train_path = 'bin/runs/adversarial/2021-12-01_17-36-59-keep/train-records_epoch1.pkl'
+val_path = 'bin/runs/adversarial/2021-12-01_17-36-59-keep/val-records_epoch0.pkl'
 
 def load_as_df(path):
     records = pickle.load(open(path, 'rb'))
@@ -45,8 +45,8 @@ def compute_features(df, skip_start, skip_end):
 
 
 if __name__ == '__main__':
-    # df_train = load_as_df(train_path)
-    df = load_as_df(val_path)
+    df = load_as_df(train_path)
+    # df = load_as_df(val_path)
 
     df = compute_features(df, 1, 1)
     # df_train = compute_features(df_train, 1)

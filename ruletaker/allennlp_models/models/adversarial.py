@@ -7,6 +7,7 @@ from math import floor
 from copy import deepcopy
 from random import shuffle
 import numpy as np
+import multiprocessing
 
 from transformers.tokenization_auto import AutoTokenizer
 import wandb
@@ -22,7 +23,8 @@ from allennlp.training.metrics import CategoricalAccuracy
 from transformers import AutoModel
 
 from .utils import (
-    safe_log, right_pad, batch_lookup, EPSILON, make_dot, set_dropout, one_hot, lmap, lfilter, print_results, gs
+    safe_log, right_pad, batch_lookup, EPSILON, make_dot, set_dropout, one_hot, lmap, lfilter, print_results, gs, 
+    timing
 )
 from .ruletaker.theory_label_generator import call_theorem_prover_from_lst
 
@@ -46,6 +48,7 @@ class AdversarialGenerator(Model):
         benchmark_type = "random",
         bernoulli_node_prediction_level = 'node-level',
         adversarial_perturbations = '',
+        max_flips = -1,
         **kwargs,
     ) -> None:
         super().__init__(qa_model.vocab, regularizer)
@@ -96,7 +99,9 @@ class AdversarialGenerator(Model):
         self.adv_perturbations = adversarial_perturbations.split(',')
 
         self.wandb = os.environ['WANDB_LOG'] == 'true'
+        self.max_flips = max_flips
 
+    # @timing
     def forward(self, phrase=None, label=None, metadata=None, retrieval=None, word_overlap_scores=None, **kwargs) -> torch.Tensor:
         ''' Forward pass of the network. 
 
@@ -118,6 +123,11 @@ class AdversarialGenerator(Model):
         orig_sentences = [[m['question_text']] + m['context'].split('.') for m in metadata]
         meta_records = [m['meta_record'] for m in metadata]
         meta_records_orig = [m for m in meta_records for _ in range(self._n_mc)]
+
+        max_facts = max(len(meta['fact_indices']) for meta in metadata)
+        max_rules = max(len(meta['rule_indices']) for meta in metadata)
+        fact_idxs = torch.tensor([n['fact_indices'] + [-1]*(max_facts-len(n['fact_indices'])) for n in metadata], device=self._d)
+        rule_idxs = torch.tensor([n['rule_indices'] + [-1]*(max_rules-len(n['rule_indices'])) for n in metadata], device=self._d)
         
         polarity = torch.tensor([1-int('not' in m['question_text']) for m in metadata], device=self._d)
 
@@ -136,12 +146,18 @@ class AdversarialGenerator(Model):
         label_ = label.repeat_interleave(self._n_mc, dim=0)
         polarity_ = polarity.repeat_interleave(self._n_mc, dim=0)
         nodes_ = nodes.repeat_interleave(self._n_mc, dim=0)
+        fact_idxs_ = fact_idxs.repeat_interleave(self._n_mc, dim=0)
+        rule_idxs_ = rule_idxs.repeat_interleave(self._n_mc, dim=0)
 
         z_sent, z_1hot_sent = self._draw_samples(sent_logits)        # (bsz * mc steps, num retrievals)
         z_ques, z_1hot_ques = self._draw_samples(ques_logits)        # (bsz * mc steps, num retrievals)
         z_eqiv, z_1hot_eqiv = self._draw_samples(eqiv_logits)        # (bsz * mc steps, num retrievals)
-        # if 'sentence_elimination' not in self.adv_perturbations:
-        #     z_sent = None
+        
+        # Adjust senteqiv samples here
+        maskers = [rule_idxs_, z_sent] if 'sentence_elimination' in self.adv_perturbations else [rule_idxs_, z_sent]
+        z_eqiv = self.mask_draws(z_eqiv, *maskers)
+        if self.max_flips > 0:
+            z_eqiv = z_eqiv.topk(self.max_flips, -1).values
 
         meta_records_ = meta_records_orig
         metadata_ = metadata_orig
@@ -152,7 +168,7 @@ class AdversarialGenerator(Model):
         if 'equivalence_substitution' in self.adv_perturbations:
             meta_records_ = self.update_meta_eqivsubt(z_eqiv, meta_records_, metadata_)
 
-        engine_labels = call_theorem_prover_from_lst(instances=meta_records_)
+        engine_labels = self.run_tp(meta_records_)
         if self.training:
             new_labels = [bool(l.item()) if nl is None else nl for nl,l in zip(engine_labels, label_)]     # This is a hack to catch cases where problog cannot solve the logic program. Only happens v. rarely though so not an issue
             skip_ids = []
@@ -241,10 +257,11 @@ class AdversarialGenerator(Model):
         
         correct = (preds == modified_label_)
         correct[skip_ids] = False
-        self.log_results(qlens_, correct, outputs, ref=correct_bl)
+        log_metrics = {}
 
         if True:
             sentences = [[m['question_text']] + m['context'].split('.') for m in new_metadata]
+            log_metrics['lens'] = np.mean([len(s) for s in sentences])
             records = []
             for i in range(len(correct)):
                 i_ = floor(i / self._n_mc)
@@ -269,8 +286,22 @@ class AdversarialGenerator(Model):
                 record["label"], record["polarity"], record["mod_label"], record["qa_probs"]
             self.records.extend(records)
 
+        self.log_results(qlens_, correct, outputs, ref=correct_bl, log_metrics=log_metrics)
+
         return outputs
 
+    def mask_draws(self, tensor, *targets):
+        ''' Mask values in tensor if they appear in any
+            of the targets.
+        '''
+        tgt = torch.cat(targets, dim=1)
+        mask = 1 - torch.prod(torch.cat([(tensor != tgt[:,i:i+1]).unsqueeze(0) for i in range(tgt.size(1))], dim=0), dim=0)
+        tensor = torch.where(mask.bool(), torch.tensor(self._z_mask, device=self._d), tensor)
+        max_flips = (tensor != self._z_mask).sum(-1).max()
+        tensor = tensor.sort(-1, descending=True).values[:,:max_flips]
+        return tensor
+
+    # @timing
     def update_meta_sentelim(self, z, meta_records_, metadata_):
         meta_records = [deepcopy(m) for m in meta_records_]
         metadata = [deepcopy(m) for m in metadata_]
@@ -290,6 +321,7 @@ class AdversarialGenerator(Model):
             continue
         return meta_records
 
+    # @timing
     def update_meta_quesflip(self, z, meta_records_, metadata_):
         meta_records = [deepcopy(m) for m in meta_records_]
         metadata = [deepcopy(m) for m in metadata_]
@@ -309,6 +341,7 @@ class AdversarialGenerator(Model):
             metadata[n]['question_text'] = qtext_new
         return meta_records
 
+    # @timing
     def update_meta_eqivsubt(self, z, meta_records_, metadata_):
         meta_records = [deepcopy(m) for m in meta_records_]
         metadata = [deepcopy(m) for m in metadata_]
@@ -324,11 +357,12 @@ class AdversarialGenerator(Model):
 
             fact_tracker, rule_tracker, popped_rules = nfacts, nrules, []
             for fact_id in scrambled_facts:
-                if fact_tracker <= 1:
+                if fact_tracker <= 3:
                     continue
                 factid = 'triple' + str(fact_id)
                 ruleid = 'rule' + str(rule_tracker + 1)
                 head_fact = meta_records[n]['triples'].pop(factid)
+                head_fact['text'] = head_fact['text'].replace('The','the')
                 popped_rules.append(factid)
                 body_factids, body_reprs, body_texts = [], [], []
                 for i in np.random.permutation(range(nfacts)):
@@ -337,6 +371,7 @@ class AdversarialGenerator(Model):
                         continue
                     body_repr = meta_records[n]['triples'][body_factid]['representation']
                     body_text = meta_records[n]['triples'][body_factid]['text']
+                    body_text = body_text.replace('The','the')
                     body_factids.append(body_factid)
                     body_reprs.append(body_repr)
                     body_texts.append(body_text.rstrip('.'))
@@ -349,12 +384,6 @@ class AdversarialGenerator(Model):
 
                 meta_records[n]['rules'][ruleid] = {'text': text, 'representation': repr, 'mask': 0}
                 meta_records[n]['equivalence_substitution'][ruleid] = body_factids
-
-                # # Strip the head fact from the context and insert the new rule at a random position
-                # new_text = metadata[n]['context'].replace(head_fact['text'], '').replace('  ',' ')
-                # insert_at = np.random.choice([pos for pos, char in enumerate(new_text) if char == '.']) + 1
-                # new_text = new_text[:insert_at] + ' ' + text + new_text[insert_at:]
-                # metadata[n]['context'] = new_text
 
                 fact_tracker -= 1
                 rule_tracker += 1
@@ -375,7 +404,7 @@ class AdversarialGenerator(Model):
         else:
             raise NotImplementedError
 
-    def log_results(self, qlens, acc, outputs, tp=None, ref=None):
+    def log_results(self, qlens, acc, outputs, log_metrics, tp=None, ref=None):
         if tp is None:
             tp = torch.full_like(acc, False)
         if ref is None:
@@ -393,13 +422,14 @@ class AdversarialGenerator(Model):
             print_results(self.answers, self._n_mc)
 
         if self.wandb:
-            self.log_wandb(qlens, acc, outputs)
+            self.log_wandb(qlens, acc, outputs, log_metrics)
 
-    def log_wandb(self, qlens, acc, outputs):
+    def log_wandb(self, qlens, acc, outputs, metrics):
         prefix = 'tr_' if self.training else 'val_'
         grouped = {qlen: [a.item() for a,q in zip(acc, qlens) if q==qlen] for qlen in qlens}
         grouped['all'] = acc.tolist()
         metrics = {
+            **{prefix + str(k): v for k,v in metrics.items()},
             **{prefix + 'acc_' + str(k): v.count(True) / len(v) for k,v in grouped.items()},
             **{prefix + 'N_' + str(k): len(v) for k,v in grouped.items()},
             **{prefix + k: v for k,v in outputs.items()},
@@ -416,20 +446,6 @@ class AdversarialGenerator(Model):
             sentences.append((question, ' '.join(context).strip(), e))
 
         batch = self.dataset_reader.encode_batch(sentences, self.qa_vocab, disable=True)
-        return self.dataset_reader.move(batch, self._d)
-
-    def _rebatch(self, metadata, label):
-        sentences = []
-        for meta, e in zip(metadata, label):
-            question = meta['question_text']
-            context = meta['context'].split('.')[:-1]
-            insert_pos = torch.randperm(len(context))[0]
-            context.insert(insert_pos, ' '+'FLAG')
-            context = [c + '.' for c in context]
-            meta['context_str'] = f"q: {question} c: {''.join(context).strip()}"
-            sentences.append((question, ''.join(context).strip(), insert_pos))
-
-        batch = self.dataset_reader.encode_batch(sentences, self.qa_vocab)
         return self.dataset_reader.move(batch, self._d)
 
     def _draw_samples(self, logits, random_chance=False):
@@ -450,7 +466,8 @@ class AdversarialGenerator(Model):
         # Obtain samples
         # During validation, use argmax unless prob = 0.5, in which case sample
         draws = gs(logits_).argmax(-1)
-        if self.training:
+        # if self.training:
+        if True:
             samples = draws
         else:
             greedy = logits_.argmax(-1)
@@ -573,7 +590,11 @@ class AdversarialGenerator(Model):
             self.records = []
 
         return metrics
-    
+
+    # @timing
+    def run_tp(self, meta_records):
+        return call_theorem_prover_from_lst(instances=meta_records)
+
 
 class _BaseSentenceClassifier(Model):
     def __init__(self, variant, vocab, dataset_reader, has_naf, regularizer=None, num_labels=1, dropout=0.):

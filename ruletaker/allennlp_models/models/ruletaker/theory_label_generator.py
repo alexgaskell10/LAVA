@@ -265,8 +265,8 @@ def call_theorem_prover(
 
 
 def call_theorem_prover_from_lst(
+    instances,
     theorem_prover='problog',
-    instances=[],
     exclude_mismatches=False,
 ):
     # Ruletaker Legacy Jsonl Format

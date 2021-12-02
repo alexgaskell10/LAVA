@@ -46,7 +46,7 @@ class TransformerBinaryQA(Model):
         self._pretrained_model = pretrained_model
 
         if 't5' in pretrained_model:
-            self._padding_value = 1  # The index of the RoBERTa padding token
+            self._padding_value = 1  # The index of the RoBERTa padding token;para
             if transformer_weights_model:  # Override for RoBERTa only for now
                 logging.info(f"Loading Transformer weights model from {transformer_weights_model}")
                 transformer_model_loaded = load_archive(transformer_weights_model)

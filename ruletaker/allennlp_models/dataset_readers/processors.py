@@ -217,7 +217,7 @@ class RRProcessor(DataProcessor):
 
                 idx += 1 
 
-            if debug_num > 0 and idx >= debug_num:
+            if debug_num is not None and debug_num > 0 and idx >= debug_num:
                 print('DEBUG BREAK TRIGGERED @'+str(debug_num))
                 break
 

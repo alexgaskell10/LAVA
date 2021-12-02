@@ -25,6 +25,7 @@ except:
     from ruletaker.allennlp_models.models.esim_binary_qa_model import ESIM
     from ruletaker.allennlp_models.predictors.transformer_binary_qa_predictor import *
     from ruletaker.allennlp_models.train.custom_train import *
+    from ruletaker.allennlp_models.train.re_train import *
     from ruletaker.allennlp_models.train.custom_trainer import *
     from ruletaker.allennlp_models.models.transformer_binary_qa_retriever import TransformerBinaryQARetriever
     from ruletaker.allennlp_models.models.retriever import RetrievalScorer
@@ -33,3 +34,4 @@ except:
     from ruletaker.allennlp_models.models.vi import VariationalObjective
     from ruletaker.allennlp_models.models.adversarial import AdversarialGenerator
     from ruletaker.allennlp_models.train.adv_trainer import AdversarialTrainer
+    from ruletaker.allennlp_models.dataset_readers.blended_rule_reasoning_reader import BlendedRuleReasoningReader

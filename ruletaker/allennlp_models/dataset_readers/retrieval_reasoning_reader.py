@@ -89,7 +89,7 @@ class RetrievalReasoningReader(DatasetReader):
         self._one_proof = one_proof     # Limits the dataset to questions with a single proof. Cuts dataset size by c. 12%
         self._word_overlap_scores = word_overlap_scores
         tok = type(self).__name__
-        self.pkl_file = f'{tok}_{self._max_pieces}_{self._shortest}_{self._longest}_{int(self._true_samples_only)}_{int(self._add_NAF)}_{int(self._one_proof)}_{int(self._word_overlap_scores)}_DSET.pkl'
+        self.pkl_file = f'{tok}_{self._max_pieces}_{self._shortest}_{self._longest}_{int(self._true_samples_only)}_{int(self._add_NAF)}_{int(self._one_proof)}_{int(self._word_overlap_scores)}_{max_instances}_DSET.pkl'
 
     @overrides
     def _read(self, file_path: str):
@@ -102,7 +102,7 @@ class RetrievalReasoningReader(DatasetReader):
 
         data_dir = '/'.join(file_path.split('/')[:-1])
         dset = file_path.split('/')[-1].split('.')[0]
-        examples = RRProcessor().get_examples(data_dir, dset, debug_num=debug_num, one_proof=self._one_proof)
+        examples = RRProcessor().get_examples(data_dir, dset, debug_num=self.max_instances, one_proof=self._one_proof)
 
         for example in examples:
             example.qlen = sum(example.node_label)
@@ -166,22 +166,12 @@ class RetrievalReasoningReader(DatasetReader):
 
         if not disable:
             meta_record = self.append_flipped_question(item_id, meta_record)
+            n_facts = len(meta_record['triples'])
+            n_rules = len(meta_record['rules'])
+            fact_idx = sorted([sentence_scramble.index(n+1) for n in range(n_facts)])
+            rule_idx = sorted([sentence_scramble.index(n+1) for n in range(n_facts, n_facts + n_rules)])
+            assert (len(fact_idx) == n_facts) and (len(rule_idx) == n_rules)
 
-        # if not qa_only:
-        if False:
-            # Tokenize context sentences seperately
-            retrieval_listfield = self.listfield_features_from_qa(
-                question_text, context, already_retrieved, self._tokenizer_retriever
-            )
-            qa_listfield = self.listfield_features_from_qa(
-                question_text, context, already_retrieved, self._tokenizer_qamodel
-            )
-            fields['retrieval'] = ListField(
-                [TextField(toks, self._token_indexers_retriever) for toks in retrieval_listfield]
-            )
-            fields['sentences'] = ListField(
-                [TextField(toks, self._token_indexers_qamodel) for toks in qa_listfield]
-            )
         if True:
             exact_match = self._get_exact_match(question_text, context)
 
@@ -201,6 +191,8 @@ class RetrievalReasoningReader(DatasetReader):
             "QLen": qlen,
             "meta_record": meta_record,
             "sentence_scramble": sentence_scramble,
+            "fact_indices": fact_idx if not disable else None,
+            "rule_indices": rule_idx if not disable else None,
         }
 
         if label is not None:

@@ -7,11 +7,46 @@ import torch.nn.functional as F
 
 from graphviz import Digraph
 
+import cProfile
+
 import logging
 logger = logging.getLogger(__name__)
 
 EPSILON = float(np.finfo(float).eps)
 HUGE_INT = 1e31
+
+from functools import wraps
+from time import time
+
+
+def timing(f):
+    @wraps(f)
+    def wrap(*args, **kw):
+        ts = time()
+        result = f(*args, **kw)
+        te = time()
+        print(f'func:"{f.__qualname__}" took: {te-ts:2.4f} sec')
+        return result
+    return wrap
+
+
+# @timing
+# def func(meta_records):
+#     return call_theorem_prover_from_lst(instances=meta_records)
+
+# @timing
+# def func1(meta_records):
+#     processes = []
+#     for i in range(0,64,24):
+#         p = multiprocessing.Process(target=call_theorem_prover_from_lst, args=(meta_records[i:i+24],))
+#         processes.append(p)
+#         p.start()
+
+#     for process in processes:
+#         process.join()
+    
+#     return process
+
 
 def batch_lookup(M, idx, vector_output=True):
     """
@@ -112,6 +147,7 @@ def flatten_list(l):
 def lrange(*args):
     return list(range(*args))
 
+
 def print_results(answers, scale_n):
     n = scale_n * 100
     for d in sorted(answers.keys()):
@@ -121,6 +157,7 @@ def print_results(answers, scale_n):
         last_100_r = answers[d][1][-n:].count(True) / max(len(answers[d][1][-n:]),1)
         print(f'\nM:\tL: {d}\tAll: {all_score_a:.3f}\tLast {n}: {last_100_a:.2f}\t'
             f'B:\tAll: {all_score_r:.3f}\tLast {n}: {last_100_r:.2f}\tN: {len(answers[d][0])}')
+
 
 def gs(logits, tau=1):
     ''' Sample using Gumbel Softmax. Ingests raw logits.
