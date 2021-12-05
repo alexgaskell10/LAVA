@@ -12,10 +12,9 @@ _POS_MAPPING = {
 
 
 class CustomTokenizer(Tokenizer):
-    """
-    Tokenizer based on nltk.word_tokenizer.
+    """ Tokenizer based on nltk.word_tokenizer.
 
-    :Language: english
+        :Language: english
     """
     TAGS = { TAG_English }
 
@@ -25,7 +24,6 @@ class CustomTokenizer(Tokenizer):
         self.sent_tokenizer = self.dset_reader.tok
 
     def do_tokenize(self, x, pos_tagging=True):
-        # return self.sent_tokenizer(x)
         tokens = self.sent_tokenizer(x)
         if not pos_tagging:
             return tokens

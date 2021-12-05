@@ -341,4 +341,4 @@ class RetrievalReasoningReader(DatasetReader):
         return d       
             
     def tok(self, x):
-        return [tok.lstrip('Ġ') for tok in self._tokenizer_qamodel.tokenizer.tokenize(x)]
+        return [tok.lstrip('Ġ') for tok in self._tokenizer_qamodel.tokenizer.tokenize(x) if tok!='Ġ']

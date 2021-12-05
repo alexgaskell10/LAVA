@@ -33,3 +33,5 @@ OpenAttack==2.1.1
 # To keep consistent with AllenNLP lib, revert to prev transformers version
 transformers==2.6.0
 torch==1.10.0
+tensorflow==2.0.0       # <-- might need to upgrade pip for this to work: pip install -U pip
+tensorflow-hub==0.12.0

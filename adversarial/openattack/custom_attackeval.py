@@ -136,7 +136,7 @@ class CustomAttackEval(AttackEval):
                         try:
                             probs = self.victim.get_prob([
                                 [x_orig['question_text'], x_orig['context']], 
-                                [x_orig['question_text'], x_adv]])       # TODO: from here
+                                [x_orig['question_text'], x_adv]])
                         finally:
                             self.victim.clear_context()
                         y_orig = probs[0]

@@ -9,7 +9,6 @@ from OpenAttack.utils import get_language, check_language, language_by_name
 from OpenAttack.exceptions import WordNotInDictionaryException
 from OpenAttack.tags import Tag
 from OpenAttack.attack_assist.filter_words import get_default_filter_words
-# from OpenAttack.victim.classifiers.base import Classifier
 from OpenAttack.attack_assist.goal import ClassifierGoal
 from OpenAttack.tags import *
 
@@ -19,30 +18,28 @@ class CustomHotFlipAttacker(HotFlipAttacker):
     @property
     def TAGS(self):
         return { self.__lang_tag, Tag("get_pred", "victim"), Tag("get_prob", "victim") }
-
-    def __init__(self,
-            substitute : Optional[WordSubstitute] = None,
-            tokenizer : Optional[Tokenizer] = None,
-            filter_words : List[str] = None,
-            lang = None,
-            vocab = None,
-            device = None
-        ):
-        """
-        HotFlip: White-Box Adversarial Examples for Text Classification. Javid Ebrahimi, Anyi Rao, Daniel Lowd, Dejing Dou. ACL 2018.
-        `[pdf] <https://www.aclweb.org/anthology/P18-2006>`__
-        `[code] <https://github.com/AnyiRao/WordAdver>`__
-
-        Args:
-            tokenizer: A tokenizer that will be used during the attack procedure. Must be an instance of :py:class:`.Tokenizer`
-            substitute: A substitute that will be used during the attack procedure. Must be an instance of :py:class:`.WordSubstitute`
-            filter_words: A list of words that will be preserved in the attack procesudre.
-            lang: The language used in attacker. If is `None` then `attacker` will intelligently select the language based on other parameters.            
-
-        :Classifier Capacity:
-            * get_pred
-            * get_prob
         
+    def __init__(self,
+        substitute : Optional[WordSubstitute] = None,
+        tokenizer : Optional[Tokenizer] = None,
+        filter_words : List[str] = [],
+        lang = None,
+        # vocab = None,
+        # device = None,
+    ):
+        """ HotFlip: White-Box Adversarial Examples for Text Classification. Javid Ebrahimi, Anyi Rao, Daniel Lowd, Dejing Dou. ACL 2018.
+            `[pdf] <https://www.aclweb.org/anthology/P18-2006>`__
+            `[code] <https://github.com/AnyiRao/WordAdver>`__
+
+            Args:
+                tokenizer: A tokenizer that will be used during the attack procedure. Must be an instance of :py:class:`.Tokenizer`
+                substitute: A substitute that will be used during the attack procedure. Must be an instance of :py:class:`.WordSubstitute`
+                filter_words: A list of words that will be preserved in the attack procesudre.
+                lang: The language used in attacker. If is `None` then `attacker` will intelligently select the language based on other parameters.            
+
+            :Classifier Capacity:
+                * get_pred
+                * get_prob
         """
 
         lst = []
@@ -70,8 +67,8 @@ class CustomHotFlipAttacker(HotFlipAttacker):
 
         check_language([self.tokenizer, self.substitute], self.__lang_tag)
 
-        self.vocab = vocab
-        self.device = device
+        # self.vocab = vocab
+        # self.device = device
 
     def attack(self, victim: Classifier, input : dict, goal: ClassifierGoal):
         context = input['context']
@@ -98,13 +95,7 @@ class CustomHotFlipAttacker(HotFlipAttacker):
         ret = x_cur[:]
         ret[index] = word
         return ret
-             
-    def get_neighbours(self, word, POS):
-        try:
-            return list( map(lambda x: x[0], self.substitute(word, POS)) )
-        except WordNotInDictionaryException:
-            return []
-        
+                     
     def __call__(self, victim: Classifier, input_: Any):
         if not isinstance(victim, Classifier):
             raise TypeError("`victim` is an instance of `%s`, but `%s` expected" % (victim.__class__.__name__, "Classifier"))
