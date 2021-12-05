@@ -3,8 +3,8 @@ import sys, os, pickle
 import pandas as pd
 import numpy as np
 
-train_path = 'bin/runs/adversarial/2021-12-01_17-36-59-keep/train-records_epoch1.pkl'
-val_path = 'bin/runs/adversarial/2021-12-01_17-36-59-keep/val-records_epoch0.pkl'
+# train_path = 'bin/runs/adversarial/2021-12-01_17-36-59-keep/train-records_epoch1.pkl'
+val_path = 'bin/runs/adversarial/2021-12-03_08-15-20-keep/val-records_epoch-1.pkl'
 
 def load_as_df(path):
     records = pickle.load(open(path, 'rb'))
@@ -38,15 +38,15 @@ def compute_features(df, skip_start, skip_end):
     df['sampled_recall'] = df['retained_sentences'].apply(len) / df['n_sampled_sentences']
     df['sampled_f1'] = 2 * df['sampled_precision'] * df['sampled_recall'] / (df['sampled_precision'] + df['sampled_recall'])
     # Process latent variables
-    df['n_sentelim'] = df['n_orig_sentences'] - df['z_sent'].apply(lambda z: len([x for x in z if x!=-1])) + 1
+    df['n_sentelim'] = df['z_sent'].apply(lambda z: len([x for x in z if x!=-1]))
     df['n_eqivsubt'] = df['z_eqiv'].apply(lambda z: len([x for x in z if x!=-1]))
     df['n_quesflip'] = df['z_ques'].apply(lambda x: x == [0]).astype(int)
     return df
 
 
 if __name__ == '__main__':
-    df = load_as_df(train_path)
-    # df = load_as_df(val_path)
+    # df = load_as_df(train_path)
+    df = load_as_df(val_path)
 
     df = compute_features(df, 1, 1)
     # df_train = compute_features(df_train, 1)

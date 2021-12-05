@@ -7,6 +7,7 @@ from transformers.modeling_xlnet import XLNetModel
 from transformers.modeling_bert import BertModel
 from transformers.modeling_albert import AlbertModel
 from transformers.modeling_utils import SequenceSummary
+
 import re
 import json
 import torch
@@ -103,10 +104,9 @@ class TransformerBinaryQA(Model):
         self._debug = -1
 
     def forward(self, 
-            phrase,#: Dict[str, torch.LongTensor],
+            phrase,
             label: torch.LongTensor = None,
             metadata: List[Dict[str, Any]] = None,
-            index_tensor: torch.Tensor = None,
         ) -> torch.Tensor:
 
         self._debug -= 1
@@ -186,7 +186,7 @@ class TransformerBinaryQA(Model):
                     'prediction': prediction,
                     'is_correct': (example['label'] == prediction) * 1.0,
                     'q_depth': example['QDep'] if 'QDep' in example else None,
-                    'q_length': example['QDep'] if 'QLen' in example else None,
+                    'q_length': example['QLen'] if 'QLen' in example else None,
                     'retrievals': example['topk'] if 'topk' in example else None,
                     'retrieval_recall': self.retrieval_recall(example) if 'node_label' in example and 'topk' in example else None
                 }

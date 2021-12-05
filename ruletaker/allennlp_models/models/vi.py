@@ -4,7 +4,7 @@ import os
 import sys
 import time
 
-from transformers.tokenization_auto import AutoTokenizer
+# from transformers import AutoTokenizer
 import wandb
 import random
 

@@ -1,6 +1,5 @@
 
 ############# RuleTaker requirements ##############
-# This is the code base for AllenNLP i use for now...
 transformers==2.6.0
 git+git://github.com/alontalmor/allennlp.git@upstream-merge-10-4
 pandas
@@ -24,3 +23,13 @@ rdflib
 
 problog==2.1.0.42
 PySDD==0.2.10
+
+
+# For openattack
+pyarrow==2.0.0
+datasets==1.14.0
+OpenAttack==2.1.1
+
+# To keep consistent with AllenNLP lib, revert to prev transformers version
+transformers==2.6.0
+torch==1.10.0

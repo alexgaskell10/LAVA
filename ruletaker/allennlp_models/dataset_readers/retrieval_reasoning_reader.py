@@ -279,7 +279,7 @@ class RetrievalReasoningReader(DatasetReader):
 
         return allennlp_collate(data)
 
-    def encode_batch(self, sentences, vocab, disable):
+    def encode_batch(self, sentences, vocab, disable, device=False):
         ''' Convert question + context strings into a batch
             which is ready for the qa model.
         '''
@@ -291,14 +291,17 @@ class RetrievalReasoningReader(DatasetReader):
                 question_text=question, 
                 context=already_retrieved,
                 qa_only=True,
-                label=label.item(),
+                label=label.item() if isinstance(label, Tensor) else 0,
                 initial_tokenization=False,
                 disable=disable
             )
             instance.index_fields(vocab)
             data.append(instance)
 
-        return allennlp_collate(data)
+        if device:
+            return self.move(allennlp_collate(data), device)
+        else:
+            return allennlp_collate(data)
 
     def decode(self, input_id, mode='qa', vocab=None):
         ''' Helper to decode a tokenized sequence.
@@ -336,5 +339,6 @@ class RetrievalReasoningReader(DatasetReader):
             elif isinstance(d[k], Tensor):
                 d[k] = d[k].to(device=device, non_blocking=True)
         return d       
-
-    
+            
+    def tok(self, x):
+        return [tok.lstrip('Ġ') for tok in self._tokenizer_qamodel.tokenizer.tokenize(x)]

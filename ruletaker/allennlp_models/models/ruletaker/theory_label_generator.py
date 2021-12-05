@@ -283,7 +283,7 @@ def call_theorem_prover_from_lst(
         theory_nl_statements = []
         for triple_key in triples:
             triple_obj = triples[triple_key]
-            if triple_obj.get('mask', 0):
+            if triple_obj.get('mask', 1):
                 continue
             theory_nl_statements.append(triple_obj["text"])
             triple_rep = triple_obj["representation"]
@@ -292,7 +292,7 @@ def call_theorem_prover_from_lst(
                 facts.append(fact)
         for rule_key in ip_rules:
             rule_obj = ip_rules[rule_key]
-            if rule_obj.get('mask', 0):
+            if rule_obj.get('mask', 1):
                 continue
             theory_nl_statements.append(rule_obj["text"])
             rule_rep = rule_obj["representation"]

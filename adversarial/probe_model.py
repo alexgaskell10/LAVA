@@ -23,7 +23,6 @@ config = {
         'concat_q_and_c': True,
         'shortest_proof': 1,
         'longest_proof': 100,
-        'topk': 100,
         'pretrained_retriever_model': None, #'bin/runs/pretrain_retriever/rb-base/model.tar.gz',
         'retriever_variant': 'roberta-large',
         'sample': -1,
@@ -33,11 +32,12 @@ config = {
         'add_prefix': {'c': 'C: ','q': 'Q: '},
         'syntax': 'rulebase',
         'max_pieces': 384,
-        'pretrained_model': 'roberta-base',
         'one_proof': True,
+        'max_instances': 100,
+        'pretrained_model': 'roberta-large'
     },
     "archive_config": {
-        "archive_file": "./ruletaker/runs/depth-5", #"./ruletaker/runs/depth-5-base", "./ruletaker/runs/depth-5"
+        "archive_file": "./ruletaker/runs/depth-5-base", #"./ruletaker/runs/depth-5-base", "./ruletaker/runs/depth-5"
         "cuda_device": 3,
         "overrides": ""
     },
@@ -93,42 +93,6 @@ config = {
         'num_epochs': 4,
     }
 }
-
-archive = load_archive(**config["archive_config"])
-model = archive.model.eval()
-vocab = model.vocab
-cuda_device = config["archive_config"]["cuda_device"]
-
-checkpointer = Checkpointer(config['trainer_config']['serialization_dir'])
-optimizer = Optimizer(model_parameters=[[n,p] for n, p in model.named_parameters() if p.requires_grad], **config["optimizer_config"])
-learning_rate_scheduler = Scheduler(optimizer=optimizer, **config["scheduler_config"])
-
-dset = DataReader(**config["dset_config"])
-# dataset = dset.read(config["file_path"])
-dataset = read_pkl(dset, config["file_path"])
-
-dataset.index_with(vocab)
-dataloader = DataLoader(dataset=dataset, **config["dataloader_config"])
-
-batches = iter(dataloader)
-batch = next(batches)
-batch = nn_util.move_to_device(batch, cuda_device)
-outputs = model(**batch)
-
-trainer = Trainer(
-    model=model,
-    optimizer=optimizer,
-    learning_rate_scheduler=learning_rate_scheduler,
-    checkpointer=checkpointer,
-    validation_data_loader=dataloader,
-    data_loader=dataloader,         # TODO
-    **config['trainer_config']
-)
-# trainer._validation_loss(0)
-
-
-##### ^^Main allennlp framework code^^ #####
-
 
 def check_data():
     mono, non_mono = [], []
@@ -326,6 +290,42 @@ def probe_model(model, select_func, probe_func):
 
 
 if __name__ == '__main__':
+    archive = load_archive(**config["archive_config"])
+    model = archive.model.eval()
+    vocab = model.vocab
+    cuda_device = config["archive_config"]["cuda_device"]
+
+    checkpointer = Checkpointer(config['trainer_config']['serialization_dir'])
+    optimizer = Optimizer(model_parameters=[[n,p] for n, p in model.named_parameters() if p.requires_grad], **config["optimizer_config"])
+    learning_rate_scheduler = Scheduler(optimizer=optimizer, **config["scheduler_config"])
+
+    dset = DataReader(**config["dset_config"])
+    # dataset = dset.read(config["file_path"])
+    dataset = read_pkl(dset, config["file_path"])
+
+    dataset.index_with(vocab)
+    dataloader = DataLoader(dataset=dataset, **config["dataloader_config"])
+
+    batches = iter(dataloader)
+    batch = next(batches)
+    batch = nn_util.move_to_device(batch, cuda_device)
+    outputs = model(**batch)
+
+    trainer = Trainer(
+        model=model,
+        optimizer=optimizer,
+        learning_rate_scheduler=learning_rate_scheduler,
+        checkpointer=checkpointer,
+        validation_data_loader=dataloader,
+        data_loader=dataloader,         # TODO
+        **config['trainer_config']
+    )
+    # trainer._validation_loss(0)
+
+
+    ##### ^^Main allennlp framework code^^ #####
+
+
     select_func = binary_vector        # random_selection binary_vector
     probe_func = loop_probe        # manual_probe loop_probe
     probe_model(model, select_func, probe_func)

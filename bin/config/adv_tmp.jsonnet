@@ -6,7 +6,7 @@ local pretrained_model = "bin/runs/pretrain_retriever/rb-base/model.tar.gz";
 local cuda_device = 2;
 local batch_size = 8;
 local num_gradient_accumulation_steps = 1;
-local num_monte_carlo = 8;
+local num_monte_carlo = 1;
 local longest_proof = 10;
 local shortest_proof = 1;
 local lr = 5e-6;
@@ -40,10 +40,11 @@ local epochs = 3;
         "num_monte_carlo": num_monte_carlo,
         "add_NAF": add_naf,
         "word_overlap_scores": compute_word_overlap_scores,
-        "benchmark_type": "none",      # word_score, random, none
+        "benchmark_type": "random",      # word_score, random, none
         "bernoulli_node_prediction_level": "node-level",       # sequence-level, node-level
-        "adversarial_perturbations": "equivalence_substitution",       # sentence_elimination,question_flip,equivalence_substitution
-        "max_flips": -1,     # -1, 3s
+        "adversarial_perturbations": "sentence_elimination,question_flip,equivalence_substitution",       # sentence_elimination,question_flip,equivalence_substitution
+        "max_flips": 3,     # -1, 3s
+        "max_elims": 3,     # -1, 3s
     },
     "trainer": {
         "cuda_device": cuda_device,

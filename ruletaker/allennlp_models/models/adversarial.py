@@ -9,7 +9,8 @@ from random import shuffle
 import numpy as np
 import multiprocessing
 
-from transformers.tokenization_auto import AutoTokenizer
+# from transformers.tokenization_auto import AutoTokenizer
+from transformers import AutoTokenizer
 import wandb
 
 import torch
@@ -49,6 +50,7 @@ class AdversarialGenerator(Model):
         bernoulli_node_prediction_level = 'node-level',
         adversarial_perturbations = '',
         max_flips = -1,
+        max_elims = -1,
         **kwargs,
     ) -> None:
         super().__init__(qa_model.vocab, regularizer)
@@ -100,6 +102,7 @@ class AdversarialGenerator(Model):
 
         self.wandb = os.environ['WANDB_LOG'] == 'true'
         self.max_flips = max_flips
+        self.max_elims = max_elims
 
     # @timing
     def forward(self, phrase=None, label=None, metadata=None, retrieval=None, word_overlap_scores=None, **kwargs) -> torch.Tensor:
@@ -154,10 +157,12 @@ class AdversarialGenerator(Model):
         z_eqiv, z_1hot_eqiv = self._draw_samples(eqiv_logits)        # (bsz * mc steps, num retrievals)
         
         # Adjust senteqiv samples here
+        if self.max_elims > 0:
+            z_sent = z_sent.topk(min(self.max_elims, z_sent.size(1)), 1).values
         maskers = [rule_idxs_, z_sent] if 'sentence_elimination' in self.adv_perturbations else [rule_idxs_, z_sent]
         z_eqiv = self.mask_draws(z_eqiv, *maskers)
         if self.max_flips > 0:
-            z_eqiv = z_eqiv.topk(self.max_flips, -1).values
+            z_eqiv = z_eqiv.topk(min(self.max_flips, z_eqiv.size(1)), 1).values
 
         meta_records_ = meta_records_orig
         metadata_ = metadata_orig
@@ -181,7 +186,7 @@ class AdversarialGenerator(Model):
         new_metadata = batch['metadata']
         if True:
             # Verify meta records sentences are in metadata
-            records_sentences = [[i['text'] for i in list(record['triples'].values()) + list(record['rules'].values()) if not i.get('mask',0)] for record in meta_records_]
+            records_sentences = [[i['text'] for i in list(record['triples'].values()) + list(record['rules'].values()) if not i.get('mask',1)] for record in meta_records_]
             assert all([all([sent in meta['context'] for sent in sentences]) for meta, sentences in zip(new_metadata, records_sentences)])
             # Verify all metadata sentences are in meta records
             assert all([all([(sent+'.').strip() in sentences for sent in meta['context'].split('.')[:-1]]) for meta, sentences in zip(new_metadata, records_sentences)])
@@ -239,6 +244,7 @@ class AdversarialGenerator(Model):
                 nodes=nodes,
                 word_overlap_scores=word_overlap_scores,
                 meta_records=meta_records,
+                rule_idxs=rule_idxs,
             )
 
             new_metadata_bl = batch_bl['metadata']
@@ -248,7 +254,7 @@ class AdversarialGenerator(Model):
 
             if True:
                 # Verify meta records sentences are in metadata
-                records_sentences_bl = [[i['text'] for i in list(record['triples'].values()) + list(record['rules'].values()) if not i.get('mask',0)] for record in meta_records_bl]
+                records_sentences_bl = [[i['text'] for i in list(record['triples'].values()) + list(record['rules'].values()) if not i.get('mask',1)] for record in meta_records_bl]
                 assert all([all([sent in meta['context'] for sent in sentences]) for meta, sentences in zip(new_metadata_bl, records_sentences_bl)])
                 # Verify all metadata sentences are in meta records
                 assert all([all([(sent+'.').strip() in sentences for sent in meta['context'].split('.')[:-1]]) for meta, sentences in zip(new_metadata_bl, records_sentences_bl)])
@@ -258,6 +264,9 @@ class AdversarialGenerator(Model):
         correct = (preds == modified_label_)
         correct[skip_ids] = False
         log_metrics = {}
+        log_metrics['n_sentelim'] = (z_sent != -1).sum(-1).float().mean().item()
+        log_metrics['n_eqivsubt'] = (z_eqiv != -1).sum(-1).float().mean().item()
+        log_metrics['n_quesflip'] = (z_ques != -1).sum(-1).float().mean().item()
 
         if True:
             sentences = [[m['question_text']] + m['context'].split('.') for m in new_metadata]
@@ -315,9 +324,9 @@ class AdversarialGenerator(Model):
             nrules = len(meta_records[n]['rules'])
             assert meta_records[n]['questions'][qid]['question'] == meta['question_text']
             for i in range(1, nfacts+1):
-                meta_records[n]['triples'][f'triple{i}']['mask'] = 0 if i in scrambled_nodes else 1
+                meta_records[n]['triples'][f'triple{i}']['mask'] = 1 if i in scrambled_nodes else 0
             for i in range(1, nrules+1):
-                meta_records[n]['rules'][f'rule{i}']['mask'] = 0 if i + nfacts in scrambled_nodes else 1
+                meta_records[n]['rules'][f'rule{i}']['mask'] = 1 if i + nfacts in scrambled_nodes else 0
             continue
         return meta_records
 
@@ -536,13 +545,19 @@ class AdversarialGenerator(Model):
     def decode(self, i, batch):
         return self.dataset_reader.decode(batch['phrase']['tokens']['token_ids'][i]).split('.')
 
-    def random_benchmark(self, sent_logits=False, ques_logits=False, eqiv_logits=False, metadata=False, label=False, polarity=False, nodes=False, meta_records=False, **kwargs):
+    def random_benchmark(self, sent_logits=False, ques_logits=False, eqiv_logits=False, metadata=False, label=False, polarity=False, nodes=False, meta_records=False, rule_idxs=None, **kwargs):
         with torch.no_grad():
             z_sent_bl, z_sent_bl_onehot = self._draw_samples(sent_logits, random_chance=True)
             z_ques_bl, z_ques_bl_onehot = self._draw_samples(ques_logits, random_chance=True)
             z_eqiv_bl, z_eqiv_bl_onehot = self._draw_samples(eqiv_logits, random_chance=True)
-            if 'sentence_elimination' not in self.adv_perturbations:
-                z_sent_bl = None
+
+            # Adjust senteqiv samples here
+            if self.max_elims > 0:
+                z_sent_b = z_sent_bl.topk(min(self.max_elims, z_sent_bl.size(1)), 1).values
+            maskers = [rule_idxs, z_sent_bl] if 'sentence_elimination' in self.adv_perturbations else [rule_idxs, z_sent_bl]
+            z_eqiv_bl = self.mask_draws(z_eqiv_bl, *maskers)
+            if self.max_flips > 0:
+                z_eqiv_bl = z_eqiv_bl.topk(min(self.max_flips, z_eqiv_bl.size(1)), 1).values
 
             meta_records_bl = meta_records
             metadata_bl = metadata

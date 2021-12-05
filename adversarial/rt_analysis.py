@@ -11,7 +11,8 @@ class ResultsProcessor():
         self.load_best_metrics()
         self.add_proof_depth()
 
-    def load_best_metrics(self, metric='validation_EM'):
+    # def load_best_metrics(self, metric='validation_EM'):
+    def load_best_metrics(self, metric='EM'):
         ''' Add proof depth for each prediction
         '''
         # metrics_paths = glob.glob(os.path.join(self.dir, 'metrics_epoch_*.json'))
@@ -24,6 +25,7 @@ class ResultsProcessor():
             with open(path, 'r') as f:
                 self.scores[path] = json.load(f)
             
+            print(self.scores[path].keys())
             if self.scores[path][metric] > best_score:
                 self.best_score = self.scores[path][metric]
                 self.best_idx = path
@@ -46,7 +48,7 @@ class ResultsProcessor():
 
         # Add proof depth for each prediction
         # There are multiple predictions per question (one per epoch)
-        preds = self.scores[self.best_idx]['validation_predictions']
+        preds = self.scores[self.best_idx]['predictions']
         self.preds = {}
         for pred in preds:
             qid = pred['id']
@@ -80,5 +82,5 @@ if __name__ == '__main__':
     # ResultsAnalyzer('runs/depth-3ext')
     
     a = ResultsAnalyzer('ruletaker/runs/2021-12-02_15-11-03-keep')
-    b = ResultsAnalyzer('ruletaker/runs/depth-5')
-    b.scores['ruletaker/runs/depth-5/metrics_epoch_3.json']['validation_EM']
+    # b = ResultsAnalyzer('ruletaker/runs/depth-5')
+    # b.scores['ruletaker/runs/depth-5/metrics_epoch_3.json']
