@@ -1,3 +1,6 @@
+# This file is a hack to make the OpenAttack codebase compatible with
+# the allennlp main codebase as they use different versions of
+# transformers package
 try:
     import OpenAttack
 except AttributeError:
