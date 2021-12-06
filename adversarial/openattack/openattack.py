@@ -91,7 +91,8 @@ def load_and_remap_config(config):
     with open(f'bin/config/baselines/{mode}_tmp.yml', 'r') as f:
         manual_config = yaml.load(f, Loader=yaml.BaseLoader)
 
-    config['dset_config']['max_instances'] = int(manual_config.pop('max_instances'))
+    max_n = manual_config.pop('max_instances')
+    config['dset_config']['max_instances'] = False if max_n == 'False' else int(max_n)
     config['archive_config']['archive_file'] = manual_config.pop('victim_archive_file')
     config['archive_config']['cuda_device'] = int(manual_config.pop('cuda_device'))
     config['attacker'] = manual_config.pop('attacker')

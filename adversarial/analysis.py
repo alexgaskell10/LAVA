@@ -3,6 +3,8 @@ import sys, os, pickle
 import pandas as pd
 import numpy as np
 
+from math import ceil, floor
+
 # train_path = 'bin/runs/adversarial/2021-12-01_17-36-59-keep/train-records_epoch1.pkl'
 val_path = 'bin/runs/adversarial/2021-12-03_08-15-20-keep/val-records_epoch-1.pkl'
 
@@ -19,6 +21,8 @@ def compute_features(df, skip_start, skip_end):
         the question is appended to the beginning of the context)
     '''
     # Cleaning
+    df['sampled_question'] = df['question']
+    df['orig_question'] = df['orig_sentences'].apply(lambda x: x[0])
     df['orig_sentences'] = df['orig_sentences'].apply(lambda x: x[skip_start : -skip_end])
     df['sampled_sentences'] = df['sampled_sentences'].apply(lambda x: x[skip_start : -skip_end])
     df['orig_proof_len'] = df['proof_sentences'].apply(len)
@@ -44,10 +48,47 @@ def compute_features(df, skip_start, skip_end):
     return df
 
 
+# def get_examples(df):
+
+
+def wrap(lst, max_chars):
+    new_lst = []
+    insert = '\t'
+    for sent in lst:
+        n_wraps = floor(len(sent) / max_chars)
+        for i in range(n_wraps+1):
+            new_lst.append(int(i>0)*insert+sent[i*(max_chars+len(insert)):(i+1)*(max_chars+len(insert))])
+            # sent[:i*(max_chars+len(insert))] + insert + sent[i*(max_chars+len(insert)):]
+        new_lst.append(sent)
+    return new_lst
+
+
 if __name__ == '__main__':
     # df = load_as_df(train_path)
     df = load_as_df(val_path)
 
     df = compute_features(df, 1, 1)
     # df_train = compute_features(df_train, 1)
-    print(df.iloc[:,15:].describe())
+    print(df.iloc[:,17:].describe())
+
+    df_pos = df[df.qa_fooled]
+
+    open('table.txt', 'w')
+    from tabulate import tabulate
+    for i in range(5):
+        to_print = []
+        row = df_pos[df_pos.orig_proof_depth == i].iloc[0]
+        orig_sents = [x.strip() for x in row.orig_sentences]
+        sampled_sents = [x.strip() for x in row.sampled_sentences]
+        to_print.append([f'Original Example {i+1}', None])
+        to_print.append([None, 'Label', bool(row.label)])
+        to_print.append([None, 'Question', row.orig_question])
+        to_print.append([None, 'Context', '\n'.join(sorted(orig_sents, key=len))])
+        to_print.append([f'Adversarial Example {i+1}', None])
+        to_print.append([None, 'Label', bool(1-row.mod_label)])
+        to_print.append([None, 'Question', row.sampled_question])
+        to_print.append([None, 'Context', '\n'.join(sorted(sampled_sents, key=len))])
+        print(tabulate(to_print))
+
+        with open('table.txt', 'a') as f:
+            f.write(tabulate(to_print))

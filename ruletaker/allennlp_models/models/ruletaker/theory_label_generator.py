@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from problog.parser import ParseError
 import yaml
 import sys
 import argparse
@@ -22,6 +23,7 @@ from problog.formula import LogicFormula, LogicDAG
 from problog.sdd_formula import SDD
 from problog.engine import NonGroundProbabilisticClause, UnknownClause
 from problog.engine_stack import NegativeCycle
+from problog.clausedb import AccessError
 
 import re
 import time
@@ -242,6 +244,12 @@ def call_theorem_prover(
             result_tuples = [(k, v) for k, v in result.items()]
             obtained_result = result_tuples[0][1] != float(0)
             return obtained_result, elapsed_millisecs, None
+        except (ParseError, AccessError) as e:
+            end_millisecs = current_milli_time()
+            elapsed_millisecs = end_millisecs - start_millisecs
+            print(f'Encountered parse error at instance id {instance_id}, question id {question_id}: {e}')
+            exception_name = str(type(e)).lstrip("<class '").rstrip("'>")
+            return False, elapsed_millisecs, exception_name
         except UnknownClause as e:
             end_millisecs = current_milli_time()
             elapsed_millisecs = end_millisecs - start_millisecs

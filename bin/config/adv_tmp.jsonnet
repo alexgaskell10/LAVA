@@ -6,14 +6,14 @@ local pretrained_model = "bin/runs/pretrain_retriever/rb-base/model.tar.gz";
 local cuda_device = 2;
 local batch_size = 8;
 local num_gradient_accumulation_steps = 1;
-local num_monte_carlo = 1;
+local num_monte_carlo = 8;
 local longest_proof = 10;
 local shortest_proof = 1;
 local lr = 5e-6;
 local model_type = 'adversarial_base';
 local add_naf = false;
 local compute_word_overlap_scores = true;
-local epochs = 3;
+local epochs = 5;
 
 {
     "ruletaker_archive": ruletaker_archive,
@@ -32,7 +32,7 @@ local epochs = 3;
         "add_NAF": add_naf,
         "one_proof": true,
         "word_overlap_scores": compute_word_overlap_scores,
-        "max_instances": 4096,     # 10, 4096, false
+        "max_instances": 4096,     # 10, 4096, 8184, false
     },
     "retrieval_reasoning_model": {
         "variant": inference_model,
@@ -43,8 +43,8 @@ local epochs = 3;
         "benchmark_type": "random",      # word_score, random, none
         "bernoulli_node_prediction_level": "node-level",       # sequence-level, node-level
         "adversarial_perturbations": "sentence_elimination,question_flip,equivalence_substitution",       # sentence_elimination,question_flip,equivalence_substitution
-        "max_flips": 3,     # -1, 3s
-        "max_elims": 3,     # -1, 3s
+        "max_flips": 3,     # -1, 3
+        "max_elims": 3,     # -1, 3
     },
     "trainer": {
         "cuda_device": cuda_device,
