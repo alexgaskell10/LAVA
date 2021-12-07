@@ -90,5 +90,8 @@ if __name__ == '__main__':
         to_print.append([None, 'Context', '\n'.join(sorted(sampled_sents, key=len))])
         print(tabulate(to_print))
 
-        with open('table.txt', 'a') as f:
-            f.write(tabulate(to_print))
+        # with open('table.txt', 'a') as f:
+        #     f.write(tabulate(to_print))
+
+    out_df = pd.DataFrame(to_print)
+    out_df.to_csv('table.csv')

@@ -3,7 +3,7 @@ local ruletaker_archive = "ruletaker/runs/depth-5/model.tar.gz";
 local dataset_dir = "ruletaker/inputs/dataset/rule-reasoning-dataset-V2020.2.4/depth-5/";
 local inference_model = "roberta-base";      # {roberta-base, roberta-large}
 local pretrained_model = "bin/runs/pretrain_retriever/rb-base/model.tar.gz";
-local cuda_device = 2;
+local cuda_device = 4;
 local batch_size = 8;
 local num_gradient_accumulation_steps = 1;
 local num_monte_carlo = 8;
@@ -32,7 +32,7 @@ local epochs = 5;
         "add_NAF": add_naf,
         "one_proof": true,
         "word_overlap_scores": compute_word_overlap_scores,
-        "max_instances": 4096,     # 10, 4096, 8184, false
+        "max_instances": 8184,     # 10, 4096, 8184, false
     },
     "retrieval_reasoning_model": {
         "variant": inference_model,
@@ -40,11 +40,11 @@ local epochs = 5;
         "num_monte_carlo": num_monte_carlo,
         "add_NAF": add_naf,
         "word_overlap_scores": compute_word_overlap_scores,
-        "benchmark_type": "random",      # word_score, random, none
+        "benchmark_type": "none",      # word_score, random, none
         "bernoulli_node_prediction_level": "node-level",       # sequence-level, node-level
         "adversarial_perturbations": "sentence_elimination,question_flip,equivalence_substitution",       # sentence_elimination,question_flip,equivalence_substitution
-        "max_flips": 3,     # -1, 3
-        "max_elims": 3,     # -1, 3
+        "max_flips": 6,     # -1, 3
+        "max_elims": 6,     # -1, 3
     },
     "trainer": {
         "cuda_device": cuda_device,

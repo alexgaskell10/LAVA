@@ -105,9 +105,10 @@ def process_meta(config, adversarial_data):
 def add_mask(rules_or_triples):
     return {k:{**v, 'mask':0} for k,v in rules_or_triples.items() if v is not None}
 
+
 if __name__ == '__main__':
     # path = 'bin/runs/baselines/hotflip/CustomHotFlipAttacker_CustomVictim_CustomTokenizer_2021-12-05_17-56-08.pkl'
-    path = 'bin/runs/baselines/textfooler/CustomTextFoolerAttacker_CustomVictim_CustomTokenizer_2021-12-05_21-49-19.pkl'
+    path = 'bin/runs/baselines/hotflip/CustomHotFlipAttacker_CustomVictim_CustomTokenizer_2021-12-06_13-36-26.pkl'
     config['attacker'] = 'textfooler' if 'textfooler' in path.lower() else 'hotflip'
     with open(path, 'rb') as f:
         adv_data = pkl.load(f)

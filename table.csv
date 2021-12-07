@@ -1,0 +1,40 @@
+,0,1,2
+0,Original Example 5,,
+1,,Label,True
+2,,Question,The bald eagle eats the squirrel.
+3,,Context,"The lion is round
+The bald eagle is red
+The bald eagle is blue
+The rabbit sees the lion
+The squirrel needs the lion
+The rabbit eats the squirrel
+The lion needs the bald eagle
+The bald eagle sees the rabbit
+The bald eagle sees the squirrel
+The squirrel eats the bald eagle
+If something eats the squirrel then it is cold
+If something needs the rabbit then it eats the squirrel
+If something is round and blue then it eats the squirrel
+If something is blue and it eats the lion then it is round
+If the lion needs the rabbit then the rabbit sees the bald eagle
+If something does not see the bald eagle and it is not round then it needs the squirrel
+If something is cold and it does not need the bald eagle then the bald eagle eats the lion
+If the bald eagle needs the rabbit and the bald eagle eats the squirrel then the bald eagle sees the squirrel"
+4,Adversarial Example 5,,
+5,,Label,True
+6,,Question,The bald eagle does not eat the squirrel.
+7,,Context,"The lion is round
+The rabbit eats the squirrel
+The lion needs the bald eagle
+The bald eagle sees the squirrel
+If something eats the squirrel then it is cold
+If something needs the rabbit then it eats the squirrel
+If something is round and blue then it eats the squirrel
+If something is blue and it eats the lion then it is round
+If the lion needs the rabbit then the rabbit sees the bald eagle
+If the lion is round and the bald eagle sees the squirrel then the bald eagle is red
+If the squirrel eats the bald eagle and the lion is round then the bald eagle is blue
+If something does not see the bald eagle and it is not round then it needs the squirrel
+If something is cold and it does not need the bald eagle then the bald eagle eats the lion
+If the lion needs the bald eagle and the rabbit sees the lion then the bald eagle sees the rabbit
+If the bald eagle needs the rabbit and the bald eagle eats the squirrel then the bald eagle sees the squirrel"
