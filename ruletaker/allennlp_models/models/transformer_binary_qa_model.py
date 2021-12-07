@@ -169,7 +169,7 @@ class TransformerBinaryQA(Model):
             output_dict["label"] = label
 
             # Hack to use wandb logging
-            if getattr(os.environ, "WANDB_LOG", "false") == 'true':
+            if "WANDB_LOG" in os.environ and os.environ["WANDB_LOG"] == 'true':
                 self.wandb_log(metadata, label_logits, label, loss)
 
             for e, example in enumerate(metadata):
@@ -230,7 +230,7 @@ class TransformerBinaryQA(Model):
             prefix+"_loss": loss.mean(), 
             prefix+"_acc": self._accuracy.get_metric(), 
             prefix+"_acc_noncuml": c.get_metric(),
-            prefix+"_ret_recall": self.batch_retrieval_recall(metadata),
+            # prefix+"_ret_recall": self.batch_retrieval_recall(metadata),
         })
 
     def retrieval_recall(self, example):

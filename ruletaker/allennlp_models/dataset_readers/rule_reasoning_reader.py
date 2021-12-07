@@ -34,7 +34,6 @@ class RuleReasoningReader(DatasetReader):
                  use_context_full: bool = False,
                  sample: int = -1) -> None:
         super().__init__()
-        # TODO edit this class
         self._tokenizer = PretrainedTransformerTokenizer(pretrained_model, max_length=max_pieces)
         self._tokenizer_internal = self._tokenizer.tokenizer
         token_indexer = PretrainedTransformerIndexer(pretrained_model)
