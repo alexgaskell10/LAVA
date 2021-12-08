@@ -249,7 +249,7 @@ def call_theorem_prover(
             elapsed_millisecs = end_millisecs - start_millisecs
             print(f'Encountered parse error at instance id {instance_id}, question id {question_id}: {e}')
             exception_name = str(type(e)).lstrip("<class '").rstrip("'>")
-            return False, elapsed_millisecs, exception_name
+            return None, elapsed_millisecs, exception_name
         except UnknownClause as e:
             end_millisecs = current_milli_time()
             elapsed_millisecs = end_millisecs - start_millisecs

@@ -73,25 +73,62 @@ if __name__ == '__main__':
 
     df_pos = df[df.qa_fooled]
 
-    open('table.txt', 'w')
-    from tabulate import tabulate
-    for i in range(5):
-        to_print = []
+    out_dfs = []
+    for i in range(6):
         row = df_pos[df_pos.orig_proof_depth == i].iloc[0]
-        orig_sents = [x.strip() for x in row.orig_sentences]
-        sampled_sents = [x.strip() for x in row.sampled_sentences]
-        to_print.append([f'Original Example {i+1}', None])
-        to_print.append([None, 'Label', bool(row.label)])
-        to_print.append([None, 'Question', row.orig_question])
-        to_print.append([None, 'Context', '\n'.join(sorted(orig_sents, key=len))])
-        to_print.append([f'Adversarial Example {i+1}', None])
-        to_print.append([None, 'Label', bool(1-row.mod_label)])
-        to_print.append([None, 'Question', row.sampled_question])
-        to_print.append([None, 'Context', '\n'.join(sorted(sampled_sents, key=len))])
-        print(tabulate(to_print))
+
+        orig_sents = ['Context'] + sorted([x.strip()+'.' for x in row.orig_sentences], key=len)
+        meta = ['Ques. number', str(int(i))+'-a', '', 'Qid', row.id+'-a', '', 'Claim', row.orig_question, '', 'Answer?', '<ANSWER HERE T/F>']
+        meta += [''] * (len(orig_sents) - len(meta))
+        orig_rows = pd.DataFrame({0:['-'*15]+meta+['']*2, 1:['-'*15]+orig_sents+['']*2})
+
+        sampled_sents = ['Context'] + sorted([x.strip()+'.' for x in row.sampled_sentences], key=len)
+        meta = ['Ques. number', str(int(i))+'-b', '', 'Qid', row.id+'-b', '', 'Claim', row.sampled_question, '', 'Answer?', '<ANSWER HERE T/F>']
+        meta += [''] * (len(sampled_sents) - len(meta))
+        sampled_rows = pd.DataFrame({0:meta+['']*2, 1:sampled_sents+['']*2})
+
+        qual_meta = ['Which was more challenging?', f"{str(int(i))+'-a'} or {str(int(i))+'-b'}", '<ANSWER HERE>']
+        qual_rows = pd.DataFrame({0:qual_meta+['-'*15]+['']*10, 1:['']*len(qual_meta)+['-'*15]+['']*10})
+
+        rows = pd.concat([orig_rows, sampled_rows, qual_rows], axis=0)
+        out_dfs.append(rows)
+
+    out_df = pd.concat(out_dfs)
+    out_df.to_csv('table.csv', header=False, index=None)
+
+        # orig_rows = []
+        # orig_rows.append(['Qnum', 'Qid', 'Question', 'Context', 'Label?'])
+        # orig_sents = sorted([x.strip() for x in row.orig_sentences], key=len)
+        # orig_rows.append([str(int(i)), row.id, row.orig_question, orig_sents[0], ''])
+        # for sent in orig_sents[1:]:
+        #     orig_rows.append(['', '', '', sent, ''])
+        # out_dfs.append(pd.DataFrame(orig_rows[1:], columns=orig_rows[0]))
 
         # with open('table.txt', 'a') as f:
         #     f.write(tabulate(to_print))
 
-    out_df = pd.DataFrame(to_print)
-    out_df.to_csv('table.csv')
+    # out_df = pd.DataFrame(to_print)
+    # out_df.to_csv('table.csv')
+
+    # open('table.txt', 'w')
+    # from tabulate import tabulate
+    # for i in range(5):
+    #     to_print = []
+    #     row = df_pos[df_pos.orig_proof_depth == i].iloc[0]
+    #     orig_sents = [x.strip() for x in row.orig_sentences]
+    #     sampled_sents = [x.strip() for x in row.sampled_sentences]
+    #     to_print.append([f'Original Example {i+1}', None])
+    #     to_print.append([None, 'Label', bool(row.label)])
+    #     to_print.append([None, 'Question', row.orig_question])
+    #     to_print.append([None, 'Context', '\n'.join(sorted(orig_sents, key=len))])
+    #     to_print.append([f'Adversarial Example {i+1}', None])
+    #     to_print.append([None, 'Label', bool(1-row.mod_label)])
+    #     to_print.append([None, 'Question', row.sampled_question])
+    #     to_print.append([None, 'Context', '\n'.join(sorted(sampled_sents, key=len))])
+    #     print(tabulate(to_print))
+
+    #     # with open('table.txt', 'a') as f:
+    #     #     f.write(tabulate(to_print))
+
+    # out_df = pd.DataFrame(to_print)
+    # out_df.to_csv('table.csv')

@@ -43,7 +43,7 @@ def main(prog: Optional[str] = None) -> None:
     cmds = {
         # "ruletaker_train_original": ['train', 'ruletaker/allennlp_models/config/rulereasoning_config.jsonnet', '-s', outdir_rt, '--include-package', 'ruletaker.allennlp_models'],
         "ruletaker_train_original": ['train', 'bin/config/ruletaker/rulereasoning_config.jsonnet', '-s', outdir_rt, '--include-package', 'ruletaker.allennlp_models'],
-        "ruletaker_adv_training": ['re_train', 'ruletaker/allennlp_models/config/ruletaker_adv_retraining.jsonnet', '-s', outdir_rt, '--include-package', 'ruletaker.allennlp_models'],
+        "ruletaker_adv_training": ['re_train', 'bin/config/ruletaker/ruletaker_adv_retraining.jsonnet', '-s', outdir_rt, '--include-package', 'ruletaker.allennlp_models'],
         "adversarial_dataset_generation": ['custom_train', 'bin/config/adv_tmp.jsonnet', '-s', outdir_adv, '--include-package', 'ruletaker.allennlp_models'],
         "ruletaker_eval_original": [
             'evaluate', 'ruletaker/runs/depth-5/model.tar.gz', 'dev', '--output-file', '_results.json', 

@@ -1,8 +1,8 @@
-local train_size = 1000; #119068;
-local batch_size = 2;
-local num_gradient_accumulation_steps = 8;
-local num_epochs = 4;
-local learning_rate = 1e-5;
+local train_size = 119068;
+local batch_size = 1;
+local num_gradient_accumulation_steps = 16;
+local num_epochs = 8;
+local learning_rate = 1e-6;
 local weight_decay = 0.1;
 local warmup_ratio = 0.06;
 local skip_id_regex = "$none";
@@ -10,7 +10,7 @@ local transformer_model = "roberta-large";
 local max_pieces = 384;
 local transformer_weights_model = "ruletaker/runs/depth-5";
 local dataset_dir = "ruletaker/inputs/dataset/rule-reasoning-dataset-V2020.2.4/depth-5/";
-local cuda_device = 3;
+local cuda_device = 4;
 
 {
   "data_loader": {
