@@ -136,3 +136,4 @@ wandb
 runs
 data
 *.pkl
+log.out

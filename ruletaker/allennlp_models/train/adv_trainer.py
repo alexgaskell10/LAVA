@@ -41,8 +41,6 @@ from allennlp.training.trainer import GradientDescentTrainer, Trainer, BatchCall
 
 from .utils import lrange, duplicate_list, description_from_metrics, write_records
 
-import wandb
-
 logger = logging.getLogger(__name__)
 
 @Trainer.register("adversarial_trainer", constructor="from_partial_objects")

@@ -8,8 +8,8 @@ local warmup_ratio = 0.06;
 local skip_id_regex = "$none";
 local transformer_model = "roberta-large";
 local max_pieces = 384;
-local transformer_weights_model = "ruletaker/runs/depth-5";
-local dataset_dir = "ruletaker/inputs/dataset/rule-reasoning-dataset-V2020.2.4/depth-5/";
+local transformer_weights_model = "runs/ruletaker/depth-5/";
+local dataset_dir = "data/rule-reasoning-dataset-V2020.2.4/depth-5/";
 local cuda_device = 4;
 local adversarial_examples_path_train = "bin/runs/adversarial/2021-12-03_08-15-20-keep/val-records_epoch-1.pkl"; # "none","bin/runs/adversarial/2021-12-01_17-36-59-keep/train-records_epoch2.pkl"
 local adversarial_examples_path_val = "bin/runs/adversarial/2021-12-03_08-15-20-keep/val-records_epoch-1.pkl"; # "none","bin/runs/adversarial/2021-12-01_17-36-59-keep/train-records_epoch2.pkl"
@@ -46,13 +46,13 @@ local adversarial_examples_path_test = "bin/runs/adversarial/2021-12-03_08-15-20
     "pretrained_model": transformer_model
   },
   "trainer": {
+    "patience": 2,
     "optimizer": {
       "type": "huggingface_adamw",
       "betas": [0.9, 0.98],
       "weight_decay": weight_decay,
       "parameter_groups": [[["bias", "LayerNorm\\.weight", "layer_norm\\.weight"], {"weight_decay": 0}]],
       "lr": learning_rate,
-      "patience": 2,
     },
     "learning_rate_scheduler": {
       "type": "slanted_triangular",

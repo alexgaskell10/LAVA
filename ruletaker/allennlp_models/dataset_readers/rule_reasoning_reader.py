@@ -35,7 +35,7 @@ class RuleReasoningReader(DatasetReader):
         sample: int = -1,
         max_instances: int = None,
     ) -> None:
-        max_instances = None if max_instances == 'none' else max_instances
+        max_instances = None if max_instances == -1 else max_instances
         super().__init__(max_instances=max_instances)
         self._tokenizer = PretrainedTransformerTokenizer(pretrained_model, max_length=max_pieces)
         self._tokenizer_internal = self._tokenizer.tokenizer

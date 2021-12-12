@@ -49,7 +49,7 @@ class RetrievalReasoningReader(DatasetReader):
         word_overlap_scores: bool = False,
         max_instances: int = None,
     ):
-        max_instances = None if not max_instances else max_instances
+        max_instances = None if not max_instances or max_instances == -1 else max_instances
         super().__init__(cache_directory=None, max_instances=max_instances)
         
         # Init reasoning tokenizer

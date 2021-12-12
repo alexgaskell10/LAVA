@@ -44,7 +44,7 @@ class BlendedRuleReasoningReader(RuleReasoningReader):
         adversarial_examples_path_val = None,
         adversarial_examples_path_test = None,
     ) -> None:
-        max_instances = None if max_instances == 'none' else max_instances
+        max_instances = None if max_instances == -1 else max_instances
         cache_directory = None if cache_directory == 'none' else cache_directory
         DatasetReader.__init__(self, max_instances=max_instances, cache_directory=cache_directory)
 

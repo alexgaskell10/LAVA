@@ -1,27 +1,16 @@
 import sys
 import os
-import argparse
 import logging
-import re
 import _jsonnet
 from typing import Any, Optional
 from datetime import datetime
 import pkgutil
 
-from overrides import overrides
-
 from allennlp.common.util import import_module_and_submodules
 from allennlp.common.plugins import import_plugins
 from allennlp.commands import create_parser
-from allennlp.commands.subcommand import Subcommand
-from allennlp.common.util import dump_metrics, prepare_environment
-from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data import DataLoader
-from allennlp.models.archival import load_archive
-from allennlp.commands.train import TrainModel
-from allennlp.training import util as training_util
 
-from ruletaker.allennlp_models.train.custom_train import CustomTrain
+import ruletaker.allennlp_models
 
 logger = logging.getLogger(__name__)
 
@@ -43,13 +32,13 @@ def main(prog: Optional[str] = None) -> None:
     outdir_rt = 'bin/runs/ruletaker/'+datetime_now()
 
     cmds = {
-        # "ruletaker_train_original": ['ruletaker_train_original', 'bin/config/ruletaker/rulereasoning_config.jsonnet', '-s', outdir_rt, '--include-package', 'ruletaker.allennlp_models'],
-        "ruletaker_train_original": ['ruletaker_train_original', 'bin/config/ruletaker/rulereasoning_config_2021-12-12_10-47-28.jsonnet', '-s', outdir_rt, '--include-package', 'ruletaker.allennlp_models'],
-        "ruletaker_adv_training": ['ruletaker_adv_training', 'bin/config/ruletaker/ruletaker_adv_retraining.jsonnet', '-s', outdir_rt, '--include-package', 'ruletaker.allennlp_models'],
+        "ruletaker_train_original": ['ruletaker_train_original', 'bin/config/ruletaker/rulereasoning_config.jsonnet', '-s', outdir_rt, '--include-package', 'ruletaker.allennlp_models'],
+        # "ruletaker_adv_training": ['ruletaker_adv_training', 'bin/config/ruletaker/ruletaker_adv_retraining.jsonnet', '-s', outdir_rt, '--include-package', 'ruletaker.allennlp_models'],
+        "ruletaker_adv_training": ['ruletaker_adv_training', 'bin/config/ruletaker/ruletaker_adv_retraining_2021-12-12_13-22-39.jsonnet', '-s', 'bin/runs/ruletaker/2021-12-12_13-22-39_roberta-base_retrain', '--include-package', 'ruletaker.allennlp_models'],
         "adversarial_dataset_generation": ['adversarial_dataset_generation', 'bin/config/attacker/config.jsonnet', '-s', outdir_adv, '--include-package', 'ruletaker.allennlp_models'],
         "ruletaker_adv_training_test": ['ruletaker_adv_training_test', 
-            'bin/runs/ruletaker/2021-12-08_14-20-49/model.tar.gz', 'test', '--output-file', '_results.json', 
-            '--overrides_file', 'bin/config/ruletaker/ruletaker_adv_retraining_test.jsonnet',\
+            'bin/runs/ruletaker/2021-12-12_13-22-39_roberta-base_retrain/model.tar.gz', 'test', '--output-file', '_results.json', 
+            '--overrides_file', 'bin/config/ruletaker/ruletaker_adv_retraining_test_2021-12-12_13-22-39.jsonnet',\
             '--cuda-device', '3', '--include-package', 'ruletaker.allennlp_models'
         ],
         "ruletaker_eval_original": ['ruletaker_eval_original'
@@ -73,14 +62,13 @@ def main(prog: Optional[str] = None) -> None:
 
     cmd_map = {
         "ruletaker_train_original":'train',
-        "ruletaker_adv_training": 're_train',
+        "ruletaker_adv_training": 'train',
         "adversarial_dataset_generation": 'custom_train',
         "ruletaker_adv_training_test": 'custom_reevaluate',
         "ruletaker_eval_original": 'evaluate',
         "ruletaker_test_original": 'evaluate',
         "adversarial_dataset_generation_test": 'custom_evaluate',
     }
-
 
     if len(sys.argv) == 2:
         shortcut_launch(cmds)
@@ -133,7 +121,7 @@ def main(prog: Optional[str] = None) -> None:
 def shortcut_launch(cmds):
     sys.argv[1:] = cmds[sys.argv.pop(1)]
 
-    if sys.argv[1].endswith('evaluate'):
+    if sys.argv[1].endswith('evaluate') or sys.argv[1].endswith('test'):
         # sys.argv[3] = f"ruletaker/inputs/dataset/rule-reasoning-dataset-V2020.2.4/depth-5/{sys.argv[3]}.jsonl"
         sys.argv[5] = f"{'/'.join(sys.argv[2].split('/')[:4])}/{sys.argv[3].split('/')[-1].strip('.jsonl') + sys.argv[5]}"
 

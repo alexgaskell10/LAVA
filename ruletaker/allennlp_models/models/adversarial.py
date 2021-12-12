@@ -6,10 +6,10 @@ import time
 from math import floor
 from copy import deepcopy
 from random import shuffle
+import random
 import numpy as np
 import multiprocessing
 
-# from transformers.tokenization_auto import AutoTokenizer
 from transformers import AutoTokenizer
 import wandb
 
@@ -37,6 +37,7 @@ import logging
 
 torch.manual_seed(0)
 np.random.seed(0)
+random.seed(0)
 
 @Model.register("adversarial_base")
 class AdversarialGenerator(Model):

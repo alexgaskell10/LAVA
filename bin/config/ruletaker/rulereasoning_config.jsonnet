@@ -40,6 +40,7 @@ local cuda_device = 2;
     "pretrained_model": transformer_model
   },
   "trainer": {
+    "patience": 2,
     "optimizer": {
       "type": "huggingface_adamw",
       "betas": [0.9, 0.98],
