@@ -137,3 +137,8 @@ runs
 data
 *.pkl
 log.out
+bin/config/ruletaker/ruletaker_adv_retraining_test_2021-12-*
+bin/config/ruletaker/ruletaker_adv_retraining_2021-12-*
+bin/config/ruletaker/rulereasoning_config_2021-12-*
+bin/config/attacker/test_config_2021-12-*
+bin/config/attacker/config_2021-12-*

@@ -200,4 +200,578 @@ wandb: Run `wandb offline` to turn off syncing.
 2021-12-12 17:40:18,825 - INFO - ruletaker.allennlp_models.dataset_readers.rule_reasoning_reader - label = 0
 96it [00:00, 959.38it/s]192it [00:00, 539.88it/s]311it [00:00, 747.80it/s]407it [00:00, 814.31it/s]513it [00:00, 887.98it/s]624it [00:00, 955.48it/s]740it [00:00, 1016.92it/s]858it [00:00, 1065.18it/s]969it [00:01, 1077.63it/s]1087it [00:01, 1107.15it/s]1210it [00:01, 1143.87it/s]1326it [00:01, 1083.58it/s]1436it [00:01, 1082.50it/s]1546it [00:01, 1016.43it/s]1650it [00:01, 814.27it/s] 1754it [00:01, 867.08it/s]1861it [00:01, 917.99it/s]1971it [00:02, 966.02it/s]2079it [00:02, 996.35it/s]2190it [00:02, 1026.40it/s]2320it [00:02, 1103.49it/s]2433it [00:02, 1085.03it/s]2549it [00:02, 1105.39it/s]2661it [00:02, 1055.12it/s]2768it [00:02, 1055.43it/s]2886it [00:02, 1089.64it/s]2996it [00:03, 1030.08it/s]3101it [00:06, 112.54it/s] 3201it [00:06, 149.66it/s]3308it [00:06, 201.58it/s]3430it [00:06, 277.36it/s]3529it [00:06, 342.72it/s]3626it [00:06, 414.42it/s]3722it [00:06, 493.28it/s]3821it [00:06, 577.49it/s]3917it [00:06, 651.55it/s]4013it [00:06, 716.80it/s]4124it [00:07, 810.12it/s]4252it [00:07, 927.73it/s]4361it [00:07, 959.94it/s]4469it [00:07, 946.48it/s]4572it [00:07, 943.74it/s]4687it [00:07, 998.66it/s]4810it [00:07, 1061.95it/s]4922it [00:07, 1077.40it/s]5033it [00:07, 1043.58it/s]5140it [00:08, 968.46it/s] 5272it [00:08, 1063.33it/s]5381it [00:08, 1049.83it/s]5489it [00:08, 1057.61it/s]5597it [00:08, 1048.41it/s]5703it [00:08, 1036.04it/s]5820it [00:08, 1072.77it/s]5928it [00:08, 1069.41it/s]6043it [00:08, 1091.17it/s]6153it [00:08, 1068.58it/s]6264it [00:09, 1079.76it/s]6387it [00:09, 1123.49it/s]6504it [00:09, 1134.11it/s]6618it [00:09, 1131.65it/s]6732it [00:09, 1110.70it/s]6844it [00:09, 1014.54it/s]6948it [00:09, 952.38it/s] 7045it [00:09, 927.13it/s]7151it [00:09, 960.66it/s]7266it [00:10, 1010.90it/s]7389it [00:10, 1072.83it/s]7504it [00:10, 1092.62it/s]7615it [00:10, 1092.36it/s]7732it [00:10, 1114.25it/s]7844it [00:10, 1086.91it/s]7963it [00:10, 1113.41it/s]8075it [00:10, 1091.27it/s]8192it [00:10, 1112.42it/s]8304it [00:10, 1097.33it/s]8414it [00:11, 1067.91it/s]8543it [00:11, 1128.91it/s]8657it [00:11, 1083.20it/s]8769it [00:11, 1092.53it/s]8889it [00:11, 1122.13it/s]9002it [00:11, 1109.82it/s]9114it [00:11, 1084.92it/s]9223it [00:11, 1079.03it/s]9332it [00:11, 1071.65it/s]9440it [00:12, 1004.63it/s]9549it [00:12, 1027.19it/s]9653it [00:12, 1022.69it/s]9756it [00:12, 994.45it/s] 9876it [00:12, 1050.96it/s]9982it [00:12, 1046.72it/s]10088it [00:12, 1021.15it/s]10191it [00:12, 996.63it/s] 10311it [00:12, 1052.43it/s]10417it [00:12, 1052.38it/s]10523it [00:13, 1041.58it/s]10628it [00:13, 1031.71it/s]10744it [00:13, 1067.99it/s]10874it [00:13, 1135.03it/s]10998it [00:13, 1164.28it/s]11115it [00:13, 1138.92it/s]11230it [00:13, 1116.46it/s]11342it [00:13, 1109.51it/s]11454it [00:13, 1078.76it/s]11564it [00:14, 1081.77it/s]11673it [00:14, 1074.79it/s]11820it [00:14, 1189.71it/s]11940it [00:14, 1180.42it/s]12063it [00:14, 1193.24it/s]12183it [00:14, 1125.97it/s]12304it [00:14, 1149.67it/s]12420it [00:14, 1082.29it/s]12539it [00:14, 1110.49it/s]12652it [00:14, 1093.18it/s]12763it [00:15, 1084.52it/s]12885it [00:15, 1122.35it/s]13005it [00:15, 1141.94it/s]13120it [00:15, 1077.12it/s]13238it [00:15, 1106.11it/s]13355it [00:15, 1122.19it/s]13468it [00:15, 1080.00it/s]13584it [00:15, 1100.67it/s]13695it [00:15, 1085.73it/s]13807it [00:16, 1093.63it/s]13917it [00:16, 1045.39it/s]14023it [00:16, 1042.86it/s]14128it [00:16, 1030.14it/s]14264it [00:16, 1123.83it/s]14377it [00:16, 1076.42it/s]14486it [00:16, 1067.82it/s]14594it [00:16, 1066.80it/s]14703it [00:16, 1072.60it/s]14827it [00:16, 1121.20it/s]14944it [00:17, 1134.79it/s]15058it [00:17, 1118.45it/s]15172it [00:17, 1122.19it/s]15286it [00:17, 1127.10it/s]15405it [00:17, 1143.79it/s]15520it [00:17, 1107.72it/s]15632it [00:17, 1056.88it/s]15769it [00:17, 1142.70it/s]15888it [00:17, 1155.74it/s]16005it [00:18, 1133.99it/s]16119it [00:18, 1134.23it/s]16237it [00:18, 1145.96it/s]16352it [00:18, 1133.55it/s]16473it [00:18, 1152.57it/s]16589it [00:18, 1140.81it/s]16704it [00:18, 1131.21it/s]16818it [00:18, 1125.28it/s]16931it [00:18, 1086.67it/s]17049it [00:18, 1112.97it/s]17161it [00:19, 1055.80it/s]17274it [00:19, 1074.60it/s]17383it [00:19, 1053.45it/s]17492it [00:19, 1063.11it/s]17599it [00:19, 1055.73it/s]17705it [00:19, 1042.32it/s]17812it [00:19, 1048.34it/s]17935it [00:19, 1100.76it/s]18046it [00:19, 1062.25it/s]18153it [00:20, 1059.23it/s]18271it [00:20, 1093.38it/s]18381it [00:20, 1071.62it/s]18501it [00:20, 1108.86it/s]18613it [00:20, 1105.17it/s]18724it [00:20, 1067.59it/s]18832it [00:20, 1067.73it/s]18945it [00:20, 1085.65it/s]19065it [00:20, 1118.98it/s]19178it [00:20, 1107.93it/s]19289it [00:21, 1088.31it/s]19399it [00:21, 1071.52it/s]19507it [00:21, 1071.70it/s]19615it [00:21, 1043.06it/s]19720it [00:21, 1044.71it/s]19844it [00:21, 1099.68it/s]19955it [00:21, 1036.57it/s]20072it [00:21, 1074.21it/s]20189it [00:21, 1100.18it/s]20192it [00:21, 922.73it/s] 2021-12-12 17:40:40,698 - INFO - allennlp.data.vocabulary - Fitting token dictionary from dataset.
 
-0it [00:00, ?it/s]4279it [00:00, 42784.84it/s]8597it [00:00, 43014.04it/s]12942it [00:00, 43212.31it/s]17332it [00:00, 43481.93it/s]22059it [00:00, 44843.20it/s]26544it [00:00, 44457.79it/s]30991it [00:00, 41264.46it/s]
+0it [00:00, ?it/s]4279it [00:00, 42784.84it/s]8597it [00:00, 43014.04it/s]12942it [00:00, 43212.31it/s]17332it [00:00, 43481.93it/s]22059it [00:00, 44843.20it/s]26544it [00:00, 44457.79it/s]30991it [00:00, 41264.46it/s]35158it [00:00, 39074.33it/s]39107it [00:00, 38342.66it/s]42968it [00:01, 37796.74it/s]46765it [00:01, 37578.63it/s]50635it [00:01, 37900.83it/s]55189it [00:01, 40136.70it/s]59758it [00:01, 41773.12it/s]64021it [00:01, 42024.24it/s]68566it [00:01, 43041.63it/s]73176it [00:01, 43950.98it/s]77949it [00:01, 45078.25it/s]82659it [00:01, 45678.50it/s]87231it [00:02, 45238.71it/s]91759it [00:02, 44937.05it/s]96256it [00:02, 44872.01it/s]100022it [00:02, 42560.35it/s]2021-12-12 17:40:43,049 - INFO - allennlp.common.params - model.type = transformer_binary_qa
+2021-12-12 17:40:43,049 - INFO - allennlp.common.params - model.pretrained_model = roberta-large
+2021-12-12 17:40:43,049 - INFO - allennlp.common.params - model.requires_grad = True
+2021-12-12 17:40:43,050 - INFO - allennlp.common.params - model.transformer_weights_model = 
+2021-12-12 17:40:43,050 - INFO - allennlp.common.params - model.num_labels = 2
+2021-12-12 17:40:43,050 - INFO - allennlp.common.params - model.predictions_file = None
+2021-12-12 17:40:43,050 - INFO - allennlp.common.params - model.layer_freeze_regexes = None
+2021-12-12 17:40:43,050 - INFO - allennlp.common.params - model.regularizer = None
+2021-12-12 17:40:43,455 - INFO - transformers.configuration_utils - loading configuration file https://s3.amazonaws.com/models.huggingface.co/bert/roberta-large-config.json from cache at /vol/bitbucket/aeg19/.cache/torch/transformers/c22e0b5bbb7c0cb93a87a2ae01263ae715b4c18d692b1740ce72cacaa99ad184.2d28da311092e99a05f9ee17520204614d60b0bfdb32f8a75644df7737b6a748
+2021-12-12 17:40:43,456 - INFO - transformers.configuration_utils - Model config RobertaConfig {
+  "_num_labels": 2,
+  "architectures": [
+    "RobertaForMaskedLM"
+  ],
+  "attention_probs_dropout_prob": 0.1,
+  "bos_token_id": 0,
+  "do_sample": false,
+  "early_stopping": false,
+  "eos_token_id": 2,
+  "finetuning_task": null,
+  "hidden_act": "gelu",
+  "hidden_dropout_prob": 0.1,
+  "hidden_size": 1024,
+  "id2label": {
+    "0": "LABEL_0",
+    "1": "LABEL_1"
+  },
+  "initializer_range": 0.02,
+  "intermediate_size": 4096,
+  "is_decoder": false,
+  "is_encoder_decoder": false,
+  "label2id": {
+    "LABEL_0": 0,
+    "LABEL_1": 1
+  },
+  "layer_norm_eps": 1e-05,
+  "length_penalty": 1.0,
+  "max_length": 20,
+  "max_position_embeddings": 514,
+  "min_length": 0,
+  "model_type": "roberta",
+  "no_repeat_ngram_size": 0,
+  "num_attention_heads": 16,
+  "num_beams": 1,
+  "num_hidden_layers": 24,
+  "num_return_sequences": 1,
+  "output_attentions": false,
+  "output_hidden_states": false,
+  "output_past": true,
+  "pad_token_id": 1,
+  "pruned_heads": {},
+  "repetition_penalty": 1.0,
+  "temperature": 1.0,
+  "top_k": 50,
+  "top_p": 1.0,
+  "torchscript": false,
+  "type_vocab_size": 1,
+  "use_bfloat16": false,
+  "vocab_size": 50265
+}
+
+2021-12-12 17:40:43,895 - INFO - transformers.modeling_utils - loading weights file https://s3.amazonaws.com/models.huggingface.co/bert/roberta-large-pytorch_model.bin from cache at /vol/bitbucket/aeg19/.cache/torch/transformers/195c00f28dc68ef13a307c6db84d566f801f03b2b6bcf8b29524f10f767fac2a.fc7abf72755ecc4a75d0d336a93c1c63358d2334f5998ed326f3b0da380bf536
+2021-12-12 17:40:54,997 - INFO - allennlp.common.params - data_loader.type = default
+2021-12-12 17:40:54,998 - INFO - allennlp.common.params - data_loader.batch_size = 1
+2021-12-12 17:40:54,998 - INFO - allennlp.common.params - data_loader.shuffle = False
+2021-12-12 17:40:54,999 - INFO - allennlp.common.params - data_loader.sampler = None
+2021-12-12 17:40:54,999 - INFO - allennlp.common.params - data_loader.num_workers = 0
+2021-12-12 17:40:54,999 - INFO - allennlp.common.params - data_loader.pin_memory = False
+2021-12-12 17:40:54,999 - INFO - allennlp.common.params - data_loader.drop_last = False
+2021-12-12 17:40:54,999 - INFO - allennlp.common.params - data_loader.timeout = 0
+2021-12-12 17:40:54,999 - INFO - allennlp.common.params - data_loader.worker_init_fn = None
+2021-12-12 17:40:54,999 - INFO - allennlp.common.params - data_loader.multiprocessing_context = None
+2021-12-12 17:40:55,000 - INFO - allennlp.common.params - data_loader.batches_per_epoch = None
+2021-12-12 17:40:55,000 - INFO - allennlp.common.params - data_loader.batch_sampler.type = basic
+2021-12-12 17:40:55,000 - INFO - allennlp.common.params - data_loader.batch_sampler.sampler = random
+2021-12-12 17:40:55,000 - INFO - allennlp.common.params - type = random
+2021-12-12 17:40:55,001 - INFO - allennlp.common.params - replacement = False
+2021-12-12 17:40:55,001 - INFO - allennlp.common.params - num_samples = None
+2021-12-12 17:40:55,002 - INFO - allennlp.common.params - data_loader.batch_sampler.batch_size = 2
+2021-12-12 17:40:55,002 - INFO - allennlp.common.params - data_loader.batch_sampler.drop_last = False
+2021-12-12 17:40:55,005 - INFO - allennlp.common.params - data_loader.type = default
+2021-12-12 17:40:55,005 - INFO - allennlp.common.params - data_loader.batch_size = 1
+2021-12-12 17:40:55,006 - INFO - allennlp.common.params - data_loader.shuffle = False
+2021-12-12 17:40:55,006 - INFO - allennlp.common.params - data_loader.sampler = None
+2021-12-12 17:40:55,006 - INFO - allennlp.common.params - data_loader.num_workers = 0
+2021-12-12 17:40:55,006 - INFO - allennlp.common.params - data_loader.pin_memory = False
+2021-12-12 17:40:55,006 - INFO - allennlp.common.params - data_loader.drop_last = False
+2021-12-12 17:40:55,007 - INFO - allennlp.common.params - data_loader.timeout = 0
+2021-12-12 17:40:55,007 - INFO - allennlp.common.params - data_loader.worker_init_fn = None
+2021-12-12 17:40:55,007 - INFO - allennlp.common.params - data_loader.multiprocessing_context = None
+2021-12-12 17:40:55,007 - INFO - allennlp.common.params - data_loader.batches_per_epoch = None
+2021-12-12 17:40:55,007 - INFO - allennlp.common.params - data_loader.batch_sampler.type = basic
+2021-12-12 17:40:55,007 - INFO - allennlp.common.params - data_loader.batch_sampler.sampler = random
+2021-12-12 17:40:55,007 - INFO - allennlp.common.params - type = random
+2021-12-12 17:40:55,008 - INFO - allennlp.common.params - replacement = False
+2021-12-12 17:40:55,008 - INFO - allennlp.common.params - num_samples = None
+2021-12-12 17:40:55,008 - INFO - allennlp.common.params - data_loader.batch_sampler.batch_size = 2
+2021-12-12 17:40:55,008 - INFO - allennlp.common.params - data_loader.batch_sampler.drop_last = False
+2021-12-12 17:40:55,009 - INFO - allennlp.common.params - data_loader.type = default
+2021-12-12 17:40:55,009 - INFO - allennlp.common.params - data_loader.batch_size = 1
+2021-12-12 17:40:55,009 - INFO - allennlp.common.params - data_loader.shuffle = False
+2021-12-12 17:40:55,009 - INFO - allennlp.common.params - data_loader.sampler = None
+2021-12-12 17:40:55,009 - INFO - allennlp.common.params - data_loader.num_workers = 0
+2021-12-12 17:40:55,009 - INFO - allennlp.common.params - data_loader.pin_memory = False
+2021-12-12 17:40:55,009 - INFO - allennlp.common.params - data_loader.drop_last = False
+2021-12-12 17:40:55,010 - INFO - allennlp.common.params - data_loader.timeout = 0
+2021-12-12 17:40:55,010 - INFO - allennlp.common.params - data_loader.worker_init_fn = None
+2021-12-12 17:40:55,010 - INFO - allennlp.common.params - data_loader.multiprocessing_context = None
+2021-12-12 17:40:55,010 - INFO - allennlp.common.params - data_loader.batches_per_epoch = None
+2021-12-12 17:40:55,010 - INFO - allennlp.common.params - data_loader.batch_sampler.type = basic
+2021-12-12 17:40:55,010 - INFO - allennlp.common.params - data_loader.batch_sampler.sampler = random
+2021-12-12 17:40:55,011 - INFO - allennlp.common.params - type = random
+2021-12-12 17:40:55,011 - INFO - allennlp.common.params - replacement = False
+2021-12-12 17:40:55,011 - INFO - allennlp.common.params - num_samples = None
+2021-12-12 17:40:55,012 - INFO - allennlp.common.params - data_loader.batch_sampler.batch_size = 2
+2021-12-12 17:40:55,012 - INFO - allennlp.common.params - data_loader.batch_sampler.drop_last = False
+2021-12-12 17:40:55,012 - INFO - allennlp.common.params - trainer.type = gradient_descent
+2021-12-12 17:40:55,012 - INFO - allennlp.common.params - trainer.patience = 2
+2021-12-12 17:40:55,013 - INFO - allennlp.common.params - trainer.validation_metric = +EM
+2021-12-12 17:40:55,013 - INFO - allennlp.common.params - trainer.num_epochs = 4
+2021-12-12 17:40:55,013 - INFO - allennlp.common.params - trainer.cuda_device = 3
+2021-12-12 17:40:55,013 - INFO - allennlp.common.params - trainer.grad_norm = None
+2021-12-12 17:40:55,013 - INFO - allennlp.common.params - trainer.grad_clipping = 1
+2021-12-12 17:40:55,013 - INFO - allennlp.common.params - trainer.distributed = None
+2021-12-12 17:40:55,013 - INFO - allennlp.common.params - trainer.save_best_model = True
+2021-12-12 17:40:55,013 - INFO - allennlp.common.params - trainer.world_size = 1
+2021-12-12 17:40:55,013 - INFO - allennlp.common.params - trainer.num_gradient_accumulation_steps = 8
+2021-12-12 17:40:55,013 - INFO - allennlp.common.params - trainer.opt_level = None
+2021-12-12 17:40:55,013 - INFO - allennlp.common.params - trainer.no_grad = None
+2021-12-12 17:40:55,014 - INFO - allennlp.common.params - trainer.momentum_scheduler = None
+2021-12-12 17:40:55,014 - INFO - allennlp.common.params - trainer.tensorboard_writer = None
+2021-12-12 17:40:55,014 - INFO - allennlp.common.params - trainer.moving_average = None
+2021-12-12 17:40:55,014 - INFO - allennlp.common.params - trainer.batch_callbacks = None
+2021-12-12 17:40:55,014 - INFO - allennlp.common.params - trainer.epoch_callbacks = None
+2021-12-12 17:41:00,396 - INFO - allennlp.common.util - The following parameters are Frozen (without gradient):
+2021-12-12 17:41:00,397 - INFO - allennlp.common.util - The following parameters are Tunable (with gradient):
+2021-12-12 17:41:00,397 - INFO - allennlp.common.util - _transformer_model.embeddings.word_embeddings.weight
+2021-12-12 17:41:00,397 - INFO - allennlp.common.util - _transformer_model.embeddings.position_embeddings.weight
+2021-12-12 17:41:00,398 - INFO - allennlp.common.util - _transformer_model.embeddings.token_type_embeddings.weight
+2021-12-12 17:41:00,398 - INFO - allennlp.common.util - _transformer_model.embeddings.LayerNorm.weight
+2021-12-12 17:41:00,398 - INFO - allennlp.common.util - _transformer_model.embeddings.LayerNorm.bias
+2021-12-12 17:41:00,398 - INFO - allennlp.common.util - _transformer_model.encoder.layer.0.attention.self.query.weight
+2021-12-12 17:41:00,398 - INFO - allennlp.common.util - _transformer_model.encoder.layer.0.attention.self.query.bias
+2021-12-12 17:41:00,398 - INFO - allennlp.common.util - _transformer_model.encoder.layer.0.attention.self.key.weight
+2021-12-12 17:41:00,398 - INFO - allennlp.common.util - _transformer_model.encoder.layer.0.attention.self.key.bias
+2021-12-12 17:41:00,398 - INFO - allennlp.common.util - _transformer_model.encoder.layer.0.attention.self.value.weight
+2021-12-12 17:41:00,398 - INFO - allennlp.common.util - _transformer_model.encoder.layer.0.attention.self.value.bias
+2021-12-12 17:41:00,399 - INFO - allennlp.common.util - _transformer_model.encoder.layer.0.attention.output.dense.weight
+2021-12-12 17:41:00,399 - INFO - allennlp.common.util - _transformer_model.encoder.layer.0.attention.output.dense.bias
+2021-12-12 17:41:00,399 - INFO - allennlp.common.util - _transformer_model.encoder.layer.0.attention.output.LayerNorm.weight
+2021-12-12 17:41:00,399 - INFO - allennlp.common.util - _transformer_model.encoder.layer.0.attention.output.LayerNorm.bias
+2021-12-12 17:41:00,399 - INFO - allennlp.common.util - _transformer_model.encoder.layer.0.intermediate.dense.weight
+2021-12-12 17:41:00,399 - INFO - allennlp.common.util - _transformer_model.encoder.layer.0.intermediate.dense.bias
+2021-12-12 17:41:00,399 - INFO - allennlp.common.util - _transformer_model.encoder.layer.0.output.dense.weight
+2021-12-12 17:41:00,399 - INFO - allennlp.common.util - _transformer_model.encoder.layer.0.output.dense.bias
+2021-12-12 17:41:00,399 - INFO - allennlp.common.util - _transformer_model.encoder.layer.0.output.LayerNorm.weight
+2021-12-12 17:41:00,399 - INFO - allennlp.common.util - _transformer_model.encoder.layer.0.output.LayerNorm.bias
+2021-12-12 17:41:00,399 - INFO - allennlp.common.util - _transformer_model.encoder.layer.1.attention.self.query.weight
+2021-12-12 17:41:00,399 - INFO - allennlp.common.util - _transformer_model.encoder.layer.1.attention.self.query.bias
+2021-12-12 17:41:00,399 - INFO - allennlp.common.util - _transformer_model.encoder.layer.1.attention.self.key.weight
+2021-12-12 17:41:00,399 - INFO - allennlp.common.util - _transformer_model.encoder.layer.1.attention.self.key.bias
+2021-12-12 17:41:00,399 - INFO - allennlp.common.util - _transformer_model.encoder.layer.1.attention.self.value.weight
+2021-12-12 17:41:00,399 - INFO - allennlp.common.util - _transformer_model.encoder.layer.1.attention.self.value.bias
+2021-12-12 17:41:00,400 - INFO - allennlp.common.util - _transformer_model.encoder.layer.1.attention.output.dense.weight
+2021-12-12 17:41:00,400 - INFO - allennlp.common.util - _transformer_model.encoder.layer.1.attention.output.dense.bias
+2021-12-12 17:41:00,400 - INFO - allennlp.common.util - _transformer_model.encoder.layer.1.attention.output.LayerNorm.weight
+2021-12-12 17:41:00,400 - INFO - allennlp.common.util - _transformer_model.encoder.layer.1.attention.output.LayerNorm.bias
+2021-12-12 17:41:00,400 - INFO - allennlp.common.util - _transformer_model.encoder.layer.1.intermediate.dense.weight
+2021-12-12 17:41:00,400 - INFO - allennlp.common.util - _transformer_model.encoder.layer.1.intermediate.dense.bias
+2021-12-12 17:41:00,400 - INFO - allennlp.common.util - _transformer_model.encoder.layer.1.output.dense.weight
+2021-12-12 17:41:00,400 - INFO - allennlp.common.util - _transformer_model.encoder.layer.1.output.dense.bias
+2021-12-12 17:41:00,400 - INFO - allennlp.common.util - _transformer_model.encoder.layer.1.output.LayerNorm.weight
+2021-12-12 17:41:00,400 - INFO - allennlp.common.util - _transformer_model.encoder.layer.1.output.LayerNorm.bias
+2021-12-12 17:41:00,400 - INFO - allennlp.common.util - _transformer_model.encoder.layer.2.attention.self.query.weight
+2021-12-12 17:41:00,400 - INFO - allennlp.common.util - _transformer_model.encoder.layer.2.attention.self.query.bias
+2021-12-12 17:41:00,400 - INFO - allennlp.common.util - _transformer_model.encoder.layer.2.attention.self.key.weight
+2021-12-12 17:41:00,400 - INFO - allennlp.common.util - _transformer_model.encoder.layer.2.attention.self.key.bias
+2021-12-12 17:41:00,400 - INFO - allennlp.common.util - _transformer_model.encoder.layer.2.attention.self.value.weight
+2021-12-12 17:41:00,400 - INFO - allennlp.common.util - _transformer_model.encoder.layer.2.attention.self.value.bias
+2021-12-12 17:41:00,400 - INFO - allennlp.common.util - _transformer_model.encoder.layer.2.attention.output.dense.weight
+2021-12-12 17:41:00,400 - INFO - allennlp.common.util - _transformer_model.encoder.layer.2.attention.output.dense.bias
+2021-12-12 17:41:00,400 - INFO - allennlp.common.util - _transformer_model.encoder.layer.2.attention.output.LayerNorm.weight
+2021-12-12 17:41:00,401 - INFO - allennlp.common.util - _transformer_model.encoder.layer.2.attention.output.LayerNorm.bias
+2021-12-12 17:41:00,401 - INFO - allennlp.common.util - _transformer_model.encoder.layer.2.intermediate.dense.weight
+2021-12-12 17:41:00,401 - INFO - allennlp.common.util - _transformer_model.encoder.layer.2.intermediate.dense.bias
+2021-12-12 17:41:00,401 - INFO - allennlp.common.util - _transformer_model.encoder.layer.2.output.dense.weight
+2021-12-12 17:41:00,401 - INFO - allennlp.common.util - _transformer_model.encoder.layer.2.output.dense.bias
+2021-12-12 17:41:00,401 - INFO - allennlp.common.util - _transformer_model.encoder.layer.2.output.LayerNorm.weight
+2021-12-12 17:41:00,401 - INFO - allennlp.common.util - _transformer_model.encoder.layer.2.output.LayerNorm.bias
+2021-12-12 17:41:00,401 - INFO - allennlp.common.util - _transformer_model.encoder.layer.3.attention.self.query.weight
+2021-12-12 17:41:00,401 - INFO - allennlp.common.util - _transformer_model.encoder.layer.3.attention.self.query.bias
+2021-12-12 17:41:00,401 - INFO - allennlp.common.util - _transformer_model.encoder.layer.3.attention.self.key.weight
+2021-12-12 17:41:00,401 - INFO - allennlp.common.util - _transformer_model.encoder.layer.3.attention.self.key.bias
+2021-12-12 17:41:00,401 - INFO - allennlp.common.util - _transformer_model.encoder.layer.3.attention.self.value.weight
+2021-12-12 17:41:00,401 - INFO - allennlp.common.util - _transformer_model.encoder.layer.3.attention.self.value.bias
+2021-12-12 17:41:00,401 - INFO - allennlp.common.util - _transformer_model.encoder.layer.3.attention.output.dense.weight
+2021-12-12 17:41:00,401 - INFO - allennlp.common.util - _transformer_model.encoder.layer.3.attention.output.dense.bias
+2021-12-12 17:41:00,401 - INFO - allennlp.common.util - _transformer_model.encoder.layer.3.attention.output.LayerNorm.weight
+2021-12-12 17:41:00,402 - INFO - allennlp.common.util - _transformer_model.encoder.layer.3.attention.output.LayerNorm.bias
+2021-12-12 17:41:00,402 - INFO - allennlp.common.util - _transformer_model.encoder.layer.3.intermediate.dense.weight
+2021-12-12 17:41:00,402 - INFO - allennlp.common.util - _transformer_model.encoder.layer.3.intermediate.dense.bias
+2021-12-12 17:41:00,402 - INFO - allennlp.common.util - _transformer_model.encoder.layer.3.output.dense.weight
+2021-12-12 17:41:00,402 - INFO - allennlp.common.util - _transformer_model.encoder.layer.3.output.dense.bias
+2021-12-12 17:41:00,402 - INFO - allennlp.common.util - _transformer_model.encoder.layer.3.output.LayerNorm.weight
+2021-12-12 17:41:00,402 - INFO - allennlp.common.util - _transformer_model.encoder.layer.3.output.LayerNorm.bias
+2021-12-12 17:41:00,402 - INFO - allennlp.common.util - _transformer_model.encoder.layer.4.attention.self.query.weight
+2021-12-12 17:41:00,402 - INFO - allennlp.common.util - _transformer_model.encoder.layer.4.attention.self.query.bias
+2021-12-12 17:41:00,402 - INFO - allennlp.common.util - _transformer_model.encoder.layer.4.attention.self.key.weight
+2021-12-12 17:41:00,402 - INFO - allennlp.common.util - _transformer_model.encoder.layer.4.attention.self.key.bias
+2021-12-12 17:41:00,402 - INFO - allennlp.common.util - _transformer_model.encoder.layer.4.attention.self.value.weight
+2021-12-12 17:41:00,402 - INFO - allennlp.common.util - _transformer_model.encoder.layer.4.attention.self.value.bias
+2021-12-12 17:41:00,403 - INFO - allennlp.common.util - _transformer_model.encoder.layer.4.attention.output.dense.weight
+2021-12-12 17:41:00,403 - INFO - allennlp.common.util - _transformer_model.encoder.layer.4.attention.output.dense.bias
+2021-12-12 17:41:00,403 - INFO - allennlp.common.util - _transformer_model.encoder.layer.4.attention.output.LayerNorm.weight
+2021-12-12 17:41:00,403 - INFO - allennlp.common.util - _transformer_model.encoder.layer.4.attention.output.LayerNorm.bias
+2021-12-12 17:41:00,403 - INFO - allennlp.common.util - _transformer_model.encoder.layer.4.intermediate.dense.weight
+2021-12-12 17:41:00,403 - INFO - allennlp.common.util - _transformer_model.encoder.layer.4.intermediate.dense.bias
+2021-12-12 17:41:00,403 - INFO - allennlp.common.util - _transformer_model.encoder.layer.4.output.dense.weight
+2021-12-12 17:41:00,403 - INFO - allennlp.common.util - _transformer_model.encoder.layer.4.output.dense.bias
+2021-12-12 17:41:00,403 - INFO - allennlp.common.util - _transformer_model.encoder.layer.4.output.LayerNorm.weight
+2021-12-12 17:41:00,403 - INFO - allennlp.common.util - _transformer_model.encoder.layer.4.output.LayerNorm.bias
+2021-12-12 17:41:00,403 - INFO - allennlp.common.util - _transformer_model.encoder.layer.5.attention.self.query.weight
+2021-12-12 17:41:00,403 - INFO - allennlp.common.util - _transformer_model.encoder.layer.5.attention.self.query.bias
+2021-12-12 17:41:00,403 - INFO - allennlp.common.util - _transformer_model.encoder.layer.5.attention.self.key.weight
+2021-12-12 17:41:00,404 - INFO - allennlp.common.util - _transformer_model.encoder.layer.5.attention.self.key.bias
+2021-12-12 17:41:00,404 - INFO - allennlp.common.util - _transformer_model.encoder.layer.5.attention.self.value.weight
+2021-12-12 17:41:00,404 - INFO - allennlp.common.util - _transformer_model.encoder.layer.5.attention.self.value.bias
+2021-12-12 17:41:00,404 - INFO - allennlp.common.util - _transformer_model.encoder.layer.5.attention.output.dense.weight
+2021-12-12 17:41:00,404 - INFO - allennlp.common.util - _transformer_model.encoder.layer.5.attention.output.dense.bias
+2021-12-12 17:41:00,404 - INFO - allennlp.common.util - _transformer_model.encoder.layer.5.attention.output.LayerNorm.weight
+2021-12-12 17:41:00,404 - INFO - allennlp.common.util - _transformer_model.encoder.layer.5.attention.output.LayerNorm.bias
+2021-12-12 17:41:00,404 - INFO - allennlp.common.util - _transformer_model.encoder.layer.5.intermediate.dense.weight
+2021-12-12 17:41:00,404 - INFO - allennlp.common.util - _transformer_model.encoder.layer.5.intermediate.dense.bias
+2021-12-12 17:41:00,404 - INFO - allennlp.common.util - _transformer_model.encoder.layer.5.output.dense.weight
+2021-12-12 17:41:00,404 - INFO - allennlp.common.util - _transformer_model.encoder.layer.5.output.dense.bias
+2021-12-12 17:41:00,404 - INFO - allennlp.common.util - _transformer_model.encoder.layer.5.output.LayerNorm.weight
+2021-12-12 17:41:00,404 - INFO - allennlp.common.util - _transformer_model.encoder.layer.5.output.LayerNorm.bias
+2021-12-12 17:41:00,404 - INFO - allennlp.common.util - _transformer_model.encoder.layer.6.attention.self.query.weight
+2021-12-12 17:41:00,405 - INFO - allennlp.common.util - _transformer_model.encoder.layer.6.attention.self.query.bias
+2021-12-12 17:41:00,405 - INFO - allennlp.common.util - _transformer_model.encoder.layer.6.attention.self.key.weight
+2021-12-12 17:41:00,405 - INFO - allennlp.common.util - _transformer_model.encoder.layer.6.attention.self.key.bias
+2021-12-12 17:41:00,405 - INFO - allennlp.common.util - _transformer_model.encoder.layer.6.attention.self.value.weight
+2021-12-12 17:41:00,405 - INFO - allennlp.common.util - _transformer_model.encoder.layer.6.attention.self.value.bias
+2021-12-12 17:41:00,405 - INFO - allennlp.common.util - _transformer_model.encoder.layer.6.attention.output.dense.weight
+2021-12-12 17:41:00,405 - INFO - allennlp.common.util - _transformer_model.encoder.layer.6.attention.output.dense.bias
+2021-12-12 17:41:00,405 - INFO - allennlp.common.util - _transformer_model.encoder.layer.6.attention.output.LayerNorm.weight
+2021-12-12 17:41:00,405 - INFO - allennlp.common.util - _transformer_model.encoder.layer.6.attention.output.LayerNorm.bias
+2021-12-12 17:41:00,405 - INFO - allennlp.common.util - _transformer_model.encoder.layer.6.intermediate.dense.weight
+2021-12-12 17:41:00,405 - INFO - allennlp.common.util - _transformer_model.encoder.layer.6.intermediate.dense.bias
+2021-12-12 17:41:00,405 - INFO - allennlp.common.util - _transformer_model.encoder.layer.6.output.dense.weight
+2021-12-12 17:41:00,405 - INFO - allennlp.common.util - _transformer_model.encoder.layer.6.output.dense.bias
+2021-12-12 17:41:00,405 - INFO - allennlp.common.util - _transformer_model.encoder.layer.6.output.LayerNorm.weight
+2021-12-12 17:41:00,405 - INFO - allennlp.common.util - _transformer_model.encoder.layer.6.output.LayerNorm.bias
+2021-12-12 17:41:00,405 - INFO - allennlp.common.util - _transformer_model.encoder.layer.7.attention.self.query.weight
+2021-12-12 17:41:00,405 - INFO - allennlp.common.util - _transformer_model.encoder.layer.7.attention.self.query.bias
+2021-12-12 17:41:00,406 - INFO - allennlp.common.util - _transformer_model.encoder.layer.7.attention.self.key.weight
+2021-12-12 17:41:00,406 - INFO - allennlp.common.util - _transformer_model.encoder.layer.7.attention.self.key.bias
+2021-12-12 17:41:00,406 - INFO - allennlp.common.util - _transformer_model.encoder.layer.7.attention.self.value.weight
+2021-12-12 17:41:00,406 - INFO - allennlp.common.util - _transformer_model.encoder.layer.7.attention.self.value.bias
+2021-12-12 17:41:00,406 - INFO - allennlp.common.util - _transformer_model.encoder.layer.7.attention.output.dense.weight
+2021-12-12 17:41:00,406 - INFO - allennlp.common.util - _transformer_model.encoder.layer.7.attention.output.dense.bias
+2021-12-12 17:41:00,406 - INFO - allennlp.common.util - _transformer_model.encoder.layer.7.attention.output.LayerNorm.weight
+2021-12-12 17:41:00,406 - INFO - allennlp.common.util - _transformer_model.encoder.layer.7.attention.output.LayerNorm.bias
+2021-12-12 17:41:00,406 - INFO - allennlp.common.util - _transformer_model.encoder.layer.7.intermediate.dense.weight
+2021-12-12 17:41:00,406 - INFO - allennlp.common.util - _transformer_model.encoder.layer.7.intermediate.dense.bias
+2021-12-12 17:41:00,406 - INFO - allennlp.common.util - _transformer_model.encoder.layer.7.output.dense.weight
+2021-12-12 17:41:00,406 - INFO - allennlp.common.util - _transformer_model.encoder.layer.7.output.dense.bias
+2021-12-12 17:41:00,406 - INFO - allennlp.common.util - _transformer_model.encoder.layer.7.output.LayerNorm.weight
+2021-12-12 17:41:00,406 - INFO - allennlp.common.util - _transformer_model.encoder.layer.7.output.LayerNorm.bias
+2021-12-12 17:41:00,406 - INFO - allennlp.common.util - _transformer_model.encoder.layer.8.attention.self.query.weight
+2021-12-12 17:41:00,406 - INFO - allennlp.common.util - _transformer_model.encoder.layer.8.attention.self.query.bias
+2021-12-12 17:41:00,406 - INFO - allennlp.common.util - _transformer_model.encoder.layer.8.attention.self.key.weight
+2021-12-12 17:41:00,407 - INFO - allennlp.common.util - _transformer_model.encoder.layer.8.attention.self.key.bias
+2021-12-12 17:41:00,407 - INFO - allennlp.common.util - _transformer_model.encoder.layer.8.attention.self.value.weight
+2021-12-12 17:41:00,407 - INFO - allennlp.common.util - _transformer_model.encoder.layer.8.attention.self.value.bias
+2021-12-12 17:41:00,407 - INFO - allennlp.common.util - _transformer_model.encoder.layer.8.attention.output.dense.weight
+2021-12-12 17:41:00,407 - INFO - allennlp.common.util - _transformer_model.encoder.layer.8.attention.output.dense.bias
+2021-12-12 17:41:00,407 - INFO - allennlp.common.util - _transformer_model.encoder.layer.8.attention.output.LayerNorm.weight
+2021-12-12 17:41:00,407 - INFO - allennlp.common.util - _transformer_model.encoder.layer.8.attention.output.LayerNorm.bias
+2021-12-12 17:41:00,407 - INFO - allennlp.common.util - _transformer_model.encoder.layer.8.intermediate.dense.weight
+2021-12-12 17:41:00,407 - INFO - allennlp.common.util - _transformer_model.encoder.layer.8.intermediate.dense.bias
+2021-12-12 17:41:00,407 - INFO - allennlp.common.util - _transformer_model.encoder.layer.8.output.dense.weight
+2021-12-12 17:41:00,408 - INFO - allennlp.common.util - _transformer_model.encoder.layer.8.output.dense.bias
+2021-12-12 17:41:00,408 - INFO - allennlp.common.util - _transformer_model.encoder.layer.8.output.LayerNorm.weight
+2021-12-12 17:41:00,408 - INFO - allennlp.common.util - _transformer_model.encoder.layer.8.output.LayerNorm.bias
+2021-12-12 17:41:00,408 - INFO - allennlp.common.util - _transformer_model.encoder.layer.9.attention.self.query.weight
+2021-12-12 17:41:00,408 - INFO - allennlp.common.util - _transformer_model.encoder.layer.9.attention.self.query.bias
+2021-12-12 17:41:00,408 - INFO - allennlp.common.util - _transformer_model.encoder.layer.9.attention.self.key.weight
+2021-12-12 17:41:00,408 - INFO - allennlp.common.util - _transformer_model.encoder.layer.9.attention.self.key.bias
+2021-12-12 17:41:00,408 - INFO - allennlp.common.util - _transformer_model.encoder.layer.9.attention.self.value.weight
+2021-12-12 17:41:00,408 - INFO - allennlp.common.util - _transformer_model.encoder.layer.9.attention.self.value.bias
+2021-12-12 17:41:00,408 - INFO - allennlp.common.util - _transformer_model.encoder.layer.9.attention.output.dense.weight
+2021-12-12 17:41:00,408 - INFO - allennlp.common.util - _transformer_model.encoder.layer.9.attention.output.dense.bias
+2021-12-12 17:41:00,408 - INFO - allennlp.common.util - _transformer_model.encoder.layer.9.attention.output.LayerNorm.weight
+2021-12-12 17:41:00,408 - INFO - allennlp.common.util - _transformer_model.encoder.layer.9.attention.output.LayerNorm.bias
+2021-12-12 17:41:00,408 - INFO - allennlp.common.util - _transformer_model.encoder.layer.9.intermediate.dense.weight
+2021-12-12 17:41:00,408 - INFO - allennlp.common.util - _transformer_model.encoder.layer.9.intermediate.dense.bias
+2021-12-12 17:41:00,408 - INFO - allennlp.common.util - _transformer_model.encoder.layer.9.output.dense.weight
+2021-12-12 17:41:00,408 - INFO - allennlp.common.util - _transformer_model.encoder.layer.9.output.dense.bias
+2021-12-12 17:41:00,408 - INFO - allennlp.common.util - _transformer_model.encoder.layer.9.output.LayerNorm.weight
+2021-12-12 17:41:00,408 - INFO - allennlp.common.util - _transformer_model.encoder.layer.9.output.LayerNorm.bias
+2021-12-12 17:41:00,409 - INFO - allennlp.common.util - _transformer_model.encoder.layer.10.attention.self.query.weight
+2021-12-12 17:41:00,409 - INFO - allennlp.common.util - _transformer_model.encoder.layer.10.attention.self.query.bias
+2021-12-12 17:41:00,409 - INFO - allennlp.common.util - _transformer_model.encoder.layer.10.attention.self.key.weight
+2021-12-12 17:41:00,409 - INFO - allennlp.common.util - _transformer_model.encoder.layer.10.attention.self.key.bias
+2021-12-12 17:41:00,409 - INFO - allennlp.common.util - _transformer_model.encoder.layer.10.attention.self.value.weight
+2021-12-12 17:41:00,409 - INFO - allennlp.common.util - _transformer_model.encoder.layer.10.attention.self.value.bias
+2021-12-12 17:41:00,409 - INFO - allennlp.common.util - _transformer_model.encoder.layer.10.attention.output.dense.weight
+2021-12-12 17:41:00,409 - INFO - allennlp.common.util - _transformer_model.encoder.layer.10.attention.output.dense.bias
+2021-12-12 17:41:00,409 - INFO - allennlp.common.util - _transformer_model.encoder.layer.10.attention.output.LayerNorm.weight
+2021-12-12 17:41:00,409 - INFO - allennlp.common.util - _transformer_model.encoder.layer.10.attention.output.LayerNorm.bias
+2021-12-12 17:41:00,409 - INFO - allennlp.common.util - _transformer_model.encoder.layer.10.intermediate.dense.weight
+2021-12-12 17:41:00,409 - INFO - allennlp.common.util - _transformer_model.encoder.layer.10.intermediate.dense.bias
+2021-12-12 17:41:00,409 - INFO - allennlp.common.util - _transformer_model.encoder.layer.10.output.dense.weight
+2021-12-12 17:41:00,409 - INFO - allennlp.common.util - _transformer_model.encoder.layer.10.output.dense.bias
+2021-12-12 17:41:00,409 - INFO - allennlp.common.util - _transformer_model.encoder.layer.10.output.LayerNorm.weight
+2021-12-12 17:41:00,409 - INFO - allennlp.common.util - _transformer_model.encoder.layer.10.output.LayerNorm.bias
+2021-12-12 17:41:00,409 - INFO - allennlp.common.util - _transformer_model.encoder.layer.11.attention.self.query.weight
+2021-12-12 17:41:00,410 - INFO - allennlp.common.util - _transformer_model.encoder.layer.11.attention.self.query.bias
+2021-12-12 17:41:00,410 - INFO - allennlp.common.util - _transformer_model.encoder.layer.11.attention.self.key.weight
+2021-12-12 17:41:00,410 - INFO - allennlp.common.util - _transformer_model.encoder.layer.11.attention.self.key.bias
+2021-12-12 17:41:00,410 - INFO - allennlp.common.util - _transformer_model.encoder.layer.11.attention.self.value.weight
+2021-12-12 17:41:00,410 - INFO - allennlp.common.util - _transformer_model.encoder.layer.11.attention.self.value.bias
+2021-12-12 17:41:00,410 - INFO - allennlp.common.util - _transformer_model.encoder.layer.11.attention.output.dense.weight
+2021-12-12 17:41:00,410 - INFO - allennlp.common.util - _transformer_model.encoder.layer.11.attention.output.dense.bias
+2021-12-12 17:41:00,410 - INFO - allennlp.common.util - _transformer_model.encoder.layer.11.attention.output.LayerNorm.weight
+2021-12-12 17:41:00,410 - INFO - allennlp.common.util - _transformer_model.encoder.layer.11.attention.output.LayerNorm.bias
+2021-12-12 17:41:00,411 - INFO - allennlp.common.util - _transformer_model.encoder.layer.11.intermediate.dense.weight
+2021-12-12 17:41:00,411 - INFO - allennlp.common.util - _transformer_model.encoder.layer.11.intermediate.dense.bias
+2021-12-12 17:41:00,411 - INFO - allennlp.common.util - _transformer_model.encoder.layer.11.output.dense.weight
+2021-12-12 17:41:00,411 - INFO - allennlp.common.util - _transformer_model.encoder.layer.11.output.dense.bias
+2021-12-12 17:41:00,411 - INFO - allennlp.common.util - _transformer_model.encoder.layer.11.output.LayerNorm.weight
+2021-12-12 17:41:00,411 - INFO - allennlp.common.util - _transformer_model.encoder.layer.11.output.LayerNorm.bias
+2021-12-12 17:41:00,411 - INFO - allennlp.common.util - _transformer_model.encoder.layer.12.attention.self.query.weight
+2021-12-12 17:41:00,411 - INFO - allennlp.common.util - _transformer_model.encoder.layer.12.attention.self.query.bias
+2021-12-12 17:41:00,411 - INFO - allennlp.common.util - _transformer_model.encoder.layer.12.attention.self.key.weight
+2021-12-12 17:41:00,411 - INFO - allennlp.common.util - _transformer_model.encoder.layer.12.attention.self.key.bias
+2021-12-12 17:41:00,411 - INFO - allennlp.common.util - _transformer_model.encoder.layer.12.attention.self.value.weight
+2021-12-12 17:41:00,411 - INFO - allennlp.common.util - _transformer_model.encoder.layer.12.attention.self.value.bias
+2021-12-12 17:41:00,411 - INFO - allennlp.common.util - _transformer_model.encoder.layer.12.attention.output.dense.weight
+2021-12-12 17:41:00,411 - INFO - allennlp.common.util - _transformer_model.encoder.layer.12.attention.output.dense.bias
+2021-12-12 17:41:00,412 - INFO - allennlp.common.util - _transformer_model.encoder.layer.12.attention.output.LayerNorm.weight
+2021-12-12 17:41:00,412 - INFO - allennlp.common.util - _transformer_model.encoder.layer.12.attention.output.LayerNorm.bias
+2021-12-12 17:41:00,412 - INFO - allennlp.common.util - _transformer_model.encoder.layer.12.intermediate.dense.weight
+2021-12-12 17:41:00,412 - INFO - allennlp.common.util - _transformer_model.encoder.layer.12.intermediate.dense.bias
+2021-12-12 17:41:00,412 - INFO - allennlp.common.util - _transformer_model.encoder.layer.12.output.dense.weight
+2021-12-12 17:41:00,412 - INFO - allennlp.common.util - _transformer_model.encoder.layer.12.output.dense.bias
+2021-12-12 17:41:00,412 - INFO - allennlp.common.util - _transformer_model.encoder.layer.12.output.LayerNorm.weight
+2021-12-12 17:41:00,412 - INFO - allennlp.common.util - _transformer_model.encoder.layer.12.output.LayerNorm.bias
+2021-12-12 17:41:00,412 - INFO - allennlp.common.util - _transformer_model.encoder.layer.13.attention.self.query.weight
+2021-12-12 17:41:00,412 - INFO - allennlp.common.util - _transformer_model.encoder.layer.13.attention.self.query.bias
+2021-12-12 17:41:00,413 - INFO - allennlp.common.util - _transformer_model.encoder.layer.13.attention.self.key.weight
+2021-12-12 17:41:00,413 - INFO - allennlp.common.util - _transformer_model.encoder.layer.13.attention.self.key.bias
+2021-12-12 17:41:00,413 - INFO - allennlp.common.util - _transformer_model.encoder.layer.13.attention.self.value.weight
+2021-12-12 17:41:00,413 - INFO - allennlp.common.util - _transformer_model.encoder.layer.13.attention.self.value.bias
+2021-12-12 17:41:00,413 - INFO - allennlp.common.util - _transformer_model.encoder.layer.13.attention.output.dense.weight
+2021-12-12 17:41:00,413 - INFO - allennlp.common.util - _transformer_model.encoder.layer.13.attention.output.dense.bias
+2021-12-12 17:41:00,413 - INFO - allennlp.common.util - _transformer_model.encoder.layer.13.attention.output.LayerNorm.weight
+2021-12-12 17:41:00,413 - INFO - allennlp.common.util - _transformer_model.encoder.layer.13.attention.output.LayerNorm.bias
+2021-12-12 17:41:00,413 - INFO - allennlp.common.util - _transformer_model.encoder.layer.13.intermediate.dense.weight
+2021-12-12 17:41:00,413 - INFO - allennlp.common.util - _transformer_model.encoder.layer.13.intermediate.dense.bias
+2021-12-12 17:41:00,414 - INFO - allennlp.common.util - _transformer_model.encoder.layer.13.output.dense.weight
+2021-12-12 17:41:00,414 - INFO - allennlp.common.util - _transformer_model.encoder.layer.13.output.dense.bias
+2021-12-12 17:41:00,414 - INFO - allennlp.common.util - _transformer_model.encoder.layer.13.output.LayerNorm.weight
+2021-12-12 17:41:00,414 - INFO - allennlp.common.util - _transformer_model.encoder.layer.13.output.LayerNorm.bias
+2021-12-12 17:41:00,414 - INFO - allennlp.common.util - _transformer_model.encoder.layer.14.attention.self.query.weight
+2021-12-12 17:41:00,414 - INFO - allennlp.common.util - _transformer_model.encoder.layer.14.attention.self.query.bias
+2021-12-12 17:41:00,414 - INFO - allennlp.common.util - _transformer_model.encoder.layer.14.attention.self.key.weight
+2021-12-12 17:41:00,414 - INFO - allennlp.common.util - _transformer_model.encoder.layer.14.attention.self.key.bias
+2021-12-12 17:41:00,414 - INFO - allennlp.common.util - _transformer_model.encoder.layer.14.attention.self.value.weight
+2021-12-12 17:41:00,414 - INFO - allennlp.common.util - _transformer_model.encoder.layer.14.attention.self.value.bias
+2021-12-12 17:41:00,414 - INFO - allennlp.common.util - _transformer_model.encoder.layer.14.attention.output.dense.weight
+2021-12-12 17:41:00,415 - INFO - allennlp.common.util - _transformer_model.encoder.layer.14.attention.output.dense.bias
+2021-12-12 17:41:00,415 - INFO - allennlp.common.util - _transformer_model.encoder.layer.14.attention.output.LayerNorm.weight
+2021-12-12 17:41:00,415 - INFO - allennlp.common.util - _transformer_model.encoder.layer.14.attention.output.LayerNorm.bias
+2021-12-12 17:41:00,415 - INFO - allennlp.common.util - _transformer_model.encoder.layer.14.intermediate.dense.weight
+2021-12-12 17:41:00,415 - INFO - allennlp.common.util - _transformer_model.encoder.layer.14.intermediate.dense.bias
+2021-12-12 17:41:00,415 - INFO - allennlp.common.util - _transformer_model.encoder.layer.14.output.dense.weight
+2021-12-12 17:41:00,415 - INFO - allennlp.common.util - _transformer_model.encoder.layer.14.output.dense.bias
+2021-12-12 17:41:00,415 - INFO - allennlp.common.util - _transformer_model.encoder.layer.14.output.LayerNorm.weight
+2021-12-12 17:41:00,415 - INFO - allennlp.common.util - _transformer_model.encoder.layer.14.output.LayerNorm.bias
+2021-12-12 17:41:00,415 - INFO - allennlp.common.util - _transformer_model.encoder.layer.15.attention.self.query.weight
+2021-12-12 17:41:00,415 - INFO - allennlp.common.util - _transformer_model.encoder.layer.15.attention.self.query.bias
+2021-12-12 17:41:00,415 - INFO - allennlp.common.util - _transformer_model.encoder.layer.15.attention.self.key.weight
+2021-12-12 17:41:00,415 - INFO - allennlp.common.util - _transformer_model.encoder.layer.15.attention.self.key.bias
+2021-12-12 17:41:00,415 - INFO - allennlp.common.util - _transformer_model.encoder.layer.15.attention.self.value.weight
+2021-12-12 17:41:00,415 - INFO - allennlp.common.util - _transformer_model.encoder.layer.15.attention.self.value.bias
+2021-12-12 17:41:00,415 - INFO - allennlp.common.util - _transformer_model.encoder.layer.15.attention.output.dense.weight
+2021-12-12 17:41:00,416 - INFO - allennlp.common.util - _transformer_model.encoder.layer.15.attention.output.dense.bias
+2021-12-12 17:41:00,416 - INFO - allennlp.common.util - _transformer_model.encoder.layer.15.attention.output.LayerNorm.weight
+2021-12-12 17:41:00,416 - INFO - allennlp.common.util - _transformer_model.encoder.layer.15.attention.output.LayerNorm.bias
+2021-12-12 17:41:00,416 - INFO - allennlp.common.util - _transformer_model.encoder.layer.15.intermediate.dense.weight
+2021-12-12 17:41:00,416 - INFO - allennlp.common.util - _transformer_model.encoder.layer.15.intermediate.dense.bias
+2021-12-12 17:41:00,416 - INFO - allennlp.common.util - _transformer_model.encoder.layer.15.output.dense.weight
+2021-12-12 17:41:00,416 - INFO - allennlp.common.util - _transformer_model.encoder.layer.15.output.dense.bias
+2021-12-12 17:41:00,416 - INFO - allennlp.common.util - _transformer_model.encoder.layer.15.output.LayerNorm.weight
+2021-12-12 17:41:00,416 - INFO - allennlp.common.util - _transformer_model.encoder.layer.15.output.LayerNorm.bias
+2021-12-12 17:41:00,417 - INFO - allennlp.common.util - _transformer_model.encoder.layer.16.attention.self.query.weight
+2021-12-12 17:41:00,417 - INFO - allennlp.common.util - _transformer_model.encoder.layer.16.attention.self.query.bias
+2021-12-12 17:41:00,417 - INFO - allennlp.common.util - _transformer_model.encoder.layer.16.attention.self.key.weight
+2021-12-12 17:41:00,417 - INFO - allennlp.common.util - _transformer_model.encoder.layer.16.attention.self.key.bias
+2021-12-12 17:41:00,417 - INFO - allennlp.common.util - _transformer_model.encoder.layer.16.attention.self.value.weight
+2021-12-12 17:41:00,417 - INFO - allennlp.common.util - _transformer_model.encoder.layer.16.attention.self.value.bias
+2021-12-12 17:41:00,417 - INFO - allennlp.common.util - _transformer_model.encoder.layer.16.attention.output.dense.weight
+2021-12-12 17:41:00,417 - INFO - allennlp.common.util - _transformer_model.encoder.layer.16.attention.output.dense.bias
+2021-12-12 17:41:00,418 - INFO - allennlp.common.util - _transformer_model.encoder.layer.16.attention.output.LayerNorm.weight
+2021-12-12 17:41:00,418 - INFO - allennlp.common.util - _transformer_model.encoder.layer.16.attention.output.LayerNorm.bias
+2021-12-12 17:41:00,418 - INFO - allennlp.common.util - _transformer_model.encoder.layer.16.intermediate.dense.weight
+2021-12-12 17:41:00,418 - INFO - allennlp.common.util - _transformer_model.encoder.layer.16.intermediate.dense.bias
+2021-12-12 17:41:00,418 - INFO - allennlp.common.util - _transformer_model.encoder.layer.16.output.dense.weight
+2021-12-12 17:41:00,418 - INFO - allennlp.common.util - _transformer_model.encoder.layer.16.output.dense.bias
+2021-12-12 17:41:00,418 - INFO - allennlp.common.util - _transformer_model.encoder.layer.16.output.LayerNorm.weight
+2021-12-12 17:41:00,418 - INFO - allennlp.common.util - _transformer_model.encoder.layer.16.output.LayerNorm.bias
+2021-12-12 17:41:00,418 - INFO - allennlp.common.util - _transformer_model.encoder.layer.17.attention.self.query.weight
+2021-12-12 17:41:00,418 - INFO - allennlp.common.util - _transformer_model.encoder.layer.17.attention.self.query.bias
+2021-12-12 17:41:00,418 - INFO - allennlp.common.util - _transformer_model.encoder.layer.17.attention.self.key.weight
+2021-12-12 17:41:00,418 - INFO - allennlp.common.util - _transformer_model.encoder.layer.17.attention.self.key.bias
+2021-12-12 17:41:00,418 - INFO - allennlp.common.util - _transformer_model.encoder.layer.17.attention.self.value.weight
+2021-12-12 17:41:00,418 - INFO - allennlp.common.util - _transformer_model.encoder.layer.17.attention.self.value.bias
+2021-12-12 17:41:00,419 - INFO - allennlp.common.util - _transformer_model.encoder.layer.17.attention.output.dense.weight
+2021-12-12 17:41:00,419 - INFO - allennlp.common.util - _transformer_model.encoder.layer.17.attention.output.dense.bias
+2021-12-12 17:41:00,419 - INFO - allennlp.common.util - _transformer_model.encoder.layer.17.attention.output.LayerNorm.weight
+2021-12-12 17:41:00,419 - INFO - allennlp.common.util - _transformer_model.encoder.layer.17.attention.output.LayerNorm.bias
+2021-12-12 17:41:00,419 - INFO - allennlp.common.util - _transformer_model.encoder.layer.17.intermediate.dense.weight
+2021-12-12 17:41:00,419 - INFO - allennlp.common.util - _transformer_model.encoder.layer.17.intermediate.dense.bias
+2021-12-12 17:41:00,419 - INFO - allennlp.common.util - _transformer_model.encoder.layer.17.output.dense.weight
+2021-12-12 17:41:00,419 - INFO - allennlp.common.util - _transformer_model.encoder.layer.17.output.dense.bias
+2021-12-12 17:41:00,419 - INFO - allennlp.common.util - _transformer_model.encoder.layer.17.output.LayerNorm.weight
+2021-12-12 17:41:00,419 - INFO - allennlp.common.util - _transformer_model.encoder.layer.17.output.LayerNorm.bias
+2021-12-12 17:41:00,419 - INFO - allennlp.common.util - _transformer_model.encoder.layer.18.attention.self.query.weight
+2021-12-12 17:41:00,420 - INFO - allennlp.common.util - _transformer_model.encoder.layer.18.attention.self.query.bias
+2021-12-12 17:41:00,420 - INFO - allennlp.common.util - _transformer_model.encoder.layer.18.attention.self.key.weight
+2021-12-12 17:41:00,420 - INFO - allennlp.common.util - _transformer_model.encoder.layer.18.attention.self.key.bias
+2021-12-12 17:41:00,420 - INFO - allennlp.common.util - _transformer_model.encoder.layer.18.attention.self.value.weight
+2021-12-12 17:41:00,420 - INFO - allennlp.common.util - _transformer_model.encoder.layer.18.attention.self.value.bias
+2021-12-12 17:41:00,420 - INFO - allennlp.common.util - _transformer_model.encoder.layer.18.attention.output.dense.weight
+2021-12-12 17:41:00,420 - INFO - allennlp.common.util - _transformer_model.encoder.layer.18.attention.output.dense.bias
+2021-12-12 17:41:00,420 - INFO - allennlp.common.util - _transformer_model.encoder.layer.18.attention.output.LayerNorm.weight
+2021-12-12 17:41:00,420 - INFO - allennlp.common.util - _transformer_model.encoder.layer.18.attention.output.LayerNorm.bias
+2021-12-12 17:41:00,421 - INFO - allennlp.common.util - _transformer_model.encoder.layer.18.intermediate.dense.weight
+2021-12-12 17:41:00,421 - INFO - allennlp.common.util - _transformer_model.encoder.layer.18.intermediate.dense.bias
+2021-12-12 17:41:00,421 - INFO - allennlp.common.util - _transformer_model.encoder.layer.18.output.dense.weight
+2021-12-12 17:41:00,421 - INFO - allennlp.common.util - _transformer_model.encoder.layer.18.output.dense.bias
+2021-12-12 17:41:00,421 - INFO - allennlp.common.util - _transformer_model.encoder.layer.18.output.LayerNorm.weight
+2021-12-12 17:41:00,421 - INFO - allennlp.common.util - _transformer_model.encoder.layer.18.output.LayerNorm.bias
+2021-12-12 17:41:00,421 - INFO - allennlp.common.util - _transformer_model.encoder.layer.19.attention.self.query.weight
+2021-12-12 17:41:00,421 - INFO - allennlp.common.util - _transformer_model.encoder.layer.19.attention.self.query.bias
+2021-12-12 17:41:00,421 - INFO - allennlp.common.util - _transformer_model.encoder.layer.19.attention.self.key.weight
+2021-12-12 17:41:00,421 - INFO - allennlp.common.util - _transformer_model.encoder.layer.19.attention.self.key.bias
+2021-12-12 17:41:00,421 - INFO - allennlp.common.util - _transformer_model.encoder.layer.19.attention.self.value.weight
+2021-12-12 17:41:00,421 - INFO - allennlp.common.util - _transformer_model.encoder.layer.19.attention.self.value.bias
+2021-12-12 17:41:00,421 - INFO - allennlp.common.util - _transformer_model.encoder.layer.19.attention.output.dense.weight
+2021-12-12 17:41:00,422 - INFO - allennlp.common.util - _transformer_model.encoder.layer.19.attention.output.dense.bias
+2021-12-12 17:41:00,422 - INFO - allennlp.common.util - _transformer_model.encoder.layer.19.attention.output.LayerNorm.weight
+2021-12-12 17:41:00,422 - INFO - allennlp.common.util - _transformer_model.encoder.layer.19.attention.output.LayerNorm.bias
+2021-12-12 17:41:00,422 - INFO - allennlp.common.util - _transformer_model.encoder.layer.19.intermediate.dense.weight
+2021-12-12 17:41:00,422 - INFO - allennlp.common.util - _transformer_model.encoder.layer.19.intermediate.dense.bias
+2021-12-12 17:41:00,422 - INFO - allennlp.common.util - _transformer_model.encoder.layer.19.output.dense.weight
+2021-12-12 17:41:00,422 - INFO - allennlp.common.util - _transformer_model.encoder.layer.19.output.dense.bias
+2021-12-12 17:41:00,422 - INFO - allennlp.common.util - _transformer_model.encoder.layer.19.output.LayerNorm.weight
+2021-12-12 17:41:00,422 - INFO - allennlp.common.util - _transformer_model.encoder.layer.19.output.LayerNorm.bias
+2021-12-12 17:41:00,422 - INFO - allennlp.common.util - _transformer_model.encoder.layer.20.attention.self.query.weight
+2021-12-12 17:41:00,422 - INFO - allennlp.common.util - _transformer_model.encoder.layer.20.attention.self.query.bias
+2021-12-12 17:41:00,422 - INFO - allennlp.common.util - _transformer_model.encoder.layer.20.attention.self.key.weight
+2021-12-12 17:41:00,422 - INFO - allennlp.common.util - _transformer_model.encoder.layer.20.attention.self.key.bias
+2021-12-12 17:41:00,422 - INFO - allennlp.common.util - _transformer_model.encoder.layer.20.attention.self.value.weight
+2021-12-12 17:41:00,422 - INFO - allennlp.common.util - _transformer_model.encoder.layer.20.attention.self.value.bias
+2021-12-12 17:41:00,422 - INFO - allennlp.common.util - _transformer_model.encoder.layer.20.attention.output.dense.weight
+2021-12-12 17:41:00,423 - INFO - allennlp.common.util - _transformer_model.encoder.layer.20.attention.output.dense.bias
+2021-12-12 17:41:00,423 - INFO - allennlp.common.util - _transformer_model.encoder.layer.20.attention.output.LayerNorm.weight
+2021-12-12 17:41:00,423 - INFO - allennlp.common.util - _transformer_model.encoder.layer.20.attention.output.LayerNorm.bias
+2021-12-12 17:41:00,423 - INFO - allennlp.common.util - _transformer_model.encoder.layer.20.intermediate.dense.weight
+2021-12-12 17:41:00,423 - INFO - allennlp.common.util - _transformer_model.encoder.layer.20.intermediate.dense.bias
+2021-12-12 17:41:00,423 - INFO - allennlp.common.util - _transformer_model.encoder.layer.20.output.dense.weight
+2021-12-12 17:41:00,423 - INFO - allennlp.common.util - _transformer_model.encoder.layer.20.output.dense.bias
+2021-12-12 17:41:00,423 - INFO - allennlp.common.util - _transformer_model.encoder.layer.20.output.LayerNorm.weight
+2021-12-12 17:41:00,423 - INFO - allennlp.common.util - _transformer_model.encoder.layer.20.output.LayerNorm.bias
+2021-12-12 17:41:00,424 - INFO - allennlp.common.util - _transformer_model.encoder.layer.21.attention.self.query.weight
+2021-12-12 17:41:00,424 - INFO - allennlp.common.util - _transformer_model.encoder.layer.21.attention.self.query.bias
+2021-12-12 17:41:00,424 - INFO - allennlp.common.util - _transformer_model.encoder.layer.21.attention.self.key.weight
+2021-12-12 17:41:00,424 - INFO - allennlp.common.util - _transformer_model.encoder.layer.21.attention.self.key.bias
+2021-12-12 17:41:00,424 - INFO - allennlp.common.util - _transformer_model.encoder.layer.21.attention.self.value.weight
+2021-12-12 17:41:00,424 - INFO - allennlp.common.util - _transformer_model.encoder.layer.21.attention.self.value.bias
+2021-12-12 17:41:00,424 - INFO - allennlp.common.util - _transformer_model.encoder.layer.21.attention.output.dense.weight
+2021-12-12 17:41:00,424 - INFO - allennlp.common.util - _transformer_model.encoder.layer.21.attention.output.dense.bias
+2021-12-12 17:41:00,425 - INFO - allennlp.common.util - _transformer_model.encoder.layer.21.attention.output.LayerNorm.weight
+2021-12-12 17:41:00,425 - INFO - allennlp.common.util - _transformer_model.encoder.layer.21.attention.output.LayerNorm.bias
+2021-12-12 17:41:00,425 - INFO - allennlp.common.util - _transformer_model.encoder.layer.21.intermediate.dense.weight
+2021-12-12 17:41:00,425 - INFO - allennlp.common.util - _transformer_model.encoder.layer.21.intermediate.dense.bias
+2021-12-12 17:41:00,425 - INFO - allennlp.common.util - _transformer_model.encoder.layer.21.output.dense.weight
+2021-12-12 17:41:00,425 - INFO - allennlp.common.util - _transformer_model.encoder.layer.21.output.dense.bias
+2021-12-12 17:41:00,425 - INFO - allennlp.common.util - _transformer_model.encoder.layer.21.output.LayerNorm.weight
+2021-12-12 17:41:00,425 - INFO - allennlp.common.util - _transformer_model.encoder.layer.21.output.LayerNorm.bias
+2021-12-12 17:41:00,425 - INFO - allennlp.common.util - _transformer_model.encoder.layer.22.attention.self.query.weight
+2021-12-12 17:41:00,425 - INFO - allennlp.common.util - _transformer_model.encoder.layer.22.attention.self.query.bias
+2021-12-12 17:41:00,426 - INFO - allennlp.common.util - _transformer_model.encoder.layer.22.attention.self.key.weight
+2021-12-12 17:41:00,426 - INFO - allennlp.common.util - _transformer_model.encoder.layer.22.attention.self.key.bias
+2021-12-12 17:41:00,426 - INFO - allennlp.common.util - _transformer_model.encoder.layer.22.attention.self.value.weight
+2021-12-12 17:41:00,426 - INFO - allennlp.common.util - _transformer_model.encoder.layer.22.attention.self.value.bias
+2021-12-12 17:41:00,426 - INFO - allennlp.common.util - _transformer_model.encoder.layer.22.attention.output.dense.weight
+2021-12-12 17:41:00,426 - INFO - allennlp.common.util - _transformer_model.encoder.layer.22.attention.output.dense.bias
+2021-12-12 17:41:00,426 - INFO - allennlp.common.util - _transformer_model.encoder.layer.22.attention.output.LayerNorm.weight
+2021-12-12 17:41:00,426 - INFO - allennlp.common.util - _transformer_model.encoder.layer.22.attention.output.LayerNorm.bias
+2021-12-12 17:41:00,426 - INFO - allennlp.common.util - _transformer_model.encoder.layer.22.intermediate.dense.weight
+2021-12-12 17:41:00,427 - INFO - allennlp.common.util - _transformer_model.encoder.layer.22.intermediate.dense.bias
+2021-12-12 17:41:00,427 - INFO - allennlp.common.util - _transformer_model.encoder.layer.22.output.dense.weight
+2021-12-12 17:41:00,427 - INFO - allennlp.common.util - _transformer_model.encoder.layer.22.output.dense.bias
+2021-12-12 17:41:00,427 - INFO - allennlp.common.util - _transformer_model.encoder.layer.22.output.LayerNorm.weight
+2021-12-12 17:41:00,427 - INFO - allennlp.common.util - _transformer_model.encoder.layer.22.output.LayerNorm.bias
+2021-12-12 17:41:00,427 - INFO - allennlp.common.util - _transformer_model.encoder.layer.23.attention.self.query.weight
+2021-12-12 17:41:00,427 - INFO - allennlp.common.util - _transformer_model.encoder.layer.23.attention.self.query.bias
+2021-12-12 17:41:00,427 - INFO - allennlp.common.util - _transformer_model.encoder.layer.23.attention.self.key.weight
+2021-12-12 17:41:00,427 - INFO - allennlp.common.util - _transformer_model.encoder.layer.23.attention.self.key.bias
+2021-12-12 17:41:00,427 - INFO - allennlp.common.util - _transformer_model.encoder.layer.23.attention.self.value.weight
+2021-12-12 17:41:00,428 - INFO - allennlp.common.util - _transformer_model.encoder.layer.23.attention.self.value.bias
+2021-12-12 17:41:00,428 - INFO - allennlp.common.util - _transformer_model.encoder.layer.23.attention.output.dense.weight
+2021-12-12 17:41:00,428 - INFO - allennlp.common.util - _transformer_model.encoder.layer.23.attention.output.dense.bias
+2021-12-12 17:41:00,428 - INFO - allennlp.common.util - _transformer_model.encoder.layer.23.attention.output.LayerNorm.weight
+2021-12-12 17:41:00,428 - INFO - allennlp.common.util - _transformer_model.encoder.layer.23.attention.output.LayerNorm.bias
+2021-12-12 17:41:00,428 - INFO - allennlp.common.util - _transformer_model.encoder.layer.23.intermediate.dense.weight
+2021-12-12 17:41:00,428 - INFO - allennlp.common.util - _transformer_model.encoder.layer.23.intermediate.dense.bias
+2021-12-12 17:41:00,429 - INFO - allennlp.common.util - _transformer_model.encoder.layer.23.output.dense.weight
+2021-12-12 17:41:00,429 - INFO - allennlp.common.util - _transformer_model.encoder.layer.23.output.dense.bias
+2021-12-12 17:41:00,429 - INFO - allennlp.common.util - _transformer_model.encoder.layer.23.output.LayerNorm.weight
+2021-12-12 17:41:00,429 - INFO - allennlp.common.util - _transformer_model.encoder.layer.23.output.LayerNorm.bias
+2021-12-12 17:41:00,429 - INFO - allennlp.common.util - _transformer_model.pooler.dense.weight
+2021-12-12 17:41:00,429 - INFO - allennlp.common.util - _transformer_model.pooler.dense.bias
+2021-12-12 17:41:00,429 - INFO - allennlp.common.util - _classifier.weight
+2021-12-12 17:41:00,429 - INFO - allennlp.common.util - _classifier.bias
+2021-12-12 17:41:00,431 - INFO - allennlp.common.params - trainer.optimizer.type = huggingface_adamw
+2021-12-12 17:41:00,432 - INFO - allennlp.common.params - trainer.optimizer.lr = 1e-05
+2021-12-12 17:41:00,432 - INFO - allennlp.common.params - trainer.optimizer.betas = [0.9, 0.98]
+2021-12-12 17:41:00,432 - INFO - allennlp.common.params - trainer.optimizer.eps = 1e-06
+2021-12-12 17:41:00,432 - INFO - allennlp.common.params - trainer.optimizer.weight_decay = 0.1
+2021-12-12 17:41:00,432 - INFO - allennlp.common.params - trainer.optimizer.correct_bias = False
+2021-12-12 17:41:00,434 - INFO - allennlp.training.optimizers - Done constructing parameter groups.
+2021-12-12 17:41:00,434 - INFO - allennlp.training.optimizers - Group 0: ['_transformer_model.encoder.layer.23.output.dense.bias', '_transformer_model.encoder.layer.11.output.LayerNorm.weight', '_transformer_model.encoder.layer.10.intermediate.dense.bias', '_transformer_model.encoder.layer.8.intermediate.dense.bias', '_transformer_model.encoder.layer.22.attention.output.dense.bias', '_transformer_model.encoder.layer.7.attention.self.query.bias', '_transformer_model.encoder.layer.0.attention.output.LayerNorm.weight', '_transformer_model.encoder.layer.11.attention.output.LayerNorm.weight', '_transformer_model.encoder.layer.6.output.LayerNorm.weight', '_transformer_model.encoder.layer.21.output.LayerNorm.bias', '_transformer_model.encoder.layer.19.attention.output.LayerNorm.weight', '_transformer_model.encoder.layer.0.attention.self.value.bias', '_transformer_model.encoder.layer.15.output.dense.bias', '_transformer_model.encoder.layer.22.output.LayerNorm.bias', '_transformer_model.encoder.layer.1.intermediate.dense.bias', '_transformer_model.encoder.layer.5.attention.output.LayerNorm.weight', '_transformer_model.encoder.layer.11.output.dense.bias', '_transformer_model.encoder.layer.23.attention.output.LayerNorm.weight', '_transformer_model.encoder.layer.17.attention.self.query.bias', '_transformer_model.encoder.layer.15.attention.output.LayerNorm.bias', '_transformer_model.encoder.layer.3.attention.output.dense.bias', '_transformer_model.encoder.layer.8.output.LayerNorm.bias', '_transformer_model.encoder.layer.18.output.LayerNorm.bias', '_transformer_model.encoder.layer.4.attention.output.dense.bias', '_transformer_model.encoder.layer.15.attention.self.key.bias', '_transformer_model.encoder.layer.20.attention.output.LayerNorm.weight', '_transformer_model.encoder.layer.19.output.dense.bias', '_transformer_model.encoder.layer.10.attention.output.LayerNorm.bias', '_transformer_model.encoder.layer.13.attention.self.value.bias', '_transformer_model.encoder.layer.4.output.dense.bias', '_transformer_model.encoder.layer.3.output.LayerNorm.bias', '_transformer_model.encoder.layer.10.attention.self.value.bias', '_transformer_model.encoder.layer.5.attention.output.LayerNorm.bias', '_transformer_model.encoder.layer.12.attention.self.key.bias', '_transformer_model.encoder.layer.19.attention.self.value.bias', '_transformer_model.encoder.layer.1.attention.output.LayerNorm.weight', '_transformer_model.encoder.layer.18.attention.self.query.bias', '_transformer_model.encoder.layer.6.attention.output.LayerNorm.bias', '_transformer_model.encoder.layer.20.intermediate.dense.bias', '_transformer_model.encoder.layer.4.attention.self.query.bias', '_transformer_model.encoder.layer.22.attention.self.key.bias', '_transformer_model.encoder.layer.21.attention.self.key.bias', '_transformer_model.encoder.layer.23.attention.self.key.bias', '_transformer_model.encoder.layer.6.intermediate.dense.bias', '_transformer_model.encoder.layer.5.intermediate.dense.bias', '_transformer_model.encoder.layer.10.output.LayerNorm.weight', '_transformer_model.encoder.layer.7.attention.output.LayerNorm.bias', '_transformer_model.encoder.layer.5.output.LayerNorm.bias', '_transformer_model.encoder.layer.14.attention.self.key.bias', '_transformer_model.encoder.layer.3.attention.self.query.bias', '_transformer_model.encoder.layer.18.output.dense.bias', '_transformer_model.encoder.layer.22.attention.output.LayerNorm.weight', '_transformer_model.encoder.layer.6.attention.output.dense.bias', '_transformer_model.encoder.layer.5.output.dense.bias', '_transformer_model.encoder.layer.13.attention.output.dense.bias', '_transformer_model.encoder.layer.2.attention.output.dense.bias', '_transformer_model.encoder.layer.17.output.dense.bias', '_transformer_model.encoder.layer.16.attention.output.LayerNorm.bias', '_transformer_model.encoder.layer.0.output.LayerNorm.bias', '_transformer_model.encoder.layer.2.output.dense.bias', '_transformer_model.embeddings.LayerNorm.bias', '_transformer_model.encoder.layer.14.output.LayerNorm.bias', '_transformer_model.encoder.layer.19.intermediate.dense.bias', '_transformer_model.encoder.layer.1.output.LayerNorm.weight', '_transformer_model.encoder.layer.7.output.LayerNorm.weight', '_transformer_model.encoder.layer.6.attention.self.key.bias', '_transformer_model.encoder.layer.12.attention.self.query.bias', '_transformer_model.encoder.layer.12.attention.output.LayerNorm.weight', '_transformer_model.encoder.layer.9.attention.self.value.bias', '_transformer_model.encoder.layer.6.attention.self.value.bias', '_transformer_model.encoder.layer.19.attention.self.query.bias', '_transformer_model.encoder.layer.22.output.LayerNorm.weight', '_transformer_model.encoder.layer.8.output.LayerNorm.weight', '_transformer_model.encoder.layer.12.attention.self.value.bias', '_transformer_model.encoder.layer.19.attention.self.key.bias', '_transformer_model.encoder.layer.10.attention.self.key.bias', '_transformer_model.encoder.layer.17.attention.output.dense.bias', '_transformer_model.encoder.layer.14.attention.output.dense.bias', '_transformer_model.encoder.layer.10.attention.self.query.bias', '_transformer_model.encoder.layer.12.output.dense.bias', '_transformer_model.encoder.layer.14.attention.self.value.bias', '_transformer_model.encoder.layer.11.attention.output.LayerNorm.bias', '_transformer_model.encoder.layer.8.output.dense.bias', '_transformer_model.encoder.layer.1.attention.output.LayerNorm.bias', '_transformer_model.encoder.layer.13.output.LayerNorm.bias', '_transformer_model.encoder.layer.7.attention.self.key.bias', '_transformer_model.encoder.layer.17.attention.self.value.bias', '_transformer_model.encoder.layer.8.attention.self.query.bias', '_transformer_model.encoder.layer.10.output.dense.bias', '_transformer_model.encoder.layer.20.output.LayerNorm.weight', '_transformer_model.encoder.layer.7.intermediate.dense.bias', '_transformer_model.embeddings.LayerNorm.weight', '_transformer_model.encoder.layer.1.attention.self.query.bias', '_transformer_model.encoder.layer.18.attention.output.LayerNorm.bias', '_transformer_model.encoder.layer.17.intermediate.dense.bias', '_transformer_model.encoder.layer.5.output.LayerNorm.weight', '_transformer_model.encoder.layer.1.attention.self.key.bias', '_transformer_model.encoder.layer.16.intermediate.dense.bias', '_transformer_model.encoder.layer.4.attention.self.key.bias', '_transformer_model.encoder.layer.14.attention.output.LayerNorm.bias', '_transformer_model.encoder.layer.1.output.LayerNorm.bias', '_transformer_model.encoder.layer.12.attention.output.dense.bias', '_transformer_model.encoder.layer.9.output.LayerNorm.weight', '_transformer_model.encoder.layer.16.output.LayerNorm.bias', '_transformer_model.encoder.layer.9.attention.self.key.bias', '_transformer_model.encoder.layer.13.attention.self.query.bias', '_transformer_model.encoder.layer.6.output.dense.bias', '_transformer_model.encoder.layer.16.attention.self.query.bias', '_transformer_model.encoder.layer.1.attention.self.value.bias', '_transformer_model.encoder.layer.20.attention.self.value.bias', '_transformer_model.encoder.layer.16.output.LayerNorm.weight', '_transformer_model.encoder.layer.20.attention.self.query.bias', '_transformer_model.encoder.layer.21.attention.self.query.bias', '_transformer_model.pooler.dense.bias', '_transformer_model.encoder.layer.22.attention.self.value.bias', '_transformer_model.encoder.layer.9.attention.output.LayerNorm.weight', '_transformer_model.encoder.layer.2.attention.output.LayerNorm.weight', '_transformer_model.encoder.layer.13.intermediate.dense.bias', '_transformer_model.encoder.layer.22.output.dense.bias', '_transformer_model.encoder.layer.9.output.LayerNorm.bias', '_transformer_model.encoder.layer.18.attention.self.key.bias', '_transformer_model.encoder.layer.11.attention.self.query.bias', '_transformer_model.encoder.layer.23.attention.output.dense.bias', '_transformer_model.encoder.layer.20.attention.self.key.bias', '_transformer_model.encoder.layer.3.output.LayerNorm.weight', '_transformer_model.encoder.layer.11.intermediate.dense.bias', '_transformer_model.encoder.layer.4.intermediate.dense.bias', '_transformer_model.encoder.layer.16.attention.self.key.bias', '_transformer_model.encoder.layer.18.attention.output.dense.bias', '_transformer_model.encoder.layer.19.attention.output.dense.bias', '_transformer_model.encoder.layer.21.intermediate.dense.bias', '_transformer_model.encoder.layer.3.attention.output.LayerNorm.weight', '_transformer_model.encoder.layer.4.output.LayerNorm.bias', '_transformer_model.encoder.layer.23.attention.self.query.bias', '_transformer_model.encoder.layer.2.intermediate.dense.bias', '_transformer_model.encoder.layer.21.attention.output.LayerNorm.bias', '_transformer_model.encoder.layer.12.attention.output.LayerNorm.bias', '_transformer_model.encoder.layer.0.attention.self.query.bias', '_transformer_model.encoder.layer.8.attention.output.LayerNorm.weight', '_transformer_model.encoder.layer.4.attention.output.LayerNorm.bias', '_transformer_model.encoder.layer.17.attention.output.LayerNorm.weight', '_transformer_model.encoder.layer.16.output.dense.bias', '_transformer_model.encoder.layer.13.output.LayerNorm.weight', '_transformer_model.encoder.layer.22.attention.self.query.bias', '_transformer_model.encoder.layer.20.output.LayerNorm.bias', '_transformer_model.encoder.layer.8.attention.self.value.bias', '_transformer_model.encoder.layer.4.attention.output.LayerNorm.weight', '_transformer_model.encoder.layer.23.output.LayerNorm.bias', '_transformer_model.encoder.layer.21.output.LayerNorm.weight', '_transformer_model.encoder.layer.8.attention.output.dense.bias', '_transformer_model.encoder.layer.3.output.dense.bias', '_transformer_model.encoder.layer.13.attention.output.LayerNorm.weight', '_transformer_model.encoder.layer.0.output.dense.bias', '_transformer_model.encoder.layer.2.attention.self.value.bias', '_transformer_model.encoder.layer.7.attention.output.LayerNorm.weight', '_transformer_model.encoder.layer.9.attention.self.query.bias', '_transformer_model.encoder.layer.14.attention.output.LayerNorm.weight', '_transformer_model.encoder.layer.5.attention.output.dense.bias', '_transformer_model.encoder.layer.17.attention.self.key.bias', '_transformer_model.encoder.layer.11.attention.output.dense.bias', '_transformer_model.encoder.layer.8.attention.self.key.bias', '_transformer_model.encoder.layer.8.attention.output.LayerNorm.bias', '_transformer_model.encoder.layer.21.output.dense.bias', '_transformer_model.encoder.layer.14.output.LayerNorm.weight', '_transformer_model.encoder.layer.4.output.LayerNorm.weight', '_transformer_model.encoder.layer.5.attention.self.key.bias', '_transformer_model.encoder.layer.19.attention.output.LayerNorm.bias', '_transformer_model.encoder.layer.2.output.LayerNorm.weight', '_transformer_model.encoder.layer.19.output.LayerNorm.weight', '_transformer_model.encoder.layer.18.intermediate.dense.bias', '_transformer_model.encoder.layer.23.attention.self.value.bias', '_transformer_model.encoder.layer.2.attention.output.LayerNorm.bias', '_transformer_model.encoder.layer.18.attention.self.value.bias', '_classifier.bias', '_transformer_model.encoder.layer.16.attention.output.LayerNorm.weight', '_transformer_model.encoder.layer.15.intermediate.dense.bias', '_transformer_model.encoder.layer.3.attention.output.LayerNorm.bias', '_transformer_model.encoder.layer.22.attention.output.LayerNorm.bias', '_transformer_model.encoder.layer.23.output.LayerNorm.weight', '_transformer_model.encoder.layer.2.attention.self.query.bias', '_transformer_model.encoder.layer.6.attention.self.query.bias', '_transformer_model.encoder.layer.9.output.dense.bias', '_transformer_model.encoder.layer.18.output.LayerNorm.weight', '_transformer_model.encoder.layer.14.output.dense.bias', '_transformer_model.encoder.layer.0.attention.self.key.bias', '_transformer_model.encoder.layer.3.attention.self.key.bias', '_transformer_model.encoder.layer.23.intermediate.dense.bias', '_transformer_model.encoder.layer.0.output.LayerNorm.weight', '_transformer_model.encoder.layer.12.output.LayerNorm.weight', '_transformer_model.encoder.layer.1.output.dense.bias', '_transformer_model.encoder.layer.4.attention.self.value.bias', '_transformer_model.encoder.layer.12.intermediate.dense.bias', '_transformer_model.encoder.layer.17.output.LayerNorm.weight', '_transformer_model.encoder.layer.19.output.LayerNorm.bias', '_transformer_model.encoder.layer.2.attention.self.key.bias', '_transformer_model.encoder.layer.7.attention.self.value.bias', '_transformer_model.encoder.layer.2.output.LayerNorm.bias', '_transformer_model.encoder.layer.3.intermediate.dense.bias', '_transformer_model.encoder.layer.7.output.LayerNorm.bias', '_transformer_model.encoder.layer.6.output.LayerNorm.bias', '_transformer_model.encoder.layer.15.attention.output.LayerNorm.weight', '_transformer_model.encoder.layer.21.attention.output.LayerNorm.weight', '_transformer_model.encoder.layer.6.attention.output.LayerNorm.weight', '_transformer_model.encoder.layer.10.attention.output.LayerNorm.weight', '_transformer_model.encoder.layer.5.attention.self.value.bias', '_transformer_model.encoder.layer.14.intermediate.dense.bias', '_transformer_model.encoder.layer.7.attention.output.dense.bias', '_transformer_model.encoder.layer.11.attention.self.key.bias', '_transformer_model.encoder.layer.12.output.LayerNorm.bias', '_transformer_model.encoder.layer.21.attention.self.value.bias', '_transformer_model.encoder.layer.20.attention.output.dense.bias', '_transformer_model.encoder.layer.11.attention.self.value.bias', '_transformer_model.encoder.layer.9.attention.output.LayerNorm.bias', '_transformer_model.encoder.layer.0.intermediate.dense.bias', '_transformer_model.encoder.layer.14.attention.self.query.bias', '_transformer_model.encoder.layer.13.output.dense.bias', '_transformer_model.encoder.layer.1.attention.output.dense.bias', '_transformer_model.encoder.layer.16.attention.output.dense.bias', '_transformer_model.encoder.layer.15.output.LayerNorm.bias', '_transformer_model.encoder.layer.17.attention.output.LayerNorm.bias', '_transformer_model.encoder.layer.10.attention.output.dense.bias', '_transformer_model.encoder.layer.7.output.dense.bias', '_transformer_model.encoder.layer.3.attention.self.value.bias', '_transformer_model.encoder.layer.5.attention.self.query.bias', '_transformer_model.encoder.layer.0.attention.output.LayerNorm.bias', '_transformer_model.encoder.layer.9.intermediate.dense.bias', '_transformer_model.encoder.layer.13.attention.self.key.bias', '_transformer_model.encoder.layer.23.attention.output.LayerNorm.bias', '_transformer_model.encoder.layer.15.attention.self.value.bias', '_transformer_model.encoder.layer.10.output.LayerNorm.bias', '_transformer_model.encoder.layer.9.attention.output.dense.bias', '_transformer_model.encoder.layer.21.attention.output.dense.bias', '_transformer_model.encoder.layer.13.attention.output.LayerNorm.bias', '_transformer_model.encoder.layer.11.output.LayerNorm.bias', '_transformer_model.encoder.layer.15.output.LayerNorm.weight', '_transformer_model.encoder.layer.22.intermediate.dense.bias', '_transformer_model.encoder.layer.15.attention.output.dense.bias', '_transformer_model.encoder.layer.20.attention.output.LayerNorm.bias', '_transformer_model.encoder.layer.17.output.LayerNorm.bias', '_transformer_model.encoder.layer.16.attention.self.value.bias', '_transformer_model.encoder.layer.18.attention.output.LayerNorm.weight', '_transformer_model.encoder.layer.0.attention.output.dense.bias', '_transformer_model.encoder.layer.20.output.dense.bias', '_transformer_model.encoder.layer.15.attention.self.query.bias'], {'weight_decay': 0}
+2021-12-12 17:41:00,434 - INFO - allennlp.training.optimizers - Group 1: ['_transformer_model.encoder.layer.18.attention.self.query.weight', '_transformer_model.encoder.layer.19.attention.self.key.weight', '_transformer_model.encoder.layer.7.intermediate.dense.weight', '_transformer_model.encoder.layer.2.attention.output.dense.weight', '_transformer_model.encoder.layer.13.attention.self.key.weight', '_transformer_model.encoder.layer.7.attention.self.key.weight', '_transformer_model.encoder.layer.8.output.dense.weight', '_transformer_model.encoder.layer.21.attention.self.value.weight', '_transformer_model.encoder.layer.21.attention.self.query.weight', '_transformer_model.encoder.layer.8.attention.self.query.weight', '_transformer_model.encoder.layer.23.output.dense.weight', '_transformer_model.encoder.layer.9.attention.self.value.weight', '_transformer_model.embeddings.position_embeddings.weight', '_transformer_model.encoder.layer.15.attention.self.query.weight', '_transformer_model.encoder.layer.6.attention.output.dense.weight', '_transformer_model.encoder.layer.9.attention.output.dense.weight', '_transformer_model.encoder.layer.9.intermediate.dense.weight', '_transformer_model.encoder.layer.5.output.dense.weight', '_transformer_model.encoder.layer.15.attention.self.value.weight', '_transformer_model.encoder.layer.12.intermediate.dense.weight', '_transformer_model.encoder.layer.16.output.dense.weight', '_transformer_model.encoder.layer.12.attention.output.dense.weight', '_transformer_model.encoder.layer.10.attention.self.query.weight', '_transformer_model.encoder.layer.3.attention.output.dense.weight', '_transformer_model.encoder.layer.20.intermediate.dense.weight', '_transformer_model.encoder.layer.2.intermediate.dense.weight', '_transformer_model.encoder.layer.11.attention.self.value.weight', '_transformer_model.encoder.layer.10.attention.self.value.weight', '_transformer_model.encoder.layer.22.attention.self.value.weight', '_transformer_model.encoder.layer.17.attention.self.key.weight', '_transformer_model.encoder.layer.1.attention.self.key.weight', '_transformer_model.encoder.layer.3.output.dense.weight', '_transformer_model.encoder.layer.19.attention.output.dense.weight', '_transformer_model.encoder.layer.21.output.dense.weight', '_transformer_model.encoder.layer.2.attention.self.value.weight', '_transformer_model.encoder.layer.16.attention.self.value.weight', '_transformer_model.encoder.layer.20.attention.self.query.weight', '_transformer_model.encoder.layer.15.attention.self.key.weight', '_transformer_model.encoder.layer.4.attention.output.dense.weight', '_transformer_model.encoder.layer.20.output.dense.weight', '_transformer_model.encoder.layer.3.intermediate.dense.weight', '_transformer_model.encoder.layer.16.intermediate.dense.weight', '_transformer_model.encoder.layer.0.attention.self.query.weight', '_transformer_model.encoder.layer.9.attention.self.key.weight', '_transformer_model.encoder.layer.10.output.dense.weight', '_transformer_model.encoder.layer.17.attention.self.value.weight', '_transformer_model.encoder.layer.5.attention.output.dense.weight', '_transformer_model.encoder.layer.16.attention.output.dense.weight', '_transformer_model.encoder.layer.3.attention.self.query.weight', '_transformer_model.embeddings.word_embeddings.weight', '_transformer_model.encoder.layer.18.intermediate.dense.weight', '_transformer_model.encoder.layer.11.attention.output.dense.weight', '_transformer_model.encoder.layer.15.attention.output.dense.weight', '_transformer_model.encoder.layer.15.output.dense.weight', '_transformer_model.encoder.layer.21.attention.output.dense.weight', '_transformer_model.encoder.layer.9.output.dense.weight', '_transformer_model.encoder.layer.11.output.dense.weight', '_transformer_model.encoder.layer.19.attention.self.query.weight', '_transformer_model.encoder.layer.6.attention.self.value.weight', '_transformer_model.encoder.layer.2.attention.self.query.weight', '_transformer_model.encoder.layer.21.attention.self.key.weight', '_transformer_model.encoder.layer.0.output.dense.weight', '_transformer_model.encoder.layer.17.output.dense.weight', '_transformer_model.encoder.layer.7.output.dense.weight', '_transformer_model.encoder.layer.19.output.dense.weight', '_transformer_model.encoder.layer.13.output.dense.weight', '_transformer_model.encoder.layer.20.attention.output.dense.weight', '_transformer_model.encoder.layer.1.output.dense.weight', '_transformer_model.encoder.layer.7.attention.self.query.weight', '_transformer_model.encoder.layer.12.output.dense.weight', '_transformer_model.encoder.layer.23.attention.self.value.weight', '_transformer_model.encoder.layer.17.attention.self.query.weight', '_transformer_model.encoder.layer.3.attention.self.key.weight', '_transformer_model.encoder.layer.4.output.dense.weight', '_transformer_model.encoder.layer.8.attention.self.key.weight', '_transformer_model.encoder.layer.14.attention.self.value.weight', '_transformer_model.encoder.layer.18.attention.self.key.weight', '_transformer_model.encoder.layer.14.attention.self.key.weight', '_transformer_model.encoder.layer.4.attention.self.value.weight', '_transformer_model.encoder.layer.20.attention.self.key.weight', '_transformer_model.embeddings.token_type_embeddings.weight', '_transformer_model.encoder.layer.14.attention.self.query.weight', '_transformer_model.encoder.layer.13.intermediate.dense.weight', '_transformer_model.encoder.layer.18.attention.output.dense.weight', '_transformer_model.encoder.layer.20.attention.self.value.weight', '_transformer_model.encoder.layer.22.attention.self.query.weight', '_transformer_model.encoder.layer.6.attention.self.key.weight', '_transformer_model.encoder.layer.8.intermediate.dense.weight', '_transformer_model.encoder.layer.23.intermediate.dense.weight', '_transformer_model.encoder.layer.22.attention.self.key.weight', '_transformer_model.encoder.layer.0.attention.self.key.weight', '_transformer_model.encoder.layer.4.attention.self.query.weight', '_transformer_model.encoder.layer.2.attention.self.key.weight', '_transformer_model.encoder.layer.23.attention.output.dense.weight', '_transformer_model.encoder.layer.6.intermediate.dense.weight', '_transformer_model.encoder.layer.6.output.dense.weight', '_transformer_model.encoder.layer.12.attention.self.query.weight', '_transformer_model.encoder.layer.10.attention.output.dense.weight', '_transformer_model.encoder.layer.18.output.dense.weight', '_transformer_model.pooler.dense.weight', '_transformer_model.encoder.layer.23.attention.self.key.weight', '_transformer_model.encoder.layer.7.attention.output.dense.weight', '_transformer_model.encoder.layer.17.intermediate.dense.weight', '_transformer_model.encoder.layer.4.attention.self.key.weight', '_transformer_model.encoder.layer.22.output.dense.weight', '_transformer_model.encoder.layer.13.attention.self.value.weight', '_transformer_model.encoder.layer.1.attention.self.value.weight', '_transformer_model.encoder.layer.13.attention.self.query.weight', '_transformer_model.encoder.layer.5.attention.self.value.weight', '_transformer_model.encoder.layer.7.attention.self.value.weight', '_transformer_model.encoder.layer.12.attention.self.value.weight', '_transformer_model.encoder.layer.1.attention.self.query.weight', '_transformer_model.encoder.layer.3.attention.self.value.weight', '_transformer_model.encoder.layer.5.attention.self.query.weight', '_transformer_model.encoder.layer.10.attention.self.key.weight', '_transformer_model.encoder.layer.0.intermediate.dense.weight', '_transformer_model.encoder.layer.0.attention.self.value.weight', '_transformer_model.encoder.layer.11.attention.self.key.weight', '_transformer_model.encoder.layer.14.attention.output.dense.weight', '_transformer_model.encoder.layer.16.attention.self.key.weight', '_transformer_model.encoder.layer.10.intermediate.dense.weight', '_transformer_model.encoder.layer.1.intermediate.dense.weight', '_transformer_model.encoder.layer.2.output.dense.weight', '_transformer_model.encoder.layer.16.attention.self.query.weight', '_transformer_model.encoder.layer.17.attention.output.dense.weight', '_transformer_model.encoder.layer.23.attention.self.query.weight', '_transformer_model.encoder.layer.11.intermediate.dense.weight', '_transformer_model.encoder.layer.18.attention.self.value.weight', '_transformer_model.encoder.layer.6.attention.self.query.weight', '_transformer_model.encoder.layer.22.attention.output.dense.weight', '_transformer_model.encoder.layer.12.attention.self.key.weight', '_transformer_model.encoder.layer.4.intermediate.dense.weight', '_transformer_model.encoder.layer.0.attention.output.dense.weight', '_transformer_model.encoder.layer.13.attention.output.dense.weight', '_transformer_model.encoder.layer.15.intermediate.dense.weight', '_transformer_model.encoder.layer.8.attention.self.value.weight', '_transformer_model.encoder.layer.21.intermediate.dense.weight', '_transformer_model.encoder.layer.14.intermediate.dense.weight', '_transformer_model.encoder.layer.5.intermediate.dense.weight', '_transformer_model.encoder.layer.5.attention.self.key.weight', '_transformer_model.encoder.layer.19.attention.self.value.weight', '_classifier.weight', '_transformer_model.encoder.layer.1.attention.output.dense.weight', '_transformer_model.encoder.layer.22.intermediate.dense.weight', '_transformer_model.encoder.layer.19.intermediate.dense.weight', '_transformer_model.encoder.layer.8.attention.output.dense.weight', '_transformer_model.encoder.layer.9.attention.self.query.weight', '_transformer_model.encoder.layer.11.attention.self.query.weight', '_transformer_model.encoder.layer.14.output.dense.weight'], {}
+2021-12-12 17:41:00,435 - WARNING - allennlp.training.optimizers - When constructing parameter groups, layer_norm\.weight does not match any parameter name
+2021-12-12 17:41:00,435 - INFO - allennlp.training.optimizers - Number of trainable parameters: 355361794
+2021-12-12 17:41:00,439 - INFO - allennlp.common.params - trainer.learning_rate_scheduler.type = slanted_triangular
+2021-12-12 17:41:00,439 - WARNING - allennlp.common.from_params - Parameter num_epochs for class SlantedTriangular was found in both **extras and in params. Using the specification found in params, but you probably put a key in a config file that you didn't need, and if it is different from what we get from **extras, you might get unexpected behavior.
+2021-12-12 17:41:00,439 - INFO - allennlp.common.params - trainer.learning_rate_scheduler.num_epochs = 4
+2021-12-12 17:41:00,439 - WARNING - allennlp.common.from_params - Parameter num_steps_per_epoch for class SlantedTriangular was found in both **extras and in params. Using the specification found in params, but you probably put a key in a config file that you didn't need, and if it is different from what we get from **extras, you might get unexpected behavior.
+2021-12-12 17:41:00,440 - INFO - allennlp.common.params - trainer.learning_rate_scheduler.num_steps_per_epoch = 7442
+2021-12-12 17:41:00,440 - INFO - allennlp.common.params - trainer.learning_rate_scheduler.cut_frac = 0.06
+2021-12-12 17:41:00,440 - INFO - allennlp.common.params - trainer.learning_rate_scheduler.ratio = 32
+2021-12-12 17:41:00,440 - INFO - allennlp.common.params - trainer.learning_rate_scheduler.last_epoch = -1
+2021-12-12 17:41:00,440 - INFO - allennlp.common.params - trainer.learning_rate_scheduler.gradual_unfreezing = False
+2021-12-12 17:41:00,440 - INFO - allennlp.common.params - trainer.learning_rate_scheduler.discriminative_fine_tuning = False
+2021-12-12 17:41:00,441 - INFO - allennlp.common.params - trainer.learning_rate_scheduler.decay_factor = 0.38
+2021-12-12 17:41:00,441 - INFO - allennlp.common.params - trainer.checkpointer.keep_serialized_model_every_num_seconds = None
+2021-12-12 17:41:00,441 - INFO - allennlp.common.params - trainer.checkpointer.num_serialized_models_to_keep = 1
+2021-12-12 17:41:00,441 - INFO - allennlp.common.params - trainer.checkpointer.model_save_interval = None
+2021-12-12 17:41:00,465 - INFO - allennlp.training.trainer - Beginning training.
+2021-12-12 17:41:00,465 - INFO - allennlp.training.trainer - Epoch 0/3
+2021-12-12 17:41:00,465 - INFO - allennlp.training.trainer - Peak CPU memory usage MB: 9889.948
+2021-12-12 17:41:01,139 - INFO - allennlp.training.trainer - GPU 0 memory usage MB: 3
+2021-12-12 17:41:01,140 - INFO - allennlp.training.trainer - GPU 1 memory usage MB: 2540
+2021-12-12 17:41:01,150 - INFO - allennlp.training.trainer - GPU 2 memory usage MB: 3
+2021-12-12 17:41:01,161 - INFO - allennlp.training.trainer - GPU 3 memory usage MB: 3
+2021-12-12 17:41:01,171 - INFO - allennlp.training.trainer - GPU 4 memory usage MB: 29841
+2021-12-12 17:41:01,197 - INFO - allennlp.training.trainer - GPU 5 memory usage MB: 3
+2021-12-12 17:41:01,202 - INFO - allennlp.training.trainer - GPU 6 memory usage MB: 3
+2021-12-12 17:41:01,213 - INFO - allennlp.training.trainer - GPU 7 memory usage MB: 3
+2021-12-12 17:41:01,240 - INFO - allennlp.training.trainer - GPU 8 memory usage MB: 3
+2021-12-12 17:41:01,245 - INFO - allennlp.training.trainer - GPU 9 memory usage MB: 22738
+2021-12-12 17:41:01,267 - INFO - allennlp.training.trainer - Training
+
+  0%|                                                                                                                                  | 0/4361 [00:00<?, ?it/s]/vol/bitbucket/aeg19/.envs/lorikeet/leapofthought/lib/python3.6/site-packages/transformers/optimization.py:155: UserWarning: This overload of add_ is deprecated:
+	add_(Number alpha, Tensor other)
+Consider using one of the following signatures instead:
+	add_(Tensor other, *, Number alpha) (Triggered internally at  ../torch/csrc/utils/python_arg_parser.cpp:1050.)
+  exp_avg.mul_(beta1).add_(1.0 - beta1, grad)
+EM: 0.7500, loss: 0.5903, reg_loss: 0.0000 ||:   0%|                                                                         | 1/4361 [00:02<2:35:56,  2.15s/it]EM: 0.6875, loss: 0.6330, reg_loss: 0.0000 ||:   0%|                                                                         | 2/4361 [00:03<2:01:11,  1.67s/it]EM: 0.5833, loss: 0.6777, reg_loss: 0.0000 ||:   0%|                                                                         | 3/4361 [00:04<1:49:19,  1.51s/it]EM: 0.5938, loss: 0.6760, reg_loss: 0.0000 ||:   0%|                                                                         | 4/4361 [00:06<1:41:49,  1.40s/it]EM: 0.5875, loss: 0.6785, reg_loss: 0.0000 ||:   0%|                                                                         | 5/4361 [00:07<1:36:49,  1.33s/it]EM: 0.5938, loss: 0.6725, reg_loss: 0.0000 ||:   0%|                                                                         | 6/4361 [00:08<1:36:12,  1.33s/it]EM: 0.5893, loss: 0.6670, reg_loss: 0.0000 ||:   0%|                                                                         | 7/4361 [00:09<1:34:08,  1.30s/it]EM: 0.5781, loss: 0.6734, reg_loss: 0.0000 ||:   0%|▏                                                                        | 8/4361 [00:11<1:38:35,  1.36s/it]EM: 0.5694, loss: 0.6761, reg_loss: 0.0000 ||:   0%|▏                                                                        | 9/4361 [00:12<1:34:22,  1.30s/it]EM: 0.5813, loss: 0.6735, reg_loss: 0.0000 ||:   0%|▏                                                                       | 10/4361 [00:14<1:40:05,  1.38s/it]EM: 0.5511, loss: 0.6848, reg_loss: 0.0000 ||:   0%|▏                                                                       | 11/4361 [00:15<1:36:58,  1.34s/it]EM: 0.5521, loss: 0.6876, reg_loss: 0.0000 ||:   0%|▏                                                                       | 12/4361 [00:16<1:35:16,  1.31s/it]EM: 0.5529, loss: 0.6875, reg_loss: 0.0000 ||:   0%|▏                                                                       | 13/4361 [00:17<1:33:06,  1.28s/it]EM: 0.5580, loss: 0.6854, reg_loss: 0.0000 ||:   0%|▏                                                                       | 14/4361 [00:18<1:30:16,  1.25s/it]EM: 0.5667, loss: 0.6825, reg_loss: 0.0000 ||:   0%|▏                                                                       | 15/4361 [00:20<1:36:09,  1.33s/it]EM: 0.5625, loss: 0.6835, reg_loss: 0.0000 ||:   0%|▎                                                                       | 16/4361 [00:21<1:36:48,  1.34s/it]EM: 0.5551, loss: 0.6850, reg_loss: 0.0000 ||:   0%|▎                                                                       | 17/4361 [00:23<1:34:46,  1.31s/it]EM: 0.5451, loss: 0.6878, reg_loss: 0.0000 ||:   0%|▎                                                                       | 18/4361 [00:24<1:36:08,  1.33s/it]EM: 0.5526, loss: 0.6859, reg_loss: 0.0000 ||:   0%|▎                                                                       | 19/4361 [00:25<1:35:03,  1.31s/it]EM: 0.5437, loss: 0.6859, reg_loss: 0.0000 ||:   0%|▎                                                                       | 20/4361 [00:26<1:33:42,  1.30s/it]EM: 0.5327, loss: 0.6901, reg_loss: 0.0000 ||:   0%|▎                                                                       | 21/4361 [00:28<1:32:17,  1.28s/it]EM: 0.5284, loss: 0.6933, reg_loss: 0.0000 ||:   1%|▎                                                                       | 22/4361 [00:29<1:32:02,  1.27s/it]EM: 0.5299, loss: 0.6925, reg_loss: 0.0000 ||:   1%|▍                                                                       | 23/4361 [00:30<1:31:46,  1.27s/it]EM: 0.5312, loss: 0.6935, reg_loss: 0.0000 ||:   1%|▍                                                                       | 24/4361 [00:32<1:33:32,  1.29s/it]EM: 0.5225, loss: 0.6948, reg_loss: 0.0000 ||:   1%|▍                                                                       | 25/4361 [00:33<1:33:28,  1.29s/it]EM: 0.5240, loss: 0.6945, reg_loss: 0.0000 ||:   1%|▍                                                                       | 26/4361 [00:34<1:30:50,  1.26s/it]EM: 0.5278, loss: 0.6929, reg_loss: 0.0000 ||:   1%|▍                                                                       | 27/4361 [00:35<1:30:15,  1.25s/it]EM: 0.5312, loss: 0.6925, reg_loss: 0.0000 ||:   1%|▍                                                                       | 28/4361 [00:36<1:30:15,  1.25s/it]EM: 0.5302, loss: 0.6929, reg_loss: 0.0000 ||:   1%|▍                                                                       | 29/4361 [00:38<1:28:00,  1.22s/it]EM: 0.5312, loss: 0.6929, reg_loss: 0.0000 ||:   1%|▍                                                                       | 30/4361 [00:39<1:27:49,  1.22s/it]EM: 0.5323, loss: 0.6940, reg_loss: 0.0000 ||:   1%|▌                                                                       | 31/4361 [00:40<1:28:05,  1.22s/it]EM: 0.5312, loss: 0.6949, reg_loss: 0.0000 ||:   1%|▌                                                                       | 32/4361 [00:41<1:24:26,  1.17s/it]EM: 0.5360, loss: 0.6934, reg_loss: 0.0000 ||:   1%|▌                                                                       | 33/4361 [00:42<1:23:44,  1.16s/it]EM: 0.5312, loss: 0.6941, reg_loss: 0.0000 ||:   1%|▌                                                                       | 34/4361 [00:43<1:24:27,  1.17s/it]EM: 0.5339, loss: 0.6949, reg_loss: 0.0000 ||:   1%|▌                                                                       | 35/4361 [00:45<1:26:36,  1.20s/it]EM: 0.5347, loss: 0.6945, reg_loss: 0.0000 ||:   1%|▌                                                                       | 36/4361 [00:46<1:28:37,  1.23s/it]EM: 0.5304, loss: 0.6943, reg_loss: 0.0000 ||:   1%|▌                                                                       | 37/4361 [00:47<1:29:55,  1.25s/it]EM: 0.5312, loss: 0.6947, reg_loss: 0.0000 ||:   1%|▋                                                                       | 38/4361 [00:49<1:30:33,  1.26s/it]EM: 0.5304, loss: 0.6959, reg_loss: 0.0000 ||:   1%|▋                                                                       | 39/4361 [00:50<1:30:17,  1.25s/it]EM: 0.5344, loss: 0.6946, reg_loss: 0.0000 ||:   1%|▋                                                                       | 40/4361 [00:51<1:28:58,  1.24s/it]EM: 0.5290, loss: 0.6963, reg_loss: 0.0000 ||:   1%|▋                                                                       | 41/4361 [00:52<1:29:52,  1.25s/it]EM: 0.5268, loss: 0.6970, reg_loss: 0.0000 ||:   1%|▋                                                                       | 42/4361 [00:54<1:28:47,  1.23s/it]EM: 0.5276, loss: 0.6978, reg_loss: 0.0000 ||:   1%|▋                                                                       | 43/4361 [00:55<1:32:10,  1.28s/it]EM: 0.5227, loss: 0.6982, reg_loss: 0.0000 ||:   1%|▋                                                                       | 44/4361 [00:56<1:32:12,  1.28s/it]EM: 0.5236, loss: 0.6983, reg_loss: 0.0000 ||:   1%|▋                                                                       | 45/4361 [00:57<1:32:47,  1.29s/it]EM: 0.5245, loss: 0.6980, reg_loss: 0.0000 ||:   1%|▊                                                                       | 46/4361 [00:59<1:31:43,  1.28s/it]EM: 0.5239, loss: 0.6977, reg_loss: 0.0000 ||:   1%|▊                                                                       | 47/4361 [01:00<1:31:40,  1.28s/it]EM: 0.5234, loss: 0.6979, reg_loss: 0.0000 ||:   1%|▊                                                                       | 48/4361 [01:01<1:31:00,  1.27s/it]EM: 0.5255, loss: 0.6977, reg_loss: 0.0000 ||:   1%|▊                                                                       | 49/4361 [01:03<1:31:32,  1.27s/it]EM: 0.5225, loss: 0.6981, reg_loss: 0.0000 ||:   1%|▊                                                                       | 50/4361 [01:04<1:31:06,  1.27s/it]EM: 0.5208, loss: 0.6984, reg_loss: 0.0000 ||:   1%|▊                                                                       | 51/4361 [01:05<1:29:03,  1.24s/it]EM: 0.5192, loss: 0.6983, reg_loss: 0.0000 ||:   1%|▊                                                                       | 52/4361 [01:06<1:28:22,  1.23s/it]EM: 0.5224, loss: 0.6973, reg_loss: 0.0000 ||:   1%|▉                                                                       | 53/4361 [01:07<1:30:01,  1.25s/it]EM: 0.5197, loss: 0.6979, reg_loss: 0.0000 ||:   1%|▉                                                                       | 54/4361 [01:09<1:30:54,  1.27s/it]EM: 0.5205, loss: 0.6977, reg_loss: 0.0000 ||:   1%|▉                                                                       | 55/4361 [01:10<1:30:03,  1.25s/it]EM: 0.5212, loss: 0.6975, reg_loss: 0.0000 ||:   1%|▉                                                                       | 56/4361 [01:11<1:29:47,  1.25s/it]EM: 0.5208, loss: 0.6981, reg_loss: 0.0000 ||:   1%|▉                                                                       | 57/4361 [01:12<1:28:58,  1.24s/it]EM: 0.5216, loss: 0.6977, reg_loss: 0.0000 ||:   1%|▉                                                                       | 58/4361 [01:14<1:28:19,  1.23s/it]EM: 0.5180, loss: 0.6984, reg_loss: 0.0000 ||:   1%|▉                                                                       | 59/4361 [01:15<1:26:58,  1.21s/it]EM: 0.5135, loss: 0.6995, reg_loss: 0.0000 ||:   1%|▉                                                                       | 60/4361 [01:16<1:28:56,  1.24s/it]EM: 0.5154, loss: 0.6993, reg_loss: 0.0000 ||:   1%|█                                                                       | 61/4361 [01:17<1:26:49,  1.21s/it]EM: 0.5161, loss: 0.6991, reg_loss: 0.0000 ||:   1%|█                                                                       | 62/4361 [01:18<1:26:39,  1.21s/it]EM: 0.5159, loss: 0.6986, reg_loss: 0.0000 ||:   1%|█                                                                       | 63/4361 [01:20<1:26:45,  1.21s/it]EM: 0.5146, loss: 0.6990, reg_loss: 0.0000 ||:   1%|█                                                                       | 64/4361 [01:21<1:27:32,  1.22s/it]EM: 0.5144, loss: 0.6992, reg_loss: 0.0000 ||:   1%|█                                                                       | 65/4361 [01:22<1:27:21,  1.22s/it]EM: 0.5123, loss: 0.6995, reg_loss: 0.0000 ||:   2%|█                                                                       | 66/4361 [01:23<1:25:41,  1.20s/it]EM: 0.5131, loss: 0.6996, reg_loss: 0.0000 ||:   2%|█                                                                       | 67/4361 [01:24<1:23:37,  1.17s/it]EM: 0.5119, loss: 0.6995, reg_loss: 0.0000 ||:   2%|█                                                                       | 68/4361 [01:26<1:26:28,  1.21s/it]EM: 0.5118, loss: 0.6996, reg_loss: 0.0000 ||:   2%|█▏                                                                      | 69/4361 [01:27<1:27:37,  1.22s/it]EM: 0.5089, loss: 0.7000, reg_loss: 0.0000 ||:   2%|█▏                                                                      | 70/4361 [01:28<1:31:20,  1.28s/it]EM: 0.5079, loss: 0.7004, reg_loss: 0.0000 ||:   2%|█▏                                                                      | 71/4361 [01:30<1:30:32,  1.27s/it]EM: 0.5095, loss: 0.7000, reg_loss: 0.0000 ||:   2%|█▏                                                                      | 72/4361 [01:31<1:30:15,  1.26s/it]EM: 0.5128, loss: 0.6993, reg_loss: 0.0000 ||:   2%|█▏                                                                      | 73/4361 [01:32<1:31:02,  1.27s/it]EM: 0.5093, loss: 0.7001, reg_loss: 0.0000 ||:   2%|█▏                                                                      | 74/4361 [01:34<1:32:20,  1.29s/it]EM: 0.5125, loss: 0.6995, reg_loss: 0.0000 ||:   2%|█▏                                                                      | 75/4361 [01:35<1:31:20,  1.28s/it]EM: 0.5107, loss: 0.6997, reg_loss: 0.0000 ||:   2%|█▎                                                                      | 76/4361 [01:36<1:29:34,  1.25s/it]EM: 0.5106, loss: 0.6998, reg_loss: 0.0000 ||:   2%|█▎                                                                      | 77/4361 [01:37<1:31:24,  1.28s/it]EM: 0.5104, loss: 0.6998, reg_loss: 0.0000 ||:   2%|█▎                                                                      | 78/4361 [01:39<1:31:37,  1.28s/it]EM: 0.5111, loss: 0.6996, reg_loss: 0.0000 ||:   2%|█▎                                                                      | 79/4361 [01:40<1:30:59,  1.27s/it]EM: 0.5109, loss: 0.6998, reg_loss: 0.0000 ||:   2%|█▎                                                                      | 80/4361 [01:41<1:29:20,  1.25s/it]EM: 0.5093, loss: 0.6996, reg_loss: 0.0000 ||:   2%|█▎                                                                      | 81/4361 [01:42<1:27:18,  1.22s/it]EM: 0.5084, loss: 0.6999, reg_loss: 0.0000 ||:   2%|█▎                                                                      | 82/4361 [01:43<1:26:28,  1.21s/it]EM: 0.5075, loss: 0.7001, reg_loss: 0.0000 ||:   2%|█▎                                                                      | 83/4361 [01:45<1:25:19,  1.20s/it]EM: 0.5067, loss: 0.7002, reg_loss: 0.0000 ||:   2%|█▍                                                                      | 84/4361 [01:46<1:24:07,  1.18s/it]EM: 0.5066, loss: 0.6996, reg_loss: 0.0000 ||:   2%|█▍                                                                      | 85/4361 [01:47<1:24:38,  1.19s/it]EM: 0.5073, loss: 0.6997, reg_loss: 0.0000 ||:   2%|█▍                                                                      | 86/4361 [01:48<1:23:46,  1.18s/it]EM: 0.5057, loss: 0.7001, reg_loss: 0.0000 ||:   2%|█▍                                                                      | 87/4361 [01:49<1:26:54,  1.22s/it]EM: 0.5085, loss: 0.6998, reg_loss: 0.0000 ||:   2%|█▍                                                                      | 88/4361 [01:51<1:27:35,  1.23s/it]EM: 0.5084, loss: 0.6996, reg_loss: 0.0000 ||:   2%|█▍                                                                      | 89/4361 [01:52<1:26:30,  1.22s/it]EM: 0.5083, loss: 0.6997, reg_loss: 0.0000 ||:   2%|█▍                                                                      | 90/4361 [01:53<1:23:17,  1.17s/it]EM: 0.5069, loss: 0.6997, reg_loss: 0.0000 ||:   2%|█▌                                                                      | 91/4361 [01:54<1:24:46,  1.19s/it]EM: 0.5048, loss: 0.7002, reg_loss: 0.0000 ||:   2%|█▌                                                                      | 92/4361 [01:55<1:26:35,  1.22s/it]EM: 0.5060, loss: 0.6998, reg_loss: 0.0000 ||:   2%|█▌                                                                      | 93/4361 [01:57<1:24:48,  1.19s/it]EM: 0.5060, loss: 0.6997, reg_loss: 0.0000 ||:   2%|█▌                                                                      | 94/4361 [01:58<1:24:46,  1.19s/it]EM: 0.5046, loss: 0.6998, reg_loss: 0.0000 ||:   2%|█▌                                                                      | 95/4361 [01:59<1:25:45,  1.21s/it]EM: 0.5065, loss: 0.6993, reg_loss: 0.0000 ||:   2%|█▌                                                                      | 96/4361 [02:00<1:22:04,  1.15s/it]EM: 0.5071, loss: 0.6993, reg_loss: 0.0000 ||:   2%|█▌                                                                      | 97/4361 [02:01<1:22:44,  1.16s/it]EM: 0.5089, loss: 0.6990, reg_loss: 0.0000 ||:   2%|█▌                                                                      | 98/4361 [02:02<1:25:39,  1.21s/it]EM: 0.5088, loss: 0.6990, reg_loss: 0.0000 ||:   2%|█▋                                                                      | 99/4361 [02:04<1:24:46,  1.19s/it]EM: 0.5094, loss: 0.6989, reg_loss: 0.0000 ||:   2%|█▋                                                                     | 100/4361 [02:06<1:46:45,  1.50s/it]EM: 0.5087, loss: 0.6992, reg_loss: 0.0000 ||:   2%|█▋                                                                     | 101/4361 [02:07<1:46:25,  1.50s/it]EM: 0.5074, loss: 0.6994, reg_loss: 0.0000 ||:   2%|█▋                                                                     | 102/4361 [02:09<1:40:59,  1.42s/it]
