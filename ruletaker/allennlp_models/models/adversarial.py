@@ -16,10 +16,14 @@ import wandb
 import torch
 from torch import nn
 
+from allennlp.common.params import Params
 from allennlp.data import Vocabulary
 from allennlp.models.model import Model
 from allennlp.nn import RegularizerApplicator
 from allennlp.training.metrics import CategoricalAccuracy
+from allennlp.models.model import remove_pretrained_embedding_params, _DEFAULT_WEIGHTS
+from allennlp.nn import util
+from allennlp.models.archival import load_archive
 
 from transformers import AutoModel
 
@@ -70,16 +74,16 @@ class AdversarialGenerator(Model):
         elif bernoulli_node_prediction_level == 'node-level':
             self.gen_model = GenerativeNetwork(variant=variant, vocab=vocab, dataset_reader=dataset_reader, has_naf=add_NAF, num_labels=2, dropout=0.1)
 
-        self._p0 = torch.tensor(-float(1e9))        # TODO: set dynamically
+        self._p0 = torch.tensor(-float(1e9))
         self.n_mc = num_monte_carlo          # Number of monte carlo steps
-        self._logprob_method = 'CE'      # TODO: set dynamically
+        self._logprob_method = 'CE'
         self._z_mask = -1
 
         self.answers = {}
         self.records = []
         self.prev_answers = {'train': [], 'val': []}
         
-        self.alpha = 0.8        # TODO: some hparam validation on this
+        self.alpha = 0.8
         self.c = 0
         self.v = 0
         self.reinforce_baseline = nn.Parameter(torch.tensor(0.), requires_grad=True)
@@ -100,7 +104,7 @@ class AdversarialGenerator(Model):
 
         self.adv_perturbations = adversarial_perturbations.split(',')
 
-        self.wandb = os.environ['WANDB_LOG'] == 'true'
+        self.wandb = 'WANDB_LOG_1' in os.environ and os.environ['WANDB_LOG_1'] == 'true'
         self.max_flips = max_flips
         self.max_elims = max_elims
 
@@ -609,6 +613,79 @@ class AdversarialGenerator(Model):
     # @timing
     def run_tp(self, meta_records):
         return call_theorem_prover_from_lst(instances=meta_records)
+
+    @classmethod
+    def _load(cls,
+        config: Params,
+        serialization_dir: str,
+        weights_file: Optional[str] = None,
+        cuda_device: int = -1,
+        opt_level: Optional[str] = None,
+    ) -> "Model":
+        """
+        Instantiates an already-trained model, based on the experiment
+        configuration and some optional overrides.
+        """
+        weights_file = weights_file or os.path.join(serialization_dir, _DEFAULT_WEIGHTS)
+
+        # Load vocabulary from file
+        vocab_dir = os.path.join(serialization_dir, "vocabulary")
+        # If the config specifies a vocabulary subclass, we need to use it.
+        vocab_params = config.get("vocabulary", Params({}))
+        vocab_choice = vocab_params.pop_choice("type", Vocabulary.list_available(), True)
+        vocab_class, _ = Vocabulary.resolve_class_name(vocab_choice)
+        vocab = vocab_class.from_files(
+            vocab_dir, vocab_params.get("padding_token"), vocab_params.get("oov_token")
+        )
+
+        model_params = config.get("model")
+
+        training_params = config.get("trainer", Params({}))
+        opt_level = opt_level or training_params.get("opt_level")
+
+        archive = load_archive(
+            archive_file=config.pop("ruletaker_archive"), 
+            cuda_device=training_params.get("cuda_device"))
+        model_params.params['qa_model'] = archive.model.eval()
+
+        reader_type = config.params["dataset_reader"].pop("type")
+        if reader_type == 'retriever_reasoning':
+            from ..dataset_readers.retrieval_reasoning_reader import RetrievalReasoningReader as DataReader
+        else:
+            raise ValueError
+        subs = {'False':False, 'True':True, 'None':None}
+        config.params['dataset_reader'] = {k:subs[v] if isinstance(v, str) and v in subs else v for k,v in config.params['dataset_reader'].items()}
+        dset = DataReader(**config.get("dataset_reader"))
+        model_params.params['dataset_reader'] = dset
+
+        # The experiment config tells us how to _train_ a model, including where to get pre-trained
+        # embeddings from.  We're now _loading_ the model, so those embeddings will already be
+        # stored in our weights.  We don't need any pretrained weight file anymore, and we don't
+        # want the code to look for it, so we remove it from the parameters here.
+        remove_pretrained_embedding_params(model_params)
+        model = cls(vocab=vocab, **model_params.params)
+        # model = Model.from_params(vocab=vocab, params=model_params)
+
+
+        # Force model to cpu or gpu, as appropriate, to make sure that the embeddings are
+        # in sync with the weights
+        if cuda_device >= 0:
+            model.cuda(cuda_device)
+        else:
+            model.cpu()
+
+        # If vocab+embedding extension was done, the model initialized from from_params
+        # and one defined by state dict in weights_file might not have same embedding shapes.
+        # Eg. when model embedder module was transferred along with vocab extension, the
+        # initialized embedding weight shape would be smaller than one in the state_dict.
+        # So calling model embedding extension is required before load_state_dict.
+        # If vocab and model embeddings are in sync, following would be just a no-op.
+        model.extend_embedder_vocab()
+
+        model_state = torch.load(weights_file, map_location=util.device_mapping(cuda_device))
+        model.load_state_dict(model_state)
+
+        return model
 
 
 class _BaseSentenceClassifier(Model):

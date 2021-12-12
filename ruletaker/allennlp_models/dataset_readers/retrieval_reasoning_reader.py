@@ -29,8 +29,7 @@ class RetrievalReasoningReader(DatasetReader):
     ----------
     """
 
-    def __init__(
-        self,
+    def __init__(self,
         pretrained_model: str = None,
         max_pieces: int = 512,
         syntax: str = "rulebase",
@@ -43,7 +42,7 @@ class RetrievalReasoningReader(DatasetReader):
         pretrained_retriever_model = None,
         longest_proof: int = 100,
         shortest_proof: int = 1,
-        concat_q_and_c: bool = None,
+        concat_q_and_c: bool = True,
         true_samples_only: bool = False,
         add_NAF: bool = False,
         one_proof: bool = False,
@@ -244,27 +243,10 @@ class RetrievalReasoningReader(DatasetReader):
         exact_match = context_lst.index(question) if question in context_lst else -1
         return exact_match
 
-    def listfield_features_from_qa(self, question: str, context: str, already_retrieved, tokenizer):
-        ''' Tokenize the context items seperately and return as a list.
-        '''
-        if self._concat:
-            tokens = []
-            for toks in context.split('.')[:-1]:
-                toks_ = toks.strip() + '.'
-                aug_context = (already_retrieved + ' ' + toks_).strip()
-                trans_features = self.transformer_features_from_qa(question, aug_context)
-                tokens.append(trans_features[0])
-        else:
-            to_tokenize = (question + (context if context is not None else "")).split('.')[:-1]
-            to_tokenize = [toks + '.' for toks in to_tokenize]
-            tokens = [tokenizer.tokenize(item) for item in to_tokenize]
-        return tokens
-
     def transformer_indices_from_qa(self, sentences, vocab):
         ''' Convert question + context strings into a batch
             which is ready for the qa model.
         '''
-        # TODO: dynamically set which model the batch is being prepped for
         data = []
         for question, already_retrieved, context in sentences:
             instance = self.text_to_instance(
@@ -283,7 +265,6 @@ class RetrievalReasoningReader(DatasetReader):
         ''' Convert question + context strings into a batch
             which is ready for the qa model.
         '''
-        # TODO: dynamically set which model the batch is being prepped for
         data = []
         for question, already_retrieved, label in sentences:
             instance=self.text_to_instance(

@@ -25,15 +25,18 @@ class RuleReasoningReader(DatasetReader):
     """
 
     def __init__(self,
-                 pretrained_model: str,
-                 max_pieces: int = 512,
-                 syntax: str = "rulebase",
-                 add_prefix: Dict[str, str] = None,
-                 skip_id_regex: str = None,
-                 scramble_context: bool = False,
-                 use_context_full: bool = False,
-                 sample: int = -1) -> None:
-        super().__init__()
+        pretrained_model: str,
+        max_pieces: int = 512,
+        syntax: str = "rulebase",
+        add_prefix: Dict[str, str] = None,
+        skip_id_regex: str = None,
+        scramble_context: bool = False,
+        use_context_full: bool = False,
+        sample: int = -1,
+        max_instances: int = None,
+    ) -> None:
+        max_instances = None if max_instances == 'none' else max_instances
+        super().__init__(max_instances=max_instances)
         self._tokenizer = PretrainedTransformerTokenizer(pretrained_model, max_length=max_pieces)
         self._tokenizer_internal = self._tokenizer.tokenizer
         token_indexer = PretrainedTransformerIndexer(pretrained_model)

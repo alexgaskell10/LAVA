@@ -40,12 +40,14 @@ class BlendedRuleReasoningReader(RuleReasoningReader):
         sample: int = -1,
         max_instances = None,
         cache_directory = None,
-        adversarial_examples_path = None,
+        adversarial_examples_path_train = None,
+        adversarial_examples_path_val = None,
+        adversarial_examples_path_test = None,
     ) -> None:
         max_instances = None if max_instances == 'none' else max_instances
         cache_directory = None if cache_directory == 'none' else cache_directory
         DatasetReader.__init__(self, max_instances=max_instances, cache_directory=cache_directory)
-        # TODO edit this class
+
         self._tokenizer = PretrainedTransformerTokenizer(pretrained_model, max_length=max_pieces)
         self._tokenizer_internal = self._tokenizer.tokenizer
         token_indexer = PretrainedTransformerIndexer(pretrained_model)
@@ -58,18 +60,33 @@ class BlendedRuleReasoningReader(RuleReasoningReader):
         self._sample = sample
         self._syntax = syntax
         self._skip_id_regex = skip_id_regex
-        self._adv_path = None if adversarial_examples_path == 'none' else adversarial_examples_path
+        self._adv_train_path = None if adversarial_examples_path_train == 'none' else adversarial_examples_path_train
+        self._adv_val_path = None if adversarial_examples_path_val == 'none' else adversarial_examples_path_val
+        self._adv_test_path = None if adversarial_examples_path_test == 'none' else adversarial_examples_path_test
 
         tok = type(self).__name__
-        adv_file = self._adv_path.split('/')[3] if self._adv_path is not None else self._adv_path
+        adv_file = self._adv_train_path.split('/')[3] if self._adv_train_path is not None else self._adv_train_path
         self.pkl_file = f'{tok}_{self._max_pieces}_{adv_file}_{max_instances}_DSET.pkl'
+
+        self._original_only = False
+        self._adversarial_only = False
 
     @overrides
     def _read(self, file_path: str):
-        instances = self._read_internal(file_path)
-        if self._adv_path == None:
-            return instances
-        adv_instances = self._read_adv(self._adv_path)
+        if self._adversarial_only:
+            instances = iter(())
+        else:
+            instances = self._read_internal(file_path)
+
+        if not self._original_only and 'train' in file_path and self._adv_train_path is not None:
+            adv_instances = self._read_adv(self._adv_train_path)
+        elif not self._original_only and 'dev' in file_path and self._adv_val_path is not None:
+            adv_instances = self._read_adv(self._adv_val_path)
+        elif not self._original_only and 'test' in file_path and self._adv_test_path is not None:
+            adv_instances = self._read_adv(self._adv_test_path)
+        else:
+            adv_instances = iter(())
+
         return chain(instances, adv_instances)
 
     def _read_adv(self, file_path):
@@ -177,3 +194,17 @@ class BlendedRuleReasoningReader(RuleReasoningReader):
                         context=context,
                         label=label,
                         debug=debug)
+
+    def adv_path(self, dataset):
+        if 'val' in dataset:
+            return self._adv_val_path
+        elif 'test' in dataset:
+            return self._adv_test_path
+        elif 'train' in dataset:
+            return self._adv_train_path
+
+    def set_original_only(self, bool):
+        self._original_only = bool
+
+    def set_adversarial_only(self, bool):
+        self._adversarial_only = bool

@@ -318,11 +318,11 @@ def train_model(
         ruletaker_archive = params.pop("ruletaker_archive")
         params.pop("model")
         
-        # Ensure same root dir
-        base = ruletaker_archive.split('/')[0]
-        if not params["train_data_path"].startswith(base):
-            for path in ['test_data_path', 'validation_data_path', 'train_data_path']:
-                params[path] = os.path.join(base, params[path])
+        # # Ensure same root dir
+        # base = ruletaker_archive.split('/')[0]
+        # if not params["train_data_path"].startswith(base):
+        #     for path in ['test_data_path', 'validation_data_path', 'train_data_path']:
+        #         params[path] = os.path.join(base, params[path])
 
     distributed_params = params.params.pop("distributed", None)
     # If distributed isn't in the config and the config contains strictly

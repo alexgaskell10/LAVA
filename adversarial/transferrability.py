@@ -2,7 +2,7 @@ import json, os, sys
 import torch
 import numpy as np
 
-from allennlp.models.archival import load_archive #archive_model, CONFIG_NAME, 
+from allennlp.models.archival import load_archive
 from allennlp.data.dataloader import DataLoader
 from allennlp.nn import util as nn_util
 from allennlp.training.optimizers import HuggingfaceAdamWOptimizer as Optimizer

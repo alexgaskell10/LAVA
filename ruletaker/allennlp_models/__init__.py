@@ -34,4 +34,6 @@ except:
     from ruletaker.allennlp_models.models.vi import VariationalObjective
     from ruletaker.allennlp_models.models.adversarial import AdversarialGenerator
     from ruletaker.allennlp_models.train.adv_trainer import AdversarialTrainer
+    from ruletaker.allennlp_models.train.custom_eval import Evaluate
+    from ruletaker.allennlp_models.train.custom_reeval import Evaluate
     from ruletaker.allennlp_models.dataset_readers.blended_rule_reasoning_reader import BlendedRuleReasoningReader
