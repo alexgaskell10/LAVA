@@ -136,6 +136,6 @@ wandb
 runs
 data
 *.pkl
-log.out
+log*.out*
 bin/config/*_2021-12-*
 logs

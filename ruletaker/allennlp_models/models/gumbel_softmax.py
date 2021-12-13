@@ -21,7 +21,7 @@ from .retriever_embedders import (
 )
 from .utils import safe_log, right_pad, batch_lookup, EPSILON, make_dot, set_dropout, one_hot, lmap, lfilter
 from .transformer_binary_qa_model import TransformerBinaryQA
-from .baseline import Baseline
+# from .baseline import Baseline
 
 torch.manual_seed(0)
 

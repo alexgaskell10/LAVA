@@ -30,6 +30,7 @@ def main(prog: Optional[str] = None) -> None:
 
     outdir_adv = 'bin/runs/adversarial/'+datetime_now()
     outdir_rt = 'bin/runs/ruletaker/'+datetime_now()
+    outdir_random_bl = 'bin/runs/baselines/random_adversarial/'+datetime_now()
 
     cmds = {
         "ruletaker_train_original": ['ruletaker_train_original', 'bin/config/ruletaker/rulereasoning_config.jsonnet', '-s', outdir_rt, '--include-package', 'ruletaker.allennlp_models'],
@@ -41,7 +42,7 @@ def main(prog: Optional[str] = None) -> None:
             '--overrides_file', 'bin/config/ruletaker/ruletaker_adv_retraining_test_2021-12-12_13-22-39.jsonnet',\
             '--cuda-device', '3', '--include-package', 'ruletaker.allennlp_models'
         ],
-        "ruletaker_eval_original": ['ruletaker_eval_original'
+        "ruletaker_eval_original": ['ruletaker_eval_original',
             'bin/runs/ruletaker/depth-5/model.tar.gz', 'dev', '--output-file', '_results.json', 
             '-o', "{'trainer': {'cuda_device': 3}, 'validation_data_loader': {'batch_sampler': {'batch_size': 64, 'type': 'bucket'}}}", 
             '--cuda-device', '3', '--include-package', 'ruletaker.allennlp_models'
@@ -53,7 +54,7 @@ def main(prog: Optional[str] = None) -> None:
         ],
         "adversarial_dataset_generation_test": ['adversarial_dataset_generation_test',
             'bin/runs/adversarial/2021-12-06_16-53-27-keep/model.tar.gz', 'data/rule-reasoning-dataset-V2020.2.4/depth-5/test.jsonl', 
-            '--output-file', '_results.json', 
+            '--output-file', '_results.json',
             '--overrides_file', 'bin/config/attacker/test_config.jsonnet',
             '--cuda-device', '3', 
             '--include-package', 'ruletaker.allennlp_models'
@@ -61,9 +62,16 @@ def main(prog: Optional[str] = None) -> None:
         "transferability": ['transferability',
             'bin/runs/ruletaker/depth-5/model.tar.gz', 'bin/runs/adversarial/2021-12-06_16-54-34-keep/val-records_epoch4.pkl', 
             '--output-file', 'bin/runs/ruletaker/depth-5/transferability_results.json', 
-            # '-o', "{'trainer': {'cuda_device': 3}, 'validation_data_loader': {'batch_sampler': {'batch_size': 64, 'type': 'bucket'}}}", 
             '--overrides_file', 'bin/config/transferability/config.jsonnet',
             '--cuda-device', '8', '--include-package', 'ruletaker.allennlp_models'
+        ],
+        "adversarial_random_benchmark": ["adversarial_random_benchmark",
+            '', 'data/rule-reasoning-dataset-V2020.2.4/depth-5/test.jsonl',
+            '--output-file', f'{outdir_random_bl}_results.json',
+            '--overrides_file', 'bin/config/baselines/adversarial_benchmark/config.jsonnet',
+            '--cuda-device', '8',
+            '--fresh-init',
+            '--include-package', 'ruletaker.allennlp_models'
         ],
     }
 
@@ -76,6 +84,7 @@ def main(prog: Optional[str] = None) -> None:
         "ruletaker_test_original": 'evaluate',
         "transferability": 'custom_evaluate',
         "adversarial_dataset_generation_test": 'custom_evaluate',
+        "adversarial_random_benchmark": 'custom_evaluate',
     }
 
     if len(sys.argv) == 2:
@@ -93,6 +102,9 @@ def main(prog: Optional[str] = None) -> None:
 
     parser = create_parser(prog)
     args = parser.parse_args()
+
+    if cmd == 'adversarial_random_benchmark':
+        args = launch_adversarial_random_benchmark(args)
 
     logging.info('Args loaded')
 
@@ -203,6 +215,18 @@ def launch_transferability():
     model_overrides['dataset_reader'].pop('adversarial_examples_path', None)
     sys.argv.extend(['-o', str(model_overrides).replace("True", "'True'").replace("False", "'False'").replace("None", "'None'")])
 
+
+def launch_adversarial_random_benchmark(args):
+    ix = sys.argv.index('--overrides_file')
+    sys.argv.pop(ix)                        # Pop flag
+    overrides_file = sys.argv.pop(ix)       # And pop path
+    file_overrides = json.loads(_jsonnet.evaluate_file(overrides_file))
+
+    from ruletaker.allennlp_models.models.adversarial_benchmark import RandomAdversarialBaseline as Model
+
+    file_overrides['model_class'] = Model
+    args.config = file_overrides
+    return args
 
 
 if __name__ == '__main__':

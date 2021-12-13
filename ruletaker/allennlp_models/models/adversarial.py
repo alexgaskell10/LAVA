@@ -8,10 +8,12 @@ from copy import deepcopy
 from random import shuffle
 import random
 import numpy as np
-import multiprocessing
 
 from transformers import AutoTokenizer
-import wandb
+try:
+    import wandb
+except:
+    pass
 
 import torch
 from torch import nn
@@ -19,19 +21,16 @@ from torch import nn
 from allennlp.common.params import Params
 from allennlp.data import Vocabulary
 from allennlp.models.model import Model
-from allennlp.nn import RegularizerApplicator
-from allennlp.training.metrics import CategoricalAccuracy
 from allennlp.models.model import remove_pretrained_embedding_params, _DEFAULT_WEIGHTS
 from allennlp.nn import util
 from allennlp.models.archival import load_archive
-
-from transformers import AutoModel
 
 from .utils import (
     safe_log, right_pad, batch_lookup, EPSILON, make_dot, set_dropout, one_hot, lmap, lfilter, print_results, gs, 
     timing
 )
-from .ruletaker.theory_label_generator import call_theorem_prover_from_lst
+from .solver.theory_label_generator import call_theorem_prover_from_lst
+from .modules.adversarial_modules import GenerativeBaselineNetwork, GenerativeNetwork
 
 import logging
 
@@ -46,7 +45,7 @@ class AdversarialGenerator(Model):
         variant: str,
         vocab: Vocabulary = None,
         num_labels: int = 2,
-        regularizer: Optional[RegularizerApplicator] = None,
+        regularizer = None,
         dataset_reader = None,
         num_monte_carlo = 1,
         add_NAF = False,
@@ -69,13 +68,13 @@ class AdversarialGenerator(Model):
         self.regularizer = regularizer
         self.num_labels = num_labels
         self.word_overlap_scores = word_overlap_scores
+        self._p0 = torch.tensor(-float(1e9))
 
         if bernoulli_node_prediction_level == 'sequence-level':
-            self.gen_model = GenerativeBaselineNetwork(variant=variant, vocab=vocab, dataset_reader=dataset_reader, num_labels=2, dropout=0.1)
+            self.gen_model = GenerativeBaselineNetwork(variant=variant, vocab=vocab, null_probability=self._p0, dataset_reader=dataset_reader, num_labels=2, dropout=0.1)
         elif bernoulli_node_prediction_level == 'node-level':
-            self.gen_model = GenerativeNetwork(variant=variant, vocab=vocab, dataset_reader=dataset_reader, has_naf=add_NAF, num_labels=2, dropout=0.1)
+            self.gen_model = GenerativeNetwork(variant=variant, vocab=vocab, null_probability=self._p0, dataset_reader=dataset_reader, has_naf=add_NAF, num_labels=2, dropout=0.1)
 
-        self._p0 = torch.tensor(-float(1e9))
         self.n_mc = num_monte_carlo          # Number of monte carlo steps
         self._logprob_method = 'CE'
         self._z_mask = -1
@@ -91,14 +90,6 @@ class AdversarialGenerator(Model):
         
         set_dropout(self.gen_model, 0.0)
         set_dropout(self.qa_model, 0.0)
-
-        self.benchmark_type = None if benchmark_type == 'none' else benchmark_type
-        if self.benchmark_type == 'random':
-            self.benchmark = self.random_benchmark
-        elif self.benchmark_type == 'word_score':
-            self.benchmark = self.wordscore_benchmark
-            self.all_word_overlap_scores = torch.tensor(self.dataset_reader._word_overlap_scores_lst)
-            self.mean_overlap_score = self.all_word_overlap_scores.mean()
         
         # Turn off verbose logging for problog
         logging.getLogger('problog').setLevel(logging.WARNING)
@@ -110,7 +101,7 @@ class AdversarialGenerator(Model):
         self.max_elims = max_elims
 
     # @timing
-    def forward(self, phrase=None, label=None, metadata=None, retrieval=None, word_overlap_scores=None, **kwargs) -> torch.Tensor:
+    def forward(self, phrase=None, label=None, metadata=None, word_overlap_scores=None, **kwargs) -> torch.Tensor:
         ''' Forward pass of the network. 
 
             - p(e|z,q) - answering term (qa_model)
@@ -146,20 +137,18 @@ class AdversarialGenerator(Model):
 
         # Obtain retrieval logits
         ques_logits, sent_logits, eqiv_logits = self.gen_model(phrase)
+        z_sent, z_1hot_sent = self._draw_samples(sent_logits)        # (bsz * mc steps, num retrievals) , ...
+        z_ques, z_1hot_ques = self._draw_samples(ques_logits)        # (bsz * mc steps, num retrievals) , ...
+        z_eqiv, z_1hot_eqiv = self._draw_samples(eqiv_logits)        # (bsz * mc steps, num retrievals) , ...
 
         # Take multiple monte carlo samples by tiling the logits
         sent_logits_ = sent_logits.repeat_interleave(self._n_mc, dim=0)
         ques_logits_ = ques_logits.repeat_interleave(self._n_mc, dim=0)
         eqiv_logits_ = eqiv_logits.repeat_interleave(self._n_mc, dim=0)
         label_ = label.repeat_interleave(self._n_mc, dim=0)
-        polarity_ = polarity.repeat_interleave(self._n_mc, dim=0)
-        nodes_ = nodes.repeat_interleave(self._n_mc, dim=0)
         fact_idxs_ = fact_idxs.repeat_interleave(self._n_mc, dim=0)
         rule_idxs_ = rule_idxs.repeat_interleave(self._n_mc, dim=0)
 
-        z_sent, z_1hot_sent = self._draw_samples(sent_logits)        # (bsz * mc steps, num retrievals)
-        z_ques, z_1hot_ques = self._draw_samples(ques_logits)        # (bsz * mc steps, num retrievals)
-        z_eqiv, z_1hot_eqiv = self._draw_samples(eqiv_logits)        # (bsz * mc steps, num retrievals)
         
         # Adjust senteqiv samples here
         if self.max_elims > 0:
@@ -199,11 +188,8 @@ class AdversarialGenerator(Model):
         with torch.no_grad():
             qa_output = self.qa_model(**batch)
         qa_logprobs = -qa_output['loss']
-        qa_probs = qa_logprobs.exp()
         probs = qa_output["label_probs"]
         preds = probs.argmax(-1)
-        qa_logits = qa_output['label_logits']
-        # qa_logprobs = torch.where(torch.isnan(qa_logprobs), torch.tensor(0., device=self._d), qa_logprobs)
 
         sent_logprobs, ques_logprobs, eqiv_logprobs = 0, 0, 0
         if 'sentence_elimination' in self.adv_perturbations:
@@ -211,13 +197,12 @@ class AdversarialGenerator(Model):
         if 'question_flip' in self.adv_perturbations:
             ques_logprobs = self._compute_logprobs(z_1hot_ques, ques_logits_)
         if 'equivalence_substitution' in self.adv_perturbations:
-            eqiv_logprobs = self._compute_logprobs(z_1hot_eqiv, eqiv_logits_)        
-        
+            eqiv_logprobs = self._compute_logprobs(z_1hot_eqiv, eqiv_logits_)                
         gen_logprobs = sent_logprobs + ques_logprobs + eqiv_logprobs
 
         # Compute objective function
-        l = qa_logprobs.detach()      # Using Jensen's inquaity
-        l[torch.isnan(l)] = 0
+        l = qa_logprobs.detach()
+        l[torch.isnan(l)] = 0       # Very occasionally the victim will output nans. Haven't managed to figure this out - zero them out for now.
 
         # Update the learning signal statistics
         cb = torch.mean(l)
@@ -228,7 +213,7 @@ class AdversarialGenerator(Model):
         l = (l - self.c) / max(1, self.v)
         reinforce_reward = torch.mul(l.detach(), gen_logprobs)
         baseline_error = l - self.reinforce_baseline
-        baseline_term = -torch.pow(baseline_error, 2) #torch.mul(l.detach(), torch.pow(baseline_error, 2))      # Didn't work when rescaling by l as outlined in the original paper...
+        baseline_term = -torch.pow(baseline_error, 2)      # Didn't work when rescaling by l as outlined in the original paper...
 
         estimator = reinforce_reward + baseline_term
         # TODO: explore adding KL term for prior: https://math.stackexchange.com/questions/2604566/kl-divergence-between-two-multivariate-bernoulli-distribution
@@ -237,35 +222,6 @@ class AdversarialGenerator(Model):
         assert not torch.isnan(estimator).any()
         outputs = {"loss": -(estimator.mean() + aux_signals), "estimator": estimator.mean()}
  
-        correct_bl = None
-        if self.benchmark_type != None: 
-            qa_output_baseline, z_bl, z_bl_onehot, batch_bl, meta_records_bl = self.benchmark(
-                sent_logits=sent_logits,
-                ques_logits=ques_logits,
-                eqiv_logits=eqiv_logits,
-                metadata=metadata,
-                label=label,
-                polarity=polarity,
-                nodes=nodes,
-                word_overlap_scores=word_overlap_scores,
-                meta_records=meta_records,
-                rule_idxs=rule_idxs,
-            )
-
-            new_metadata_bl = batch_bl['metadata']
-            engine_labels_bl = call_theorem_prover_from_lst(instances=meta_records_bl)
-            new_labels_bl = [bool(l.item()) if nl is None else nl for nl,l in zip(engine_labels_bl, label)]     # TODO: this is a hack to catch cases where problog cannot solve the logic program. Find a better solution here.
-            modified_label_bl = 1 - torch.tensor(new_labels_bl, device=self._d, dtype=torch.int)
-
-            if True:
-                # Verify meta records sentences are in metadata
-                records_sentences_bl = [[i['text'] for i in list(record['triples'].values()) + list(record['rules'].values()) if not i.get('mask',1)] for record in meta_records_bl]
-                assert all([all([sent in meta['context'] for sent in sentences]) for meta, sentences in zip(new_metadata_bl, records_sentences_bl)])
-                # Verify all metadata sentences are in meta records
-                assert all([all([(sent+'.').strip() in sentences for sent in meta['context'].split('.')[:-1]]) for meta, sentences in zip(new_metadata_bl, records_sentences_bl)])
-
-                correct_bl = (qa_output_baseline["label_probs"].argmax(-1) == modified_label_bl)
-        
         correct = (preds == modified_label_)
         correct[skip_ids] = False
         log_metrics = {}
@@ -300,7 +256,7 @@ class AdversarialGenerator(Model):
                 record["label"], record["polarity"], record["mod_label"], record["qa_probs"]
             self.records.extend(records)
 
-        self.log_results(qlens_, correct, outputs, ref=correct_bl, log_metrics=log_metrics)
+        self.log_results(qlens_, correct, outputs, log_metrics=log_metrics)
 
         return outputs
 
@@ -418,13 +374,12 @@ class AdversarialGenerator(Model):
         else:
             raise NotImplementedError
 
-    def log_results(self, qlens, acc, outputs, log_metrics, tp=None, ref=None):
+    def log_results(self, qlens, acc, outputs, log_metrics, tp=None):
         if tp is None:
             tp = torch.full_like(acc, False)
-        if ref is None:
-            ref = torch.full_like(acc, False)
+        ref = torch.full_like(acc, False)
 
-        for n, (d, c, r, t) in enumerate(zip(qlens, acc, ref.repeat_interleave(self._n_mc, dim=0), tp)):
+        for n, (d, c, r, t) in enumerate(zip(qlens, acc, ref, tp)):
             if d not in self.answers:
                 self.answers[d] = [[], [], []]
             self.answers[d][0].append(c.item())
@@ -550,42 +505,6 @@ class AdversarialGenerator(Model):
     def decode(self, i, batch):
         return self.dataset_reader.decode(batch['phrase']['tokens']['token_ids'][i]).split('.')
 
-    def random_benchmark(self, sent_logits=False, ques_logits=False, eqiv_logits=False, metadata=False, label=False, polarity=False, nodes=False, meta_records=False, rule_idxs=None, **kwargs):
-        with torch.no_grad():
-            z_sent_bl, z_sent_bl_onehot = self._draw_samples(sent_logits, random_chance=True)
-            z_ques_bl, z_ques_bl_onehot = self._draw_samples(ques_logits, random_chance=True)
-            z_eqiv_bl, z_eqiv_bl_onehot = self._draw_samples(eqiv_logits, random_chance=True)
-
-            # Adjust senteqiv samples here
-            if self.max_elims > 0:
-                z_sent_b = z_sent_bl.topk(min(self.max_elims, z_sent_bl.size(1)), 1).values
-            maskers = [rule_idxs, z_sent_bl] if 'sentence_elimination' in self.adv_perturbations else [rule_idxs, z_sent_bl]
-            z_eqiv_bl = self.mask_draws(z_eqiv_bl, *maskers)
-            if self.max_flips > 0:
-                z_eqiv_bl = z_eqiv_bl.topk(min(self.max_flips, z_eqiv_bl.size(1)), 1).values
-
-            meta_records_bl = meta_records
-            metadata_bl = metadata
-            if 'sentence_elimination' in self.adv_perturbations:
-                meta_records_bl = self.update_meta_sentelim(z_sent_bl, meta_records_bl, metadata_bl)
-            if 'question_flip' in self.adv_perturbations:
-                meta_records_bl = self.update_meta_quesflip(z_ques_bl, meta_records_bl, metadata_bl)
-            if 'equivalence_substitution' in self.adv_perturbations:
-                meta_records_bl = self.update_meta_eqivsubt(z_eqiv_bl, meta_records_bl, metadata_bl)
-
-            batch_bl = self._prep_batch(meta_records_bl, label)
-            qa_output_baseline = self.qa_model(**batch_bl)
-
-        return qa_output_baseline, z_sent_bl, z_sent_bl_onehot, batch_bl, meta_records_bl
-
-    def wordscore_benchmark(self, sent_logits=False, metadata=False, label=False, polarity=False, nodes=False, word_overlap_scores=False, **kwargs):
-        with torch.no_grad():
-            z_baseline, z_bl_onehot = self._draw_samples_wordscore(sent_logits, word_overlap_scores, random_chance=True)
-            batch_baseline = self._prep_batch(z_baseline, metadata, label)
-            qa_output_baseline = self.qa_model(**batch_baseline)
-
-        return qa_output_baseline, z_baseline, z_bl_onehot, batch_baseline
-
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         if len(self.answers) == 0:
             self._precomputed_metrics.pop('predictions', None)
@@ -688,161 +607,4 @@ class AdversarialGenerator(Model):
 
         return model
 
-
-class _BaseSentenceClassifier(Model):
-    def __init__(self, variant, vocab, dataset_reader, has_naf, regularizer=None, num_labels=1, dropout=0.):
-        super().__init__(vocab, regularizer)
-        self._predictions = []
-        self._dropout = dropout
-
-        self.variant = variant
-        self.dataset_reader = dataset_reader
-        self.model = AutoModel.from_pretrained(variant)
-        assert 'roberta' in variant     # Only implemented for roberta currently
-
-        transformer_config = self.model.config
-        transformer_config.num_labels = num_labels
-        self._output_dim = self.model.config.hidden_size
-
-        # unifing all model classification layer
-        self.sent_classifier = NodeClassificationHead(self._output_dim, dropout, num_labels)
-        self.ques_classifier = NodeClassificationHead(self._output_dim, dropout, num_labels)
-        self.eqiv_classifier = NodeClassificationHead(self._output_dim, dropout, num_labels)
-        self.naf_layer = nn.Linear(self._output_dim, self._output_dim)
-        self.has_naf = has_naf
-
-        self._accuracy = CategoricalAccuracy()
-        self._loss = nn.CrossEntropyLoss()
-        self.num_labels = num_labels
-
-        # Split sentences in the context based on full stop
-        self.split_idx = self.dataset_reader.encode_token('.', mode='retriever')
-
-        self._p0 = torch.tensor(-float(1e9))
-
-    def forward(self, x) -> torch.Tensor:
-        ''' Forward pass of the network. Outputs a distribution over sentences z. 
-
-            - q(z|e,q,c) - variational distribution (infr_model)
-            - e: entailment relation [0,1] (i.e. does q follow from c (or z))
-            - z: retrievals (subset of c)
-            - c: context (rules + facts)
-            - q: claim
-        '''
-        # Compute representations
-        embs = self.model(x)[0]
-        cls_emb = embs[:,0,:]
-        naf_repr = self.naf_layer(cls_emb)
-
-        max_num_sentences = (x == self.split_idx).nonzero()[:,0].bincount().max()
-        batch_sent_logits = torch.full((x.size(0), max_num_sentences, self.num_labels), self._p0).to(self._d)       # shape: (bsz, # sentences, 2)
-        batch_eqiv_logits = batch_sent_logits.clone()[:,1:,:]                                                               # shape: (bsz, # sentences - 1, 2)   2nd dim is smaller than above because it doesn't need NAF reprs
-        batch_ques_logits = batch_sent_logits.clone()[:,:1,:]
-        for b in range(x.size(0)):
-            # Create list of end idxs of each context item
-            end_idxs = (x[b] == self.split_idx).nonzero().squeeze(1).tolist()
-            q_end = end_idxs[0]
-            q_start = 2             # Beginning of question ix. Ignores BOS tokens
-            start_idxs = [q_start, q_end + 4] + end_idxs[1:-1]       # +4 because tok adds four "decorative" tokens at the beginning of the context
-            offsets = list(zip(start_idxs, end_idxs))
-
-            # Form tensor containing sentence-level mean of token embeddings
-            n_sentences = len(offsets)
-            reprs = torch.zeros(n_sentences, 1, embs.size(-1)).to(self._d)      # shape: (# context items, 1, model_dim)
-            for i in range(n_sentences):
-                start_idx = offsets[i][0] + 1               # +1 to skip full stop at beginning
-                end_idx = offsets[i][1] + 1                 # +1 to include full stop at end
-                
-                # Extract reprs for tokens in the sentence from the original encoded sequence
-                reprs[i, 0] = embs[b, start_idx:end_idx].mean(dim=0)
-
-            # Pass through classifier and store results
-            ques_reprs = reprs.view(reprs.size(0), -1)[:1]
-            sent_reprs = reprs.view(reprs.size(0), -1)[1:]
-            sent_reprs = torch.cat((sent_reprs, naf_repr[b].unsqueeze(0)), 0)
-            eqiv_reprs = reprs.view(reprs.size(0), -1)[1:]
-
-            ques_logits = self.ques_classifier(ques_reprs).squeeze(-1)
-            sent_logits = self.sent_classifier(sent_reprs).squeeze(-1)
-            eqiv_logits = self.eqiv_classifier(eqiv_reprs).squeeze(-1)
-            
-            batch_ques_logits[b, :len(ques_logits)] = ques_logits
-            batch_sent_logits[b, :len(sent_logits)] = sent_logits
-            batch_eqiv_logits[b, :len(eqiv_logits)] = eqiv_logits
-
-        return batch_ques_logits, batch_sent_logits, batch_eqiv_logits
-
-
-class GenerativeNetwork(_BaseSentenceClassifier):
-    def forward(self, phrase, **kwargs) -> torch.Tensor:
-        ''' Forward pass of the network. Outputs a distribution over sentences z. 
-
-            - q(z|q,c) - generative distribution (gen_model)
-            - z: retrievals (subset of c)
-            - c: context (rules + facts)
-            - q: claim
-        '''
-        qc = phrase['tokens']['token_ids']       # shape = (bsz, context_len)
-        self._d = qc.device
-
-        return super().forward(qc)
-
-
-class GenerativeBaselineNetwork(Model):
-    ''' Predicts a single Bernoulli parameter for the whole sample
-        (rather than per sentence, as is the case in above GenerativeNetwork)
-    '''
-    def __init__(self, variant, vocab, dataset_reader, regularizer=None, num_labels=1):
-        super().__init__(vocab, regularizer)
-
-        self.dataset_reader = dataset_reader
-        self.model = AutoModel.from_pretrained(variant)
-        assert 'roberta' in variant     # Only implemented for roberta currently
-
-        transformer_config = self.model.config
-        transformer_config.num_labels = num_labels
-        self._output_dim = self.model.config.hidden_size
-
-        self.out_layer = NodeClassificationHead(self._output_dim, 0, num_labels)
-        self.num_labels = num_labels
-        
-        self.split_idx = self.dataset_reader.encode_token('.', mode='retriever')
-        self._p0 = torch.tensor(-float(1e9))
-
-    def forward(self, phrase, **kwargs) -> torch.Tensor:
-        
-        x = phrase['tokens']['token_ids']
-        final_layer_hidden_states = self.model(x)[0]
-        out = self.out_layer(final_layer_hidden_states[:,0,:])
-
-        num_sentences = (x == self.split_idx).nonzero()[:,0].bincount()
-        node_reprs = torch.cat([out.unsqueeze(1)]*num_sentences.max(), dim=1)
-        num_padding = num_sentences.max() - num_sentences
-
-        for n,i in enumerate(num_padding):
-            if i == 0:
-                continue
-            for m in range(1,i+1):
-                node_reprs[n,-m] = self._p0
-
-        return node_reprs, None
-
-
-class NodeClassificationHead(nn.Module):
-    """ Head for sentence-level classification tasks.
-        TODO: from PRover
-    """
-    def __init__(self, hidden_size, hidden_dropout_prob, num_labels):
-        super(NodeClassificationHead, self).__init__()
-        self.dense = nn.Linear(hidden_size, hidden_size)
-        self.dropout = nn.Dropout(hidden_dropout_prob)
-        self.out_proj = nn.Linear(hidden_size, num_labels)
-
-    def forward(self, features, **kwargs):
-        x = self.dropout(features)
-        x = self.dense(x)
-        x = torch.tanh(x)
-        x = self.dropout(x)
-        x = self.out_proj(x)
-        return x
 

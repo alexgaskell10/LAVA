@@ -65,6 +65,7 @@ from allennlp.models.archival import load_archive
 from allennlp.training.util import evaluate
 
 from allennlp.common import Params
+from torch.types import Storage
 
 from .utils import write_records
 
@@ -135,6 +136,16 @@ class Evaluate(Subcommand):
             "they are not available we will use random vectors for embedding extension.",
         )
 
+        subparser.add_argument(
+            "--fresh-init",
+            action='store_true',
+            help="will evaluate using a freshly initialized model",
+        )
+        subparser.add_argument(
+            "--overrides_file",
+            help="manually pass the path to overrides so they can be loaded later",
+        )
+
         subparser.set_defaults(func=evaluate_from_args)
 
         return subparser
@@ -146,22 +157,41 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     logging.getLogger("allennlp.nn.initializers").disabled = True
     logging.getLogger("allennlp.modules.token_embedders.embedding").setLevel(logging.INFO)
 
-    # Load from archive
-    archive = load_archive(args.archive_file, args.cuda_device, None, args.overrides, args.weights_file)
-    config = archive.config
-    prepare_environment(config)
-    model = archive.model
-    model.eval()
+    if not args.fresh_init:
+        # Load from archive
+        archive = load_archive(args.archive_file, args.cuda_device, None, args.overrides, args.weights_file)
+        config = archive.config
+        prepare_environment(config)
+        model = archive.model
+        model.eval()
+        config = Params(json.loads(json.dumps(config.as_dict()).replace('"True"', "true").replace('"False"', "false").replace('"None"', "none")))
 
-    config = Params(json.loads(json.dumps(config.as_dict()).replace('"True"', "true").replace('"False"', "false").replace('"None"', "none")))
+        # Try to use the validation dataset reader if there is one - otherwise fall back
+        # to the default dataset_reader used for both training and validation.
+        validation_dataset_reader_params = config.pop("validation_dataset_reader", None)
+        if validation_dataset_reader_params is not None:
+            dataset_reader = DatasetReader.from_params(validation_dataset_reader_params)
+        else:
+            dataset_reader = DatasetReader.from_params(config.pop("dataset_reader"))
 
-    # Try to use the validation dataset reader if there is one - otherwise fall back
-    # to the default dataset_reader used for both training and validation.
-    validation_dataset_reader_params = config.pop("validation_dataset_reader", None)
-    if validation_dataset_reader_params is not None:
-        dataset_reader = DatasetReader.from_params(validation_dataset_reader_params)
     else:
-        dataset_reader = DatasetReader.from_params(config.pop("dataset_reader"))
+        config = Params(args.config)
+        # Try to use the validation dataset reader if there is one - otherwise fall back
+        # to the default dataset_reader used for both training and validation.
+        validation_dataset_reader_params = config.pop("validation_dataset_reader", None)
+        if validation_dataset_reader_params is not None:
+            dataset_reader = DatasetReader.from_params(validation_dataset_reader_params)
+        else:
+            dataset_reader = DatasetReader.from_params(config.pop("dataset_reader"))
+
+        archive = load_archive(config['model']['ruletaker_archive'], args.cuda_device, None, None, None)
+        victim = archive.model
+        Model = config.pop('model_class')
+        model = Model(qa_model=victim, dataset_reader=dataset_reader, **config['model'])
+        model.vocab = victim.vocab
+        model.eval()
+        model = model.to(victim._classifier.bias.device)
+
     evaluation_data_path = args.input_file
     logger.info("Reading evaluation data from %s", evaluation_data_path)
     instances = dataset_reader.read(evaluation_data_path)
