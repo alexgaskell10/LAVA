@@ -37,3 +37,4 @@ except:
     from ruletaker.allennlp_models.train.custom_eval import Evaluate
     from ruletaker.allennlp_models.train.custom_reeval import Evaluate
     from ruletaker.allennlp_models.dataset_readers.blended_rule_reasoning_reader import BlendedRuleReasoningReader
+    from ruletaker.allennlp_models.dataset_readers.records_reader import RecordsReader

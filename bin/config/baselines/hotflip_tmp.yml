@@ -1,5 +1,5 @@
 max_instances: False
-victim_archive_file: ./ruletaker/runs/depth-5
+victim_archive_file: runs/ruletaker/depth-5
 attacker: hotflip
 cuda_device: 0
 outdir: bin/runs/baselines

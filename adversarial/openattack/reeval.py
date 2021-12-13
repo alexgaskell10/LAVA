@@ -4,51 +4,14 @@ import yaml
 import pickle as pkl
 from datetime import datetime
 import difflib
-# from sklearn.metrics import accuracy_scores
 
 sys.path.extend(['/vol/bitbucket/aeg19/re-re'])
 
 from ruletaker.allennlp_models.dataset_readers.retrieval_reasoning_reader import RetrievalReasoningReader as DataReader
 from ruletaker.allennlp_models.models.ruletaker.theory_label_generator import call_theorem_prover_from_lst
+from adversarial.openattack.config import config
+from adversarial.openattack.openattack import load_and_remap_config
 
-config = {
-    "file_path": "./ruletaker/inputs/dataset/rule-reasoning-dataset-V2020.2.4/depth-5/dev.jsonl",
-    "dset_config": {
-        'add_NAF': False, #True,
-        'true_samples_only': False,
-        'concat_q_and_c': True,
-        'shortest_proof': 1,
-        'longest_proof': 100,
-        'pretrained_retriever_model': None, #'bin/runs/pretrain_retriever/rb-base/model.tar.gz',
-        'retriever_variant': 'roberta-large',
-        'sample': -1,
-        'use_context_full': False,
-        'scramble_context': False,
-        'skip_id_regex': '$none',
-        'add_prefix': {'c': 'C: ','q': 'Q: '},
-        'syntax': 'rulebase',
-        'max_pieces': 384,
-        'one_proof': True,
-        'max_instances': False,
-        'pretrained_model': 'roberta-large'
-    },
-    "archive_config": {
-        "archive_file": "./ruletaker/runs/depth-5-base", #"./ruletaker/runs/depth-5-base", "./ruletaker/runs/depth-5"
-        "cuda_device": 3,
-        "overrides": ""
-    },
-    "dataloader_config": {   
-        'batches_per_epoch': None,
-        'multiprocessing_context': None,
-        'worker_init_fn': None,
-        'timeout': 0,
-        'drop_last': False,
-        'pin_memory': False,
-        'num_workers': 0,
-        'shuffle': False,
-        'batch_size': 1
-    }
-}
 
 def extract_sent(tok_txt, ix):
     eos = ix + tok_txt[ix:].index('.') + 1
@@ -199,11 +162,10 @@ def add_mask(rules_or_triples):
 
 
 if __name__ == '__main__':
-    # path = 'bin/runs/baselines/hotflip/CustomHotFlipAttacker_CustomVictim_CustomTokenizer_2021-12-06_13-36-26.pkl'
-    path = 'bin/runs/baselines/textfooler/CustomTextFoolerAttacker_CustomVictim_CustomTokenizer_2021-12-06_22-18-05.pkl'
-    config['attacker'] = 'textfooler' if 'textfooler' in path.lower() else 'hotflip'
-    with open(path, 'rb') as f:
-        adv_data = pkl.load(f)[:500]
+    config = load_and_remap_config(config)
+    config['attacker'] = 'textfooler' if 'textfooler' in config['pkl_path'].lower() else 'hotflip'
+    with open(config['pkl_path'], 'rb') as f:
+        adv_data = pkl.load(f)
 
     proc_data = process_meta(config, adv_data)
     engine_labels = [
@@ -223,5 +185,7 @@ if __name__ == '__main__':
 
     out_str = f'Unadjusted flip rate: {unadj_flip_rate}\nAdjusted flip rate: {adj_flip_rate}\nNum samples before adjustment: {len(adv_data)}\nNum samples post adjustment: {len(modified)}'
     print(out_str)
-    with open(path.replace('.pkl', '_modresults.txt'), 'w') as f:
+    # with open(pkl_path.replace('.pkl', '_modresults.txt'), 'w') as f:
+    with open(config['outpath'], 'w') as f:
         f.write(out_str)
+

@@ -107,8 +107,10 @@ def description_from_metrics(metrics) -> str:
     )
 
 
-def write_records(records, dset, epoch, serialization_dir):
-    outfile = os.path.join(serialization_dir, f'{dset}-records_epoch{epoch}.pkl')
+def write_records(records, dset, epoch, serialization_dir, outfile=None):
+    if outfile is None:
+        outfile = os.path.join(serialization_dir, f'{dset}-records_epoch{epoch}.pkl')
+    
     logger.info('Writing records to: ' + outfile)
     with open(outfile, 'wb') as f:
         pkl.dump(records, f)

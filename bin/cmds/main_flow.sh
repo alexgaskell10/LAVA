@@ -1,18 +1,17 @@
-exec 3>&1 4>&2
-trap 'exec 2>&4 1>&3' 0 1 2 3
-exec 1>log.out2 2>&1
-
-
+## bash bin/cmds/main_flow.sh 
 dt=$(date +%Y-%m-%d_%H-%M-%S)
 
 max_instances=-1        # 10 -1
-cuda_device=3       # Currently only supports single GPU training
+cuda_device=4       # Currently only supports single GPU training
 roberta_model="roberta-base"        # Victim model
 outdir_victim=bin/runs/ruletaker/$dt'_'$roberta_model
 outdir_victim_retrain=bin/runs/ruletaker/$dt'_'$roberta_model'_'retrain
 outdir_attacker=bin/runs/adversarial/$dt'_'$roberta_model
 data_dir=data/rule-reasoning-dataset-V2020.2.4/depth-5/
 
+exec 3>&1 4>&2
+trap 'exec 2>&4 1>&3' 0 1 2 3
+exec 1>'logs/log-'$roberta_model'.out' 2>&1
 
 
 ### STEP 1. Train the victim ###
@@ -30,8 +29,8 @@ then
   num_gradient_accumulation_steps=8
 else
   num_epochs=8
-  batch_size=8
-  num_gradient_accumulation_steps=2
+  batch_size=4
+  num_gradient_accumulation_steps=4
 fi
 
 sed -i 's/local\ cuda_device\ =\ [[:digit:]]\+/local\ cuda_device\ =\ '$cuda_device'/g' $proc_config_1
@@ -40,8 +39,6 @@ sed -i 's/local\ batch_size\ =\ [[:digit:]]\+/local\ batch_size\ =\ '$batch_size
 sed -i 's/local\ num_gradient_accumulation_steps\ =\ [[:digit:]]\+/local\ num_gradient_accumulation_steps\ =\ '$num_gradient_accumulation_steps'/g' $proc_config_1
 sed -i 's/local\ transformer_model\ \=\ [^,]*;/local\ transformer_model\ =\ "'$roberta_model'";/g' $proc_config_1
 sed -i 's+local\ dataset_dir\ \=\ [^,]*;+local\ dataset_dir\ =\ "'$data_dir'";+g' $proc_config_1
-
-# TODO: add training if statement
 sed -i 's/"max_instances":\ [^,]*,/"max_instances":\ '$max_instances',/g' $proc_config_1
 
 # Train the model
@@ -56,13 +53,13 @@ echo $cmd
 $cmd
 
 # Evaluate trained model on the test set
-echo '\n\nEvaluating the victim model on the test set (no config file). \nOutputs will be saved to '$outdir_victim/test_results.jsonl'\n\n'
+echo '\n\nEvaluating the victim model on the test set (no config file). \nOutputs will be saved to '$outdir_victim/test_results.json'\n\n'
 overrides='{"trainer":{"cuda_device":"'$cuda_device'"},"validation_data_loader":{"batch_sampler":{"batch_size":64,"type":"bucket"}}}'
 cmd='python main.py \
         ruletaker_test_original \
         '$outdir_victim'/model.tar.gz \
         '$data_dir'/test.jsonl \
-        --output-file '$outdir_victim'/test_results.jsonl \
+        --output-file '$outdir_victim'/test_results.json \
         --cuda-device '$cuda_device' \
         -o "'$overrides'" \
         --include-package ruletaker.allennlp_models'
@@ -109,7 +106,7 @@ cmd='python main.py \
         adversarial_dataset_generation_test \
         '$outdir_attacker'/model.tar.gz \
         '$data_dir'/test.jsonl \
-        --output-file '$outdir_attacker'/test_results.jsonl \
+        --output-file '$outdir_attacker'/test_results.json \
         --overrides_file '$proc_config_3' \
         --cuda-device '$cuda_device' \
         --include-package ruletaker.allennlp_models'
@@ -135,8 +132,8 @@ then
   num_gradient_accumulation_steps=8
 else
   num_epochs=8
-  batch_size=8
-  num_gradient_accumulation_steps=2
+  batch_size=4
+  num_gradient_accumulation_steps=4
 fi
 
 sed -i 's/local\ cuda_device\ =\ [[:digit:]]\+/local\ cuda_device\ =\ '$cuda_device'/g' $proc_config_4

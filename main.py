@@ -1,7 +1,7 @@
 import sys
 import os
 import logging
-import _jsonnet
+import _jsonnet, json
 from typing import Any, Optional
 from datetime import datetime
 import pkgutil
@@ -42,7 +42,7 @@ def main(prog: Optional[str] = None) -> None:
             '--cuda-device', '3', '--include-package', 'ruletaker.allennlp_models'
         ],
         "ruletaker_eval_original": ['ruletaker_eval_original'
-            'custom_evaluate', 'bin/runs/ruletaker/depth-5/model.tar.gz', 'dev', '--output-file', '_results.json', 
+            'bin/runs/ruletaker/depth-5/model.tar.gz', 'dev', '--output-file', '_results.json', 
             '-o', "{'trainer': {'cuda_device': 3}, 'validation_data_loader': {'batch_sampler': {'batch_size': 64, 'type': 'bucket'}}}", 
             '--cuda-device', '3', '--include-package', 'ruletaker.allennlp_models'
         ],
@@ -57,7 +57,14 @@ def main(prog: Optional[str] = None) -> None:
             '--overrides_file', 'bin/config/attacker/test_config.jsonnet',
             '--cuda-device', '3', 
             '--include-package', 'ruletaker.allennlp_models'
-        ]
+        ],
+        "transferability": ['transferability',
+            'bin/runs/ruletaker/depth-5/model.tar.gz', 'bin/runs/adversarial/2021-12-06_16-54-34-keep/val-records_epoch4.pkl', 
+            '--output-file', 'bin/runs/ruletaker/depth-5/transferability_results.json', 
+            # '-o', "{'trainer': {'cuda_device': 3}, 'validation_data_loader': {'batch_sampler': {'batch_size': 64, 'type': 'bucket'}}}", 
+            '--overrides_file', 'bin/config/transferability/config.jsonnet',
+            '--cuda-device', '8', '--include-package', 'ruletaker.allennlp_models'
+        ],
     }
 
     cmd_map = {
@@ -67,6 +74,7 @@ def main(prog: Optional[str] = None) -> None:
         "ruletaker_adv_training_test": 'custom_reevaluate',
         "ruletaker_eval_original": 'evaluate',
         "ruletaker_test_original": 'evaluate',
+        "transferability": 'custom_evaluate',
         "adversarial_dataset_generation_test": 'custom_evaluate',
     }
 
@@ -80,6 +88,8 @@ def main(prog: Optional[str] = None) -> None:
         launch_adversarial_dataset_generation_test()
     if cmd == 'ruletaker_adv_training_test':
         launch_ruletaker_adv_training_test()
+    if cmd == 'transferability':
+        launch_transferability()
 
     parser = create_parser(prog)
     args = parser.parse_args()
@@ -138,7 +148,6 @@ def launch_adversarial_dataset_generation_test():
     sys.argv.pop(ix)                        # Pop flag
     overrides_file = sys.argv.pop(ix)       # And pop path
 
-    import json
     file_overrides = json.loads(_jsonnet.evaluate_file(overrides_file))
     model_overrides = json.load(open(sys.argv[2].replace('model.tar.gz', 'config.json'), 'r'))
     for k,v in file_overrides.items():
@@ -160,7 +169,26 @@ def launch_ruletaker_adv_training_test():
     sys.argv.pop(ix)                        # Pop flag
     overrides_file = sys.argv.pop(ix)       # And pop path
 
-    import json
+    file_overrides = json.loads(_jsonnet.evaluate_file(overrides_file))
+    model_overrides = json.load(open(sys.argv[2].replace('model.tar.gz', 'config.json'), 'r'))
+    for k,v in file_overrides.items():
+        if isinstance(v, dict):
+            if k in model_overrides:
+                model_overrides[k].update(v)
+            else:
+                model_overrides[k] = v
+        else:
+            model_overrides.update({k:v})
+
+    model_overrides['dataset_reader'].pop('adversarial_examples_path', None)
+    sys.argv.extend(['-o', str(model_overrides).replace("True", "'True'").replace("False", "'False'").replace("None", "'None'")])
+
+
+def launch_transferability():
+    ix = sys.argv.index('--overrides_file')
+    sys.argv.pop(ix)                        # Pop flag
+    overrides_file = sys.argv.pop(ix)       # And pop path
+
     file_overrides = json.loads(_jsonnet.evaluate_file(overrides_file))
     model_overrides = json.load(open(sys.argv[2].replace('model.tar.gz', 'config.json'), 'r'))
     for k,v in file_overrides.items():

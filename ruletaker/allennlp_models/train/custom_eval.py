@@ -188,9 +188,10 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     logger.info("Finished evaluating.")
 
     if 'predictions' in metrics:
-        outdir = '/'.join(args.output_file.split('/')[:-1])
-        dset = 'test' if 'test' in evaluation_data_path.split('/')[-1] else 'val'
-        write_records(metrics.pop('predictions'), dset, 100, outdir)
+        # outdir = '/'.join(args.output_file.split('/')[:-1])
+        # dset = 'test' if 'test' in evaluation_data_path.split('/')[-1] else 'val'
+        outfile = args.output_file.replace('.json', '-records.pkl')
+        write_records(metrics.pop('predictions'), None, None, None, outfile)
     dump_metrics(args.output_file, metrics, log=False)
 
     return metrics

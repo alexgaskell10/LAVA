@@ -3,27 +3,17 @@ import random, re, os, json, logging, pickle
 from copy import deepcopy
 import pickle as pkl
 
-import numpy as np
 from torch import Tensor
 from overrides import overrides
 
 from allennlp.common.file_utils import cached_path
 from allennlp.data.dataset_readers.dataset_reader import DatasetReader
-from allennlp.data.fields import (
-    Field, TextField, LabelField, MetadataField, SequenceLabelField,
-    ListField, ArrayField
-)
-from allennlp.data.instance import Instance
-from allennlp.data.token_indexers import PretrainedTransformerIndexer, SingleIdTokenIndexer
-from allennlp.data.tokenizers import Token, PretrainedTransformerTokenizer, SpacyTokenizer
-from allennlp.data.dataloader import allennlp_collate
-
-from .processors import RRProcessor
 from .rule_reasoning_reader import RuleReasoningReader
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 # TagSpanType = ((int, int), str)
 
+@DatasetReader.register("records_reader")
 class RecordsReader(RuleReasoningReader):
     """
     Parameters
@@ -46,8 +36,8 @@ class RecordsReader(RuleReasoningReader):
             if n == max_instances:
                 break
 
-            # if not record['qa_fooled']:
-            #     continue                # Only include incorrectly answered adversarial questions
+            if not record['qa_fooled']:
+                continue                # Only include incorrectly answered adversarial questions
 
             base_id = record['id']
             if base_id in qids:
@@ -58,7 +48,6 @@ class RecordsReader(RuleReasoningReader):
 
             context = '.'.join(record['sampled_sentences'][1:-1]) + '.'
             label = 1 - record['mod_label']     # The adversarial label (mod_label) = 1 - true label
-            # label = record['mod_label']     # The adversarial label (mod_label) = 1 - true label
 
             n += 1
             yield self.text_to_instance(
