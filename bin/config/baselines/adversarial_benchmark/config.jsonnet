@@ -1,4 +1,4 @@
-local ruletaker_archive = "bin/runs/ruletaker/depth-5/model.tar.gz";
+local ruletaker_archive = "bin/runs/ruletaker/depth-5-base/model.tar.gz";
 local dataset_dir = "";
 local inference_model = "roberta-base";      # {roberta-base, roberta-large}
 local batch_size = 16;

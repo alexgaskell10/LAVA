@@ -80,22 +80,58 @@ class RandomAdversarialBaseline(AdversarialGenerator):
         ques_logits, sent_logits, eqiv_logits = self.gen_model(phrase)
 
         outputs = {"loss": torch.tensor(0.), "estimator": torch.tensor(0.)}
+
+        # qa_output_bl, z_sent_bl, z_eqiv_bl, z_ques_bl, batch_bl, meta_records_bl = self.benchmark(
+        #     sent_logits=sent_logits,
+        #     ques_logits=ques_logits,
+        #     eqiv_logits=eqiv_logits,
+        #     metadata=metadata,
+        #     label=label,
+        #     word_overlap_scores=word_overlap_scores,
+        #     meta_records=meta_records,
+        #     rule_idxs=rule_idxs,
+        # )
  
-        qa_output_bl, z_sent_bl, z_eqiv_bl, z_ques_bl, batch_bl, meta_records_bl = self.benchmark(
-            sent_logits=sent_logits,
-            ques_logits=ques_logits,
-            eqiv_logits=eqiv_logits,
-            metadata=metadata,
-            label=label,
-            word_overlap_scores=word_overlap_scores,
-            meta_records=meta_records,
-            rule_idxs=rule_idxs,
-        )
+        z_sent_bl, z_ques_bl, z_eqiv_bl = self.benchmarker(sent_logits, ques_logits, eqiv_logits)
+
+        # Adjust senteqiv samples here
+        if self.max_elims > 0:
+            z_sent_bl = z_sent_bl.topk(min(self.max_elims, z_sent_bl.size(1)), 1).values
+        maskers = [rule_idxs, z_sent_bl] if 'sentence_elimination' in self.adv_perturbations else [rule_idxs, z_sent_bl]
+        z_eqiv_bl = self.mask_draws(z_eqiv_bl, *maskers)
+        if self.max_flips > 0:
+            z_eqiv_bl = z_eqiv_bl.topk(min(self.max_flips, z_eqiv_bl.size(1)), 1).values
+
+        meta_records_bl = meta_records
+        metadata_bl = metadata
+        if 'sentence_elimination' in self.adv_perturbations:
+            meta_records_bl = self.update_meta_sentelim(z_sent_bl, meta_records_bl, metadata_bl)
+        if 'question_flip' in self.adv_perturbations:
+            meta_records_bl = self.update_meta_quesflip(z_ques_bl, meta_records_bl, metadata_bl)
+        if 'equivalence_substitution' in self.adv_perturbations:
+            meta_records_bl = self.update_meta_eqivsubt(z_eqiv_bl, meta_records_bl, metadata_bl)
+
+        # engine_labels_bl = call_theorem_prover_from_lst(instances=meta_records_bl)
+        # new_labels_bl = [bool(l.item()) if nl is None else nl for nl,l in zip(engine_labels_bl, label)]     # TODO: this is a hack to catch cases where problog cannot solve the logic program. Find a better solution here.
+        # modified_label_bl = 1 - torch.tensor(new_labels_bl, device=self._d, dtype=torch.int)
+
+        engine_labels_bl = self.run_tp(meta_records_bl)
+        if self.training:
+            new_labels_bl = [bool(l.item()) if nl is None else nl for nl,l in zip(engine_labels_bl, label)]     # This is a hack to catch cases where problog cannot solve the logic program. Only happens v. rarely though so not an issue
+            skip_ids = []
+        else:
+            new_labels = [bool(l.item()) if nl is None else nl for nl,l in zip(engine_labels_bl, label)]
+            skip_ids = [n for n,e in enumerate(engine_labels_bl) if e is None]
+        modified_label_bl = 1 - torch.tensor(new_labels, device=self._d, dtype=torch.int)
+
+        batch_bl = self._prep_batch(meta_records_bl, modified_label_bl)
+
+        with torch.no_grad():
+            qa_output_bl = self.qa_model(**batch_bl)
+        probs = qa_output_bl["label_probs"]
+        preds = probs.argmax(-1)
 
         new_metadata_bl = batch_bl['metadata']
-        engine_labels_bl = call_theorem_prover_from_lst(instances=meta_records_bl)
-        new_labels_bl = [bool(l.item()) if nl is None else nl for nl,l in zip(engine_labels_bl, label)]     # TODO: this is a hack to catch cases where problog cannot solve the logic program. Find a better solution here.
-        modified_label_bl = 1 - torch.tensor(new_labels_bl, device=self._d, dtype=torch.int)
 
         if True:
             # Verify meta records sentences are in metadata
@@ -104,8 +140,8 @@ class RandomAdversarialBaseline(AdversarialGenerator):
             # Verify all metadata sentences are in meta records
             assert all([all([(sent+'.').strip() in sentences for sent in meta['context'].split('.')[:-1]]) for meta, sentences in zip(new_metadata_bl, records_sentences_bl)])
 
-        correct = (qa_output_bl["label_probs"].argmax(-1) == modified_label_bl)
-        
+        correct = (preds == modified_label_bl)
+        correct[skip_ids] = False
         log_metrics = {}
         log_metrics['n_sentelim'] = (z_sent_bl != -1).sum(-1).float().mean().item()
         log_metrics['n_eqivsubt'] = (z_eqiv_bl != -1).sum(-1).float().mean().item()
