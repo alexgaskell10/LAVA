@@ -120,12 +120,12 @@ class RandomAdversarialBaseline(AdversarialGenerator):
             new_labels_bl = [bool(l.item()) if nl is None else nl for nl,l in zip(engine_labels_bl, label)]     # This is a hack to catch cases where problog cannot solve the logic program. Only happens v. rarely though so not an issue
             skip_ids = []
         else:
-            new_labels = [bool(l.item()) if nl is None else nl for nl,l in zip(engine_labels_bl, label)]
+            new_labels_bl = [bool(l.item()) if nl is None else nl for nl,l in zip(engine_labels_bl, label)]
             skip_ids = [n for n,e in enumerate(engine_labels_bl) if e is None]
-        modified_label_bl = 1 - torch.tensor(new_labels, device=self._d, dtype=torch.int)
+        modified_label_bl = 1 - torch.tensor(new_labels_bl, device=self._d, dtype=torch.int)
 
+        # batch_bl = self._prep_batch(meta_records_bl, label)
         batch_bl = self._prep_batch(meta_records_bl, modified_label_bl)
-
         with torch.no_grad():
             qa_output_bl = self.qa_model(**batch_bl)
         probs = qa_output_bl["label_probs"]
@@ -177,6 +177,13 @@ class RandomAdversarialBaseline(AdversarialGenerator):
         self.log_results(qlens_, correct, outputs, log_metrics=log_metrics)
 
         return outputs
+        import pickle as pkl
+        batch = pkl.load(open('batch.pkl', 'rb'))
+        self.qa_model.to(torch.device('cuda:8'))
+        set_dropout(self.qa_model, 0.0)
+        with torch.no_grad():
+            a = self.qa_model(**batch)
+        a['label_logits']
 
     def _draw_samples_wordscore(self, logits, word_overlap_scores, random_chance=False):
         ''' Obtain samples from a distribution

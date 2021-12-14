@@ -1,5 +1,5 @@
-local ruletaker_archive = "ruletaker/runs/depth-5/model.tar.gz";
-local dataset_dir = "ruletaker/inputs/dataset/rule-reasoning-dataset-V2020.2.4/depth-5/";
+local ruletaker_archive = "bin/runs/ruletaker/depth-5/model.tar.gz";
+local dataset_dir = "data/rule-reasoning-dataset-V2020.2.4/depth-5/";
 local inference_model = "roberta-base";      # {roberta-base, roberta-large}
 local pretrained_model = "bin/runs/pretrain_retriever/rb-base/model.tar.gz";
 local cuda_device = 8;
@@ -34,7 +34,7 @@ local epochs = 5;
         "type": model_type,
         "num_monte_carlo": num_monte_carlo,
         "word_overlap_scores": compute_word_overlap_scores,
-        "benchmark_type": "none",      # word_score, random, none
+        "benchmark_type": "random",      # word_score, random, none
         "bernoulli_node_prediction_level": "node-level",       # sequence-level, node-level
         "adversarial_perturbations": "sentence_elimination,question_flip,equivalence_substitution",       # sentence_elimination,question_flip,equivalence_substitution
         "max_flips": 3,     # -1, 3
@@ -55,7 +55,7 @@ local epochs = 5;
         "batch_sampler": {
             "batch_size": batch_size,
             "type": "basic",
-            "sampler": "random",        # random, sequential
+            "sampler": "sequential",        # random, sequential
             "drop_last": false
         }
     }

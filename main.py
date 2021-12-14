@@ -34,9 +34,8 @@ def main(prog: Optional[str] = None) -> None:
 
     cmds = {
         "ruletaker_train_original": ['ruletaker_train_original', 'bin/config/ruletaker/rulereasoning_config.jsonnet', '-s', outdir_rt, '--include-package', 'ruletaker.allennlp_models'],
-        # "ruletaker_adv_training": ['ruletaker_adv_training', 'bin/config/ruletaker/ruletaker_adv_retraining.jsonnet', '-s', outdir_rt, '--include-package', 'ruletaker.allennlp_models'],
-        "ruletaker_adv_training": ['ruletaker_adv_training', 'bin/config/ruletaker/ruletaker_adv_retraining_2021-12-12_13-22-39.jsonnet', '-s', 'bin/runs/ruletaker/2021-12-12_13-22-39_roberta-base_retrain', '--include-package', 'ruletaker.allennlp_models'],
-        "adversarial_dataset_generation": ['adversarial_dataset_generation', 'bin/config/attacker/config.jsonnet', '-s', outdir_adv, '--include-package', 'ruletaker.allennlp_models'],
+        "ruletaker_adv_training": ['ruletaker_adv_training', 'bin/config/ruletaker/ruletaker_adv_retraining.jsonnet', '-s', outdir_rt, '--include-package', 'ruletaker.allennlp_models'],
+        "adversarial_dataset_generation": ['adversarial_dataset_generation', 'bin/config/attacker/tmp.jsonnet', '-s', outdir_adv, '--include-package', 'ruletaker.allennlp_models'],
         "ruletaker_adv_training_test": ['ruletaker_adv_training_test', 
             'bin/runs/ruletaker/2021-12-12_13-22-39_roberta-base_retrain/model.tar.gz', 'test', '--output-file', '_results.json', 
             '--overrides_file', 'bin/config/ruletaker/ruletaker_adv_retraining_test_2021-12-12_13-22-39.jsonnet',\
@@ -109,8 +108,8 @@ def main(prog: Optional[str] = None) -> None:
     logging.info('Args loaded')
 
     # Hack to use wandb logging
-    # if False:
-    if 'train' in sys.argv[1] and pkgutil.find_loader('wandb') is not None:
+    if False:
+    # if 'train' in sys.argv[1] and pkgutil.find_loader('wandb') is not None:
         import wandb
 
         if 'pretrain_retriever' in sys.argv[2]:

@@ -190,6 +190,7 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
         model = Model(qa_model=victim, dataset_reader=dataset_reader, **config['model'])
         model.vocab = victim.vocab
         model.eval()
+        model.qa_model.train()
         model = model.to(victim._classifier.bias.device)
 
     evaluation_data_path = args.input_file
