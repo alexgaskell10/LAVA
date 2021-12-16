@@ -76,23 +76,11 @@ class RandomAdversarialBaseline(AdversarialGenerator):
         nodes = torch.tensor([n.tolist() + [-1]*(max_nodes-len(n)) for n in nodes], device=self._d)
         proof_sentences = [[s[0]]+[s[i+1] for i in n if i!=-1] for n,s in zip(nodes, orig_sentences)]
 
-        # Obtain retrieval logits
         ques_logits, sent_logits, eqiv_logits = self.gen_model(phrase)
 
-        outputs = {"loss": torch.tensor(0.), "estimator": torch.tensor(0.)}
+        outputs = {"loss": torch.tensor(0.), "estimator": torch.tensor(0.)}     # Placeholders to pass back through evaluation loop. Not needed here
 
-        # qa_output_bl, z_sent_bl, z_eqiv_bl, z_ques_bl, batch_bl, meta_records_bl = self.benchmark(
-        #     sent_logits=sent_logits,
-        #     ques_logits=ques_logits,
-        #     eqiv_logits=eqiv_logits,
-        #     metadata=metadata,
-        #     label=label,
-        #     word_overlap_scores=word_overlap_scores,
-        #     meta_records=meta_records,
-        #     rule_idxs=rule_idxs,
-        # )
- 
-        z_sent_bl, z_ques_bl, z_eqiv_bl = self.benchmarker(sent_logits, ques_logits, eqiv_logits)
+        z_sent_bl, z_ques_bl, z_eqiv_bl = self.benchmarker(sent_logits, ques_logits, eqiv_logits, word_overlap_scores)
 
         # Adjust senteqiv samples here
         if self.max_elims > 0:
@@ -111,20 +99,11 @@ class RandomAdversarialBaseline(AdversarialGenerator):
         if 'equivalence_substitution' in self.adv_perturbations:
             meta_records_bl = self.update_meta_eqivsubt(z_eqiv_bl, meta_records_bl, metadata_bl)
 
-        # engine_labels_bl = call_theorem_prover_from_lst(instances=meta_records_bl)
-        # new_labels_bl = [bool(l.item()) if nl is None else nl for nl,l in zip(engine_labels_bl, label)]     # TODO: this is a hack to catch cases where problog cannot solve the logic program. Find a better solution here.
-        # modified_label_bl = 1 - torch.tensor(new_labels_bl, device=self._d, dtype=torch.int)
-
         engine_labels_bl = self.run_tp(meta_records_bl)
-        if self.training:
-            new_labels_bl = [bool(l.item()) if nl is None else nl for nl,l in zip(engine_labels_bl, label)]     # This is a hack to catch cases where problog cannot solve the logic program. Only happens v. rarely though so not an issue
-            skip_ids = []
-        else:
-            new_labels_bl = [bool(l.item()) if nl is None else nl for nl,l in zip(engine_labels_bl, label)]
-            skip_ids = [n for n,e in enumerate(engine_labels_bl) if e is None]
+        new_labels_bl = [bool(l.item()) if nl is None else nl for nl,l in zip(engine_labels_bl, label)]
+        skip_ids = [n for n,e in enumerate(engine_labels_bl) if e is None]
         modified_label_bl = 1 - torch.tensor(new_labels_bl, device=self._d, dtype=torch.int)
 
-        # batch_bl = self._prep_batch(meta_records_bl, label)
         batch_bl = self._prep_batch(meta_records_bl, modified_label_bl)
         with torch.no_grad():
             qa_output_bl = self.qa_model(**batch_bl)
@@ -177,13 +156,6 @@ class RandomAdversarialBaseline(AdversarialGenerator):
         self.log_results(qlens_, correct, outputs, log_metrics=log_metrics)
 
         return outputs
-        import pickle as pkl
-        batch = pkl.load(open('batch.pkl', 'rb'))
-        self.qa_model.to(torch.device('cuda:8'))
-        set_dropout(self.qa_model, 0.0)
-        with torch.no_grad():
-            a = self.qa_model(**batch)
-        a['label_logits']
 
     def _draw_samples_wordscore(self, logits, word_overlap_scores, random_chance=False):
         ''' Obtain samples from a distribution
@@ -200,12 +172,6 @@ class RandomAdversarialBaseline(AdversarialGenerator):
         samples = torch.bernoulli(scores)
         samples *= 1 - mask       # Ensure padding sentences are not sampled
 
-        # logits_ = logits.view(-1, logits.size(-1))
-        # samples = gs(logits_).argmax(-1)
-        # mask = (logits_ == -1e9).all(-1).int()
-        # samples *= 1 - mask       # Ensure padding sentences are not sampled
-        # samples = samples.view(logits.shape[:-1])
-
         max_draws = samples.sum(-1).max().int()
         z = torch.full_like(samples, -1)[:,:max_draws]
         row, idx = samples.nonzero(as_tuple=True)
@@ -220,57 +186,19 @@ class RandomAdversarialBaseline(AdversarialGenerator):
         # Replace padding sentences with -1
         samples = samples * (1-mask.view(samples.shape)) - mask.view(samples.shape)
 
-        return z, samples
+        return z.long(), samples.long()
 
-    def benchmark(self, 
-        sent_logits=None,
-        ques_logits=None,
-        eqiv_logits=None,
-        metadata=None,
-        label=None,
-        meta_records=None,
-        rule_idxs=None,
-        **kwargs
-    ):
-        with torch.no_grad():
-            z_sent_bl, z_ques_bl, z_eqiv_bl = self.benchmarker(sent_logits, ques_logits, eqiv_logits)
+    def random_benchmark(self, sent_logits, ques_logits, eqiv_logits, *args):
+        z_sent, _ = self._draw_samples(sent_logits, random_chance=True)
+        z_ques, _ = self._draw_samples(ques_logits, random_chance=True)
+        z_eqiv, _ = self._draw_samples(eqiv_logits, random_chance=True)
+        return z_sent, z_ques, z_eqiv
 
-            # Adjust senteqiv samples here
-            if self.max_elims > 0:
-                z_sent_bl = z_sent_bl.topk(min(self.max_elims, z_sent_bl.size(1)), 1).values
-            maskers = [rule_idxs, z_sent_bl] if 'sentence_elimination' in self.adv_perturbations else [rule_idxs, z_sent_bl]
-            z_eqiv_bl = self.mask_draws(z_eqiv_bl, *maskers)
-            if self.max_flips > 0:
-                z_eqiv_bl = z_eqiv_bl.topk(min(self.max_flips, z_eqiv_bl.size(1)), 1).values
-
-            meta_records_bl = meta_records
-            metadata_bl = metadata
-            if 'sentence_elimination' in self.adv_perturbations:
-                meta_records_bl = self.update_meta_sentelim(z_sent_bl, meta_records_bl, metadata_bl)
-            if 'question_flip' in self.adv_perturbations:
-                meta_records_bl = self.update_meta_quesflip(z_ques_bl, meta_records_bl, metadata_bl)
-            if 'equivalence_substitution' in self.adv_perturbations:
-                meta_records_bl = self.update_meta_eqivsubt(z_eqiv_bl, meta_records_bl, metadata_bl)
-
-            batch_bl = self._prep_batch(meta_records_bl, label)
-            qa_output_baseline = self.qa_model(**batch_bl)
-
-        return qa_output_baseline, z_sent_bl, z_ques_bl, z_eqiv_bl, batch_bl, meta_records_bl
-
-    def random_benchmark(self, sent_logits, ques_logits, eqiv_logits):
-        z_sent_bl, _ = self._draw_samples(sent_logits, random_chance=True)
-        z_ques_bl, _ = self._draw_samples(ques_logits, random_chance=True)
-        z_eqiv_bl, _ = self._draw_samples(eqiv_logits, random_chance=True)
-        return z_sent_bl, z_ques_bl, z_eqiv_bl
-
-    def wordscore_benchmark(self, sent_logits=False, metadata=False, label=False, word_overlap_scores=False, **kwargs):
-        raise NotImplementedError
-        with torch.no_grad():
-            z_baseline, z_bl_onehot = self._draw_samples_wordscore(sent_logits, word_overlap_scores, random_chance=True)
-            batch_baseline = self._prep_batch(z_baseline, metadata, label)
-            qa_output_baseline = self.qa_model(**batch_baseline)
-
-        return qa_output_baseline, z_baseline, z_bl_onehot, batch_baseline
+    def wordscore_benchmark(self, sent_logits, ques_logits, eqiv_logits, word_overlap_scores):
+        z_sent, _ = self._draw_samples_wordscore(sent_logits, word_overlap_scores, random_chance=True)
+        z_eqiv, _ = self._draw_samples_wordscore(eqiv_logits, word_overlap_scores, random_chance=True)
+        z_ques, _ = self._draw_samples(ques_logits, random_chance=True)
+        return z_sent, z_ques, z_eqiv
 
     @classmethod
     def _load(cls, *args, **kwargs) -> "Model":

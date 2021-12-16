@@ -106,8 +106,8 @@ class AdversarialGenerator(Model):
         self.adv_perturbations = adversarial_perturbations.split(',')
 
         self.wandb = 'WANDB_LOG_1' in os.environ and os.environ['WANDB_LOG_1'] == 'true'
-        self.max_flips = max_flips
-        self.max_elims = max_elims
+        self.max_flips = int(max_flips)
+        self.max_elims = int(max_elims)
 
     # @timing
     def forward(self, phrase=None, label=None, metadata=None, retrieval=None, word_overlap_scores=None, **kwargs) -> torch.Tensor:
@@ -480,12 +480,7 @@ class AdversarialGenerator(Model):
         # Obtain samples
         # During validation, use argmax unless prob = 0.5, in which case sample
         draws = gs(logits_).argmax(-1)
-        # if self.training:
-        if True:
-            samples = draws
-        else:
-            greedy = logits_.argmax(-1)
-            samples = torch.where((logits_ == 0).all(-1), draws, greedy)
+        samples = draws
 
         # Ensure padding sentences are not sampled
         mask = (logits_ == self._p0).all(-1).int()

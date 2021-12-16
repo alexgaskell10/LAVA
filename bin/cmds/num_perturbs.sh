@@ -2,7 +2,7 @@
 dt=$(date +%Y-%m-%d_%H-%M-%S)
 
 max_instances=-1        # 10 -1
-cuda_device=7       # Currently only supports single GPU training
+cuda_device=6       # Currently only supports single GPU training
 data_dir=data/rule-reasoning-dataset-V2020.2.4/depth-5/
 victim_dir=bin/runs/ruletaker/2021-12-12_17-38-38_roberta-large/
 outdir_attacker_base=bin/runs/num_perturbs/$dt/
@@ -15,7 +15,7 @@ exec 1>'logs/num_perturbs-log-'$dt'.out' 2>&1
 
 for ES in {1..5}
 do
-    for SE in {4..5}
+    for SE in {5..5}
     do
         ext=SE-$SE'_'ES-$ES
         outdir_attacker=$outdir_attacker_base/$ext
@@ -32,6 +32,8 @@ do
         sed -i 's+local\ dataset_dir\ =\ [^,]*;+local\ dataset_dir\ =\ "'$data_dir'";+g' $proc_config_1
         sed -i 's/local\ cuda_device\ =\ [[:digit:]]\+/local\ cuda_device\ =\ '$cuda_device'/g' $proc_config_1
         sed -i 's/"max_instances":\ [^,]*,/"max_instances":\ '$max_instances',/g' $proc_config_1
+        sed -i 's+local\ max_flips\ =\ [^,]*;+local\ max_flips\ =\ "'$ES'";+g' $proc_config_1
+        sed -i 's+local\ max_elims\ =\ [^,]*;+local\ max_elims\ =\ "'$SE'";+g' $proc_config_1
 
         # Train model
         echo '\n\nTraining the attacker model using config '$proc_config_1' with '$ext'. \nOutputs will be saved to '$outdir_attacker'\n\n'

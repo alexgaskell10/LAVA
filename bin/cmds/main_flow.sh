@@ -178,7 +178,7 @@ proc_config_5=bin/config/ruletaker/ruletaker_adv_retraining_test_$dt.jsonnet
 cp $raw_config_5 $proc_config_5
 
 sed -i 's+local\ dataset_dir\ \=\ [^,]*;+local\ dataset_dir\ =\ "'$data_dir'";+g' $proc_config_5
-sed -i 's+local\ adversarial_examples_path_test\ \=\ [^,]*;+local\ adversarial_examples_path_test\ =\ "'$adv_test_path'";+g' $proc_config_5
+sed -i 's+local\ adversarial\_examples_path_test\ \=\ [^,]*;+local\ adversarial_examples_path_test\ =\ "'$adv_test_path'";+g' $proc_config_5
 sed -i 's/"max_instances":\ [^,]*,/"max_instances":\ '$max_instances',/g' $proc_config_5
 
 echo '\n\nEvaluating the victim on the augmented test set using config '$proc_config_5'. \nOutputs will be saved to '$outdir_victim_retrain'\n\n'
@@ -195,3 +195,22 @@ echo $cmd
 $cmd
 
 echo "Done"
+
+
+
+# outdir_victim_retrain=bin/runs/ruletaker/2021-12-12_17-38-38_roberta-large_retrain
+# proc_config_5=bin/config/ruletaker/ruletaker_adv_retraining_test_2021-12-12_17-38-38.jsonnet
+# data_dir=data/rule-reasoning-dataset-V2020.2.4/depth-5/
+# cuda_device=9
+
+# cmd='python main.py \
+#         ruletaker_adv_training_test \
+#         '$outdir_victim_retrain'/model.tar.gz \
+#         test \
+#         --output-file '$outdir_victim_retrain'/results.json \
+#         --overrides_file '$proc_config_5' \
+#         --cuda-device '$cuda_device' \
+#         --include-package ruletaker.allennlp_models'
+# cmd=$(sed 's/\\//g' <<< $cmd)
+# echo $cmd
+# $cmd

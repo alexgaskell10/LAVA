@@ -11,6 +11,8 @@ local lr = 5e-6;
 local model_type = 'adversarial_base';
 local compute_word_overlap_scores = true;
 local epochs = 2;
+local max_flips = 3;
+local max_elims = 3;
 
 {
     "ruletaker_archive": ruletaker_archive,
@@ -35,8 +37,8 @@ local epochs = 2;
         "benchmark_type": "none",      # word_score, random, none
         "bernoulli_node_prediction_level": "node-level",       # sequence-level, node-level
         "adversarial_perturbations": "sentence_elimination,question_flip,equivalence_substitution",       # sentence_elimination,question_flip,equivalence_substitution
-        "max_flips": 3,     # -1, 3
-        "max_elims": 3,     # -1, 3
+        "max_flips": max_flips,
+        "max_elims": max_elims,
     },
     "trainer": {
         "cuda_device": cuda_device,

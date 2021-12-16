@@ -190,7 +190,7 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
     outdir = '/'.join(args.output_file.split('/')[:-1])
     dset = ('test' if 'test' in evaluation_data_path.split('/')[-1] else 'val')+'-orig'
     write_records(metrics.pop('predictions'), dset, 100, outdir)
-    dump_metrics(args.output_file, metrics, log=False)
+    dump_metrics(args.output_file.replace('results.json', f'results_{dset}.json'), metrics, log=False)
 
 
 
@@ -208,7 +208,7 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
 
     dset = ('test' if 'test' in evaluation_data_path.split('/')[-1] else 'val')+'-adv'
     write_records(metrics.pop('predictions'), dset, 100, outdir)
-    dump_metrics(args.output_file, metrics, log=False)
+    dump_metrics(args.output_file.replace('results.json', f'results_{dset}.json'), metrics, log=False)
 
 
 
@@ -226,6 +226,6 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
 
     dset = ('test' if 'test' in evaluation_data_path.split('/')[-1] else 'val')+'-aug'
     write_records(metrics.pop('predictions'), dset, 100, outdir)
-    dump_metrics(args.output_file, metrics, log=False)
+    dump_metrics(args.output_file.replace('results.json', f'results_{dset}.json'), metrics, log=False)
 
     return metrics

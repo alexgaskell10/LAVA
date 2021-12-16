@@ -8,7 +8,7 @@ import difflib
 sys.path.extend(['/vol/bitbucket/aeg19/re-re'])
 
 from ruletaker.allennlp_models.dataset_readers.retrieval_reasoning_reader import RetrievalReasoningReader as DataReader
-from ruletaker.allennlp_models.models.ruletaker.theory_label_generator import call_theorem_prover_from_lst
+from ruletaker.allennlp_models.models.solver.theory_label_generator import call_theorem_prover_from_lst
 from adversarial.openattack.config import config
 from adversarial.openattack.openattack import load_and_remap_config
 
@@ -103,6 +103,7 @@ def process_meta(config, adversarial_data):
         meta = data['data']['metadata']
         meta['result'] = adv
         if adv is None:
+            meta['subs'] = 0
             proc_data.append(meta)
             continue
         orig = meta['context']
@@ -122,10 +123,12 @@ def process_meta(config, adversarial_data):
             new_meta['representation'] = new_meta['representation'].replace(*sub)
             new_meta['text'] = new_meta['text'].replace(*sub)
             meta['meta_record'][meta_type][meta_id] = new_meta
+            meta['subs'] = 1
         elif config['attacker'] == 'textfooler':
             subs = extract_textfooler(orig_, adv_)
             if len(subs) == 0:
                 meta['skip'] = True
+                meta['subs'] = 0
                 proc_data.append(meta)
                 continue
             try:
@@ -142,8 +145,10 @@ def process_meta(config, adversarial_data):
                     new_meta['text'] = new_meta['text'].replace(*sub)
                     meta['meta_record'][meta_type][meta_id] = new_meta
                     continue
+                meta['subs'] = len(subs)
             except IndexError:
                 meta['skip'] = True
+                meta['subs'] = 0
                 proc_data.append(meta)
                 continue
 
@@ -185,7 +190,11 @@ if __name__ == '__main__':
 
     out_str = f'Unadjusted flip rate: {unadj_flip_rate}\nAdjusted flip rate: {adj_flip_rate}\nNum samples before adjustment: {len(adv_data)}\nNum samples post adjustment: {len(modified)}'
     print(out_str)
-    # with open(pkl_path.replace('.pkl', '_modresults.txt'), 'w') as f:
     with open(config['outpath'], 'w') as f:
         f.write(out_str)
 
+    # Add labels to dict for later analysis
+    proc_data = [{**d, 'adv_result':a, 'mod_label':e} for d,a,e, in zip(proc_data, adv_results, engine_labels)]
+    with open(config['pkl_path'].replace('.pkl', '_reevaled.pkl'), 'wb') as f:
+        pkl.dump(proc_data, f)
+    

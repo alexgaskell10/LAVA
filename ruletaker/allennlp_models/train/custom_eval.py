@@ -174,6 +174,10 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
         else:
             dataset_reader = DatasetReader.from_params(config.pop("dataset_reader"))
 
+        evaluation_data_path = args.input_file
+        logger.info("Reading evaluation data from %s", evaluation_data_path)
+        instances = dataset_reader.read(evaluation_data_path)
+
     else:
         config = Params(args.config)
         # Try to use the validation dataset reader if there is one - otherwise fall back
@@ -184,6 +188,10 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
         else:
             dataset_reader = DatasetReader.from_params(config.pop("dataset_reader"))
 
+        evaluation_data_path = args.input_file
+        logger.info("Reading evaluation data from %s", evaluation_data_path)
+        instances = dataset_reader.read(evaluation_data_path)
+
         archive = load_archive(config['model']['ruletaker_archive'], args.cuda_device, None, None, None)
         victim = archive.model
         Model = config.pop('model_class')
@@ -193,9 +201,6 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
         model.qa_model.train()
         model = model.to(victim._classifier.bias.device)
 
-    evaluation_data_path = args.input_file
-    logger.info("Reading evaluation data from %s", evaluation_data_path)
-    instances = dataset_reader.read(evaluation_data_path)
 
     embedding_sources = (
         json.loads(args.embedding_sources_mapping) if args.embedding_sources_mapping else {}

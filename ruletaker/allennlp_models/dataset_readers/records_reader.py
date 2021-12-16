@@ -30,20 +30,21 @@ class RecordsReader(RuleReasoningReader):
             records = pkl.load(data_file)
 
         n = 0
-        max_instances = -1 if self.max_instances is None else self.max_instances // 2
+        max_instances = -1 if self.max_instances is None else self.max_instances
         qids, qid_texts = {}, {}
         for record in records:
             if n == max_instances:
                 break
 
-            if not record['qa_fooled']:
-                continue                # Only include incorrectly answered adversarial questions
+            # if not record['qa_fooled']:
+            #     continue                # Only include incorrectly answered adversarial questions
 
             base_id = record['id']
             if base_id in qids:
                 qids[base_id] += 1
             else:
                 qids[base_id] = 1
+
             id = 'Adv-' + base_id + '-' + str(qids[base_id])
 
             context = '.'.join(record['sampled_sentences'][1:-1]) + '.'

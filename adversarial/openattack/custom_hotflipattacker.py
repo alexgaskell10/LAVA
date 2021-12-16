@@ -24,8 +24,6 @@ class CustomHotFlipAttacker(HotFlipAttacker):
         tokenizer : Optional[Tokenizer] = None,
         filter_words : List[str] = [],
         lang = None,
-        # vocab = None,
-        # device = None,
     ):
         """ HotFlip: White-Box Adversarial Examples for Text Classification. Javid Ebrahimi, Anyi Rao, Daniel Lowd, Dejing Dou. ACL 2018.
             `[pdf] <https://www.aclweb.org/anthology/P18-2006>`__
@@ -66,9 +64,6 @@ class CustomHotFlipAttacker(HotFlipAttacker):
         self.filter_words = set(filter_words)
 
         check_language([self.tokenizer, self.substitute], self.__lang_tag)
-
-        # self.vocab = vocab
-        # self.device = device
 
     def attack(self, victim: Classifier, input : dict, goal: ClassifierGoal):
         context = input['context']
@@ -119,3 +114,4 @@ class CustomHotFlipAttacker(HotFlipAttacker):
             if not goal.check( adversarial_sample, y_adv ):
                 raise RuntimeError("Check attacker result failed: result ([%d] %s) expect (%s%d)" % ( y_adv, adversarial_sample, "" if goal.targeted else "not ", goal.target))
         return adversarial_sample, counter
+        

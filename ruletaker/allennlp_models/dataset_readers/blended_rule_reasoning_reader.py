@@ -96,7 +96,7 @@ class BlendedRuleReasoningReader(RuleReasoningReader):
             records = pkl.load(data_file)
 
         n = 0
-        max_instances = -1 if self.max_instances is None else self.max_instances // 2
+        max_instances = -1 if self.max_instances is None else self.max_instances
         qids, qid_texts = {}, {}
         for record in records:
             if n == max_instances:
