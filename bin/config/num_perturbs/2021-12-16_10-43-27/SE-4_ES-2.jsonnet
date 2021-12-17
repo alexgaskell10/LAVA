@@ -1,16 +1,18 @@
-local ruletaker_archive = 'bin/runs/ruletaker/2021-12-12_16-40-50_roberta-large/model.tar.gz';
+local ruletaker_archive = 'bin/runs/ruletaker/2021-12-12_17-38-38_roberta-large//model.tar.gz';
 local dataset_dir = "data/rule-reasoning-dataset-V2020.2.4/depth-5/";
 local inference_model = "roberta-base";      # {roberta-base, roberta-large}
-local cuda_device = 3;
-local batch_size = 8;
-local num_gradient_accumulation_steps = 1;
+local cuda_device = 5;
+local batch_size = 2;
+local num_gradient_accumulation_steps = 8;
 local num_monte_carlo = 8;
 local longest_proof = 10;
 local shortest_proof = 1;
 local lr = 5e-6;
 local model_type = 'adversarial_base';
 local compute_word_overlap_scores = true;
-local epochs = 5;
+local epochs = 2;
+local max_flips = "2";
+local max_elims = "4";
 
 {
     "ruletaker_archive": ruletaker_archive,
@@ -25,7 +27,7 @@ local epochs = 5;
         "shortest_proof": shortest_proof,
         "one_proof": false,
         "word_overlap_scores": compute_word_overlap_scores,
-        "max_instances": "none",     # 10, 4096, 8184, false
+        "max_instances": -1,     # 10, 4096, 8184, false
     },
     "retrieval_reasoning_model": {
         "variant": inference_model,
@@ -35,8 +37,8 @@ local epochs = 5;
         "benchmark_type": "none",      # word_score, random, none
         "bernoulli_node_prediction_level": "node-level",       # sequence-level, node-level
         "adversarial_perturbations": "sentence_elimination,question_flip,equivalence_substitution",       # sentence_elimination,question_flip,equivalence_substitution
-        "max_flips": 3,     # -1, 3
-        "max_elims": 3,     # -1, 3
+        "max_flips": max_flips,
+        "max_elims": max_elims,
     },
     "trainer": {
         "cuda_device": cuda_device,

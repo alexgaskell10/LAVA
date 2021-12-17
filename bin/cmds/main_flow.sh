@@ -198,8 +198,8 @@ echo "Done"
 
 
 
-# outdir_victim_retrain=bin/runs/ruletaker/2021-12-12_17-38-38_roberta-large_retrain
-# proc_config_5=bin/config/ruletaker/ruletaker_adv_retraining_test_2021-12-12_17-38-38.jsonnet
+# outdir_victim_retrain=bin/runs/ruletaker/2021-12-12_19-08-47_roberta-base_retrain
+# proc_config_5=bin/config/ruletaker/ruletaker_adv_retraining_test_2021-12-12_19-08-47.jsonnet
 # data_dir=data/rule-reasoning-dataset-V2020.2.4/depth-5/
 # cuda_device=9
 

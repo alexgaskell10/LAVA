@@ -38,7 +38,7 @@ def main(prog: Optional[str] = None) -> None:
         "adversarial_dataset_generation": ['adversarial_dataset_generation', 'bin/config/attacker/tmp.jsonnet', '-s', outdir_adv, '--include-package', 'ruletaker.allennlp_models'],
         "ruletaker_adv_training_test": ['ruletaker_adv_training_test', 
             'bin/runs/ruletaker/2021-12-12_19-08-47_roberta-base_retrain/model.tar.gz', 'test', '--output-file', '_results.json', 
-            '--overrides_file', 'bin/config/ruletaker/ruletaker_adv_retraining_2021-12-12_19-08-47.jsonnet',\
+            '--overrides_file', 'bin/config/ruletaker/ruletaker_adv_retraining_test_2021-12-12_19-08-47.jsonnet',\
             '--cuda-device', '9', '--include-package', 'ruletaker.allennlp_models'
         ],
         "ruletaker_eval_original": ['ruletaker_eval_original',

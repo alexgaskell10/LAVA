@@ -102,8 +102,8 @@ class BlendedRuleReasoningReader(RuleReasoningReader):
             if n == max_instances:
                 break
 
-            if not record['qa_fooled']:
-                continue                # Only include incorrectly answered adversarial questions
+            # if not record['qa_fooled']:
+            #     continue                # Only include incorrectly answered adversarial questions
 
             base_id = record['id']
             if base_id in qids:

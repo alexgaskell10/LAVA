@@ -1,6 +1,7 @@
 import json, os, sys
 import pickle as pkl
 import pandas as pd
+from sklearn.metrics import confusion_matrix, precision_score, recall_score, f1_score
 
 from analysis import load_as_df, compute_features
 
@@ -16,6 +17,18 @@ paths = {
     'v_rb-lg_retrain_orig': 'bin/runs/ruletaker/2021-12-12_17-38-38_roberta-large_retrain/test-orig-records_epoch100.pkl',
     'v_rb-lg_retrain_adv': 'bin/runs/ruletaker/2021-12-12_17-38-38_roberta-large_retrain/test-adv-records_epoch100.pkl',
     # 'v_rb-lg_retrain_aug': 'bin/runs/ruletaker/2021-12-12_17-38-38_roberta-large_retrain/test-aug-records_epoch100.pkl',
+    # Transferability
+    'trans-v_rb-lg:v_rb-b': 'bin/runs/ruletaker/2021-12-12_17-38-38_roberta-large/transferability_results_2021-12-12_17-38-38_roberta-large--2021-12-12_19-08-47_roberta-base-records.pkl',
+    'trans-v_rb-b:v_rb-lg': 'bin/runs/ruletaker/2021-12-12_19-08-47_roberta-base/transferability_results_2021-12-12_19-08-47_roberta-base--2021-12-12_17-38-38_roberta-large-records.pkl',
+    # Adv retraining
+    'retrain-v_rb-lg:adv_before': 'bin/runs/adversarial/2021-12-12_17-38-38_roberta-large/test_results-records.pkl',
+    'retrain-v_rb-lg:adv_after': 'bin/runs/ruletaker/2021-12-12_17-38-38_roberta-large_retrain_v1/test-adv-records_epoch100.pkl',
+    'retrain-v_rb-lg:orig_before': 'bin/runs/ruletaker/2021-12-12_17-38-38_roberta-large/test_results.json',
+    'retrain-v_rb-lg:orig_after': 'bin/runs/ruletaker/2021-12-12_17-38-38_roberta-large_retrain_v1/test-orig-records_epoch100.pkl',     # TODO update
+    'retrain-v_rb-b:adv_before': 'bin/runs/adversarial/2021-12-12_19-08-47_roberta-base/test_results-records.pkl',
+    'retrain-v_rb-b:adv_after': 'bin/runs/ruletaker/2021-12-12_19-08-47_roberta-base_retrain_v1/test-adv-records_epoch100.pkl',
+    'retrain-v_rb-b:orig_before': 'bin/runs/ruletaker/2021-12-12_19-08-47_roberta-base/test_results.json',
+    'retrain-v_rb-b:orig_after': 'bin/runs/ruletaker/2021-12-12_19-08-47_roberta-base_retrain_v1/test-orig-records_epoch100.pkl',       # TODO update
 }
 
 ref_paths = {
@@ -28,6 +41,8 @@ ref_paths = {
     'v_rb-lg_retrain_orig': 'data/rule-reasoning-dataset-V2020.2.4/depth-5/test.jsonl',
     'v_rb-lg_retrain_adv': 'data/rule-reasoning-dataset-V2020.2.4/depth-5/test.jsonl',
     'v_rb-lg_retrain_aug': 'data/rule-reasoning-dataset-V2020.2.4/depth-5/test.jsonl',
+    'trans-v_rb-lg:v_rb-b': 'bin/runs/adversarial/2021-12-12_17-38-38_roberta-large/test_results-records.pkl',
+    'trans-v_rb-b:v_rb-lg': 'bin/runs/adversarial/2021-12-12_19-08-47_roberta-base/test_results-records.pkl',
 }
 
 
@@ -158,7 +173,68 @@ def display_adversarial_retraining_results():
     print(output_df.to_latex())
 
 
+def display_transferability_results():
+    summaries = []
+    cols = ['name', 'cnt_qafooled', 'ASR', 'acc', 'cnt']
+    for name in ['trans-v_rb-lg:v_rb-b', 'trans-v_rb-b:v_rb-lg']:
+        path = paths[name]
+        preds = load_as_df(path)
+
+        data_path = ref_paths[name]
+        ref = load_as_df(data_path)
+
+        preds['id'] = preds['id'].apply(lambda x: '-'.join(x.split('-')[1:-1]))
+        df = pd.merge(preds, ref[['orig_proof_depth','qa_fooled','id']], on='id')
+        tn, fp, fn, tp = confusion_matrix(df['is_correct'], df['qa_fooled']).ravel().tolist()
+        precision = tp / (tp + fp)
+        n_qafooled = df.qa_fooled.tolist().count(True)
+        row = [n_qafooled, 100*(1-precision), 100*df.is_correct.mean(), len(df)]
+        tmp_df = pd.DataFrame([[name, *row]], columns=cols)
+        summaries.append(tmp_df)
+        df_ = df[df.qa_fooled]
+        df_.is_correct.mean()
+
+
+    output_df = pd.concat(summaries, axis=0)
+    output_df.set_index('name', inplace=True)
+    print(output_df.to_latex(float_format="%.1f"))
+
+
+def display_retraining_results():
+    summaries = []
+    cols = ['name', 'acc']
+    for name in ['retrain-v_rb-lg:adv_before', 'retrain-v_rb-b:adv_before']:
+        path = paths[name]
+        preds = load_as_df(path)
+        acc = 100*(1 - preds.qa_fooled.mean())
+        summaries.append([name, acc])
+        continue
+
+    for name in ['retrain-v_rb-lg:adv_after', 'retrain-v_rb-b:adv_after', 'retrain-v_rb-lg:orig_after', 'retrain-v_rb-b:orig_after']:
+        path = paths[name]
+        preds = load_as_df(path)
+        acc = 100*preds.is_correct.mean()
+        summaries.append([name, acc])
+        continue
+
+    for name in ['retrain-v_rb-lg:orig_before', 'retrain-v_rb-b:orig_before']:
+        path = paths[name]
+        results = json.load(open(path, 'r'))
+        preds = pd.DataFrame(results['predictions'])
+
+        acc = 100*preds.is_correct.mean()
+        summaries.append([name, acc])
+        continue
+
+    output_df = pd.DataFrame(summaries, columns=cols)
+    output_df.sort_values('name', inplace=True)
+    output_df.set_index('name', inplace=True)
+    print(output_df.to_latex(float_format="%.1f"))
+
+
 if __name__ == '__main__':
     # display_victim_results()
     # display_attacker_results()
-    display_adversarial_retraining_results()
+    # display_adversarial_retraining_results()
+    # display_transferability_results()
+    display_retraining_results()

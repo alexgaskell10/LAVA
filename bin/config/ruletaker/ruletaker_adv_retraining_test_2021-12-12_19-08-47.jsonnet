@@ -1,5 +1,5 @@
 local batch_size = 16;
-local adversarial_examples_path_test = "bin/runs/adversarial/2021-12-12_19-08-47_roberta-base/";
+local adversarial_examples_path_test = "bin/runs/adversarial/2021-12-12_19-08-47_roberta-large/";
 local dataset_dir = "data/rule-reasoning-dataset-V2020.2.4/depth-5/";
 
 {
