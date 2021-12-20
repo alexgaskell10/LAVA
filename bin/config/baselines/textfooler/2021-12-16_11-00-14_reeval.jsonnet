@@ -1,10 +1,10 @@
 local victim_archive_file = "bin/runs/ruletaker/2021-12-12_17-38-38_roberta-large";
-local file_path = "data/rule-reasoning-dataset-V2020.2.4/depth-5/test.jsonl"; 
-local pkl_path = ""; 
+local file_path = ""; 
+local pkl_path = "bin/runs/baselines/textfooler/2021-12-16_11-00-14.pkl"; 
 local cuda_device = 8;
-local attack_method = "hotflip";
+local attack_method = "textfooler";
 local outdir = "bin/runs/baselines";
-local outpath = "bin/runs/baselines/hotflip/2021-12-16_11-00-14_reeval.txt";
+local outpath = "bin/runs/baselines/textfooler/2021-12-16_11-00-14.pkl";
 
 {
     "outpath": outpath,

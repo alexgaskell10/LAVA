@@ -199,11 +199,8 @@ class AdversarialGenerator(Model):
         with torch.no_grad():
             qa_output = self.qa_model(**batch)
         qa_logprobs = -qa_output['loss']
-        qa_probs = qa_logprobs.exp()
         probs = qa_output["label_probs"]
         preds = probs.argmax(-1)
-        qa_logits = qa_output['label_logits']
-        # qa_logprobs = torch.where(torch.isnan(qa_logprobs), torch.tensor(0., device=self._d), qa_logprobs)
 
         sent_logprobs, ques_logprobs, eqiv_logprobs = 0, 0, 0
         if 'sentence_elimination' in self.adv_perturbations:

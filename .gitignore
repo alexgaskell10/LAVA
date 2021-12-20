@@ -139,3 +139,4 @@ data
 log*.out*
 bin/config/*_2021-12-*
 logs
+adversarial/figs

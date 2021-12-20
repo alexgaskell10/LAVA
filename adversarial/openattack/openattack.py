@@ -22,47 +22,6 @@ from adversarial.openattack.custom_attackeval import CustomAttackEval as Eval
 from datasets import Dataset
 
 
-if False:
-    config = {
-        "file_path": None,
-        "dset_config": {
-            'add_NAF': False, #True,
-            'true_samples_only': False,
-            'concat_q_and_c': True,
-            'shortest_proof': 1,
-            'longest_proof': 100,
-            'pretrained_retriever_model': None, #'bin/runs/pretrain_retriever/rb-base/model.tar.gz',
-            'retriever_variant': 'roberta-large',
-            'sample': -1,
-            'use_context_full': False,
-            'scramble_context': False,
-            'skip_id_regex': '$none',
-            'add_prefix': {'c': 'C: ','q': 'Q: '},
-            'syntax': 'rulebase',
-            'max_pieces': 384,
-            'one_proof': True,
-            'max_instances': False,
-            'pretrained_model': 'roberta-large'
-        },
-        "archive_config": {
-            "archive_file": "runs/ruletaker/depth-5-base", #"./ruletaker/runs/depth-5-base", "./ruletaker/runs/depth-5"
-            "cuda_device": 3,
-            "overrides": ""
-        },
-        "dataloader_config": {   
-            'batches_per_epoch': None,
-            'multiprocessing_context': None,
-            'worker_init_fn': None,
-            'timeout': 0,
-            'drop_last': False,
-            'pin_memory': False,
-            'num_workers': 0,
-            'shuffle': False,
-            'batch_size': 1
-        }
-    }
-
-
 def datetime_now():
     return datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
@@ -132,6 +91,7 @@ if __name__ == '__main__':
 
     # Don't apply perturbs to proper nouns
     filter_words = ['Anne', 'Bob', 'Charlie', 'Dave', 'Erin', 'Fiona', 'Gary', 'Harry']
+    filter_words += ['The', 'the', '.', 'If']
 
     victim, data_reader, vocab = load_victim_from_archive(config)
 

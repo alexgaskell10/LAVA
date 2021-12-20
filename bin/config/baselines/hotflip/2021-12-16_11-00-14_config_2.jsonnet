@@ -4,13 +4,13 @@ local pkl_path = "";
 local cuda_device = 8;
 local attack_method = "hotflip";
 local outdir = "bin/runs/baselines";
-local outpath = "bin/runs/baselines/hotflip/2021-12-16_11-00-14_reeval.txt";
+local outpath = "bin/runs/baselines/hotflip/tmp.txt";
 
 {
     "outpath": outpath,
     "file_path": file_path,
     "pkl_path": pkl_path,
-    "max_instances": -1,
+    "max_instances": 100,
     "victim_archive_file": victim_archive_file,
     "attacker": attack_method,
     "cuda_device": cuda_device,

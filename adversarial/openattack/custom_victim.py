@@ -28,8 +28,6 @@ class GetProbability(CustomMethod):
 CLASSIFIER_METHODS : Dict[str, VictimMethod] = {
     "get_pred": GetPredict(),
     "get_prob": GetProbability(),
-    # "get_grad": GetGradient(),
-    # "get_embedding": GetEmbedding()
 }
 
 

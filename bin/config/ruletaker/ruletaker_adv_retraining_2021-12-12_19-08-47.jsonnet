@@ -1,18 +1,18 @@
 local train_size = 119068;
-local batch_size = 2;
-local num_gradient_accumulation_steps = 8;
-local num_epochs = 4;
+local batch_size = 4;
+local num_gradient_accumulation_steps = 4;
+local num_epochs = 8;
 local learning_rate = 1e-6;
 local weight_decay = 0.1;
 local warmup_ratio = 0.06;
 local skip_id_regex = "$none";
-local transformer_model = "roberta-large";
+local transformer_model = "roberta-base";
 local max_pieces = 384;
-local transformer_weights_model = "bin/runs/ruletaker/2021-12-12_19-08-47_roberta-large";
+local transformer_weights_model = "";
 local dataset_dir = "data/rule-reasoning-dataset-V2020.2.4/depth-5/";
-local cuda_device = 9;
-local adversarial_examples_path_train = "bin/runs/adversarial/2021-12-12_19-08-47_roberta-large/"; # "none","bin/runs/adversarial/2021-12-01_17-36-59-keep/train-records_epoch2.pkl"
-local adversarial_examples_path_val = "bin/runs/adversarial/2021-12-12_19-08-47_roberta-large/"; # "none","bin/runs/adversarial/2021-12-01_17-36-59-keep/train-records_epoch2.pkl"
+local cuda_device = 8;
+local adversarial_examples_path_train = "bin/runs/adversarial/2021-12-12_19-08-47_roberta-base/val-records_epoch-1.pkl"; # "none","bin/runs/adversarial/2021-12-01_17-36-59-keep/train-records_epoch2.pkl"
+local adversarial_examples_path_val = "bin/runs/adversarial/2021-12-12_19-08-47_roberta-base/val-records_epoch4.pkl"; # "none","bin/runs/adversarial/2021-12-01_17-36-59-keep/train-records_epoch2.pkl"
 local adversarial_examples_path_test = "none"; # "none","bin/runs/adversarial/2021-12-01_17-36-59-keep/train-records_epoch2.pkl"
 
 {

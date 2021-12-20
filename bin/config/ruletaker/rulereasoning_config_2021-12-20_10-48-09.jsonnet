@@ -1,23 +1,23 @@
 local train_size = 119068;
-local batch_size = 4;
-local num_gradient_accumulation_steps = 4;
+local batch_size = 2;
+local num_gradient_accumulation_steps = 8;
 local num_epochs = 8;
-local learning_rate = 1e-5;
+local learning_rate = 5e-6;
 local weight_decay = 0.1;
 local warmup_ratio = 0.06;
 local skip_id_regex = "$none";
-local transformer_model = "roberta-base";
+local transformer_model = "roberta-large";
 local max_pieces = 384;
 local transformer_weights_model = "";
 local dataset_dir = "data/rule-reasoning-dataset-V2020.2.4/depth-5/";
-local cuda_device = 4;
+local cuda_device = 3;
 
 {
   "data_loader": {
     "batch_sampler": {
       "batch_size": batch_size,
       "type": "basic",
-      "sampler": "sequential",      # sequential, random
+      "sampler": "random",      # sequential, random
       "drop_last": false
     }
   },

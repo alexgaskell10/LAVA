@@ -1,21 +1,24 @@
 max_instances=-1        # 10 -1
-cuda_device=9       # Currently only supports single GPU training
-roberta_model="roberta-large"        # Victim model
+cuda_device=7       # Currently only supports single GPU training
+roberta_model="roberta-base"        # Victim model
 data_dir=data/rule-reasoning-dataset-V2020.2.4/depth-5/
 
-dt='2021-12-12_17-38-38'
+# dt=$(date +%Y-%m-%d_%H-%M-%S)
+dt='2021-12-20_09-00-40'
+# bin/runs/ruletaker/2021-12-20_09-00-40_roberta-base
 outdir_victim=bin/runs/ruletaker/$dt'_'$roberta_model
-outdir_victim_retrain=bin/runs/ruletaker/$dt'_'$roberta_model'_retrain'
-outdir_attacker=bin/runs/adversarial/$dt'_'$roberta_model
+outdir_victim_retrain=bin/runs/ruletaker/$dt'_'$roberta_model'_retrain_v2'
+# outdir_attacker=bin/runs/adversarial/$dt'_'$roberta_model
+outdir_attacker=bin/runs/adversarial/2021-12-12_19-08-47_roberta-base
 
 
 exec 3>&1 4>&2
 trap 'exec 2>&4 1>&3' 0 1 2 3
-exec 1>'logs/retrain-'$roberta_model'.out' 2>&1
+exec 1>'logs/retrain-'$roberta_model'_'$dt'.out' 2>&1
 
 
 
-### STEP 3. Retrain the victim on the combined dataset ###
+### Retrain the victim on the combined dataset ###
 
 raw_config_4=bin/config/ruletaker/ruletaker_adv_retraining.jsonnet
 proc_config_4=bin/config/ruletaker/ruletaker_adv_retraining_$dt.jsonnet
@@ -30,7 +33,7 @@ then
 else
   num_epochs=8
   batch_size=4
-  num_gradient_accumulation_steps=4
+  num_gradient_accumulation_steps=8 #4 8
 fi
 
 sed -i 's/local\ cuda_device\ =\ [[:digit:]]\+/local\ cuda_device\ =\ '$cuda_device'/g' $proc_config_4
@@ -40,6 +43,7 @@ sed -i 's/local\ num_gradient_accumulation_steps\ =\ [[:digit:]]\+/local\ num_gr
 sed -i 's/local\ transformer\_model\ \=\ [^,]*;/local\ transformer\_model\ =\ "'$roberta_model'";/g' $proc_config_4
 sed -i 's+local\ dataset_dir\ \=\ [^,]*;+local\ dataset_dir\ =\ "'$data_dir'";+g' $proc_config_4
 sed -i 's+local\ transformer_weights_model\ \=\ [^,]*;+local\ transformer_weights_model\ =\ "'$outdir_victim'";+g' $proc_config_4
+# sed -i 's+local\ transformer_weights_model\ \=\ [^,]*;+local\ transformer_weights_model\ =\ "";+g' $proc_config_4
 
 # Get path for adversarial examples
 path=$(ls $outdir_attacker | grep val-records_epoch-1)
@@ -51,7 +55,7 @@ else
 fi
 
 adv_val_path=$outdir_attacker/$(ls $outdir_attacker | grep val-records_epoch | tail -1)
-adv_test_path=$outdir_attacker/$(ls $outdir_attacker | grep test-records_epoch | tail -1)
+adv_test_path=$outdir_attacker/$(ls $outdir_attacker | grep test_results-records | tail -1)
 
 sed -i 's+local\ adversarial_examples_path_train\ \=\ [^,]*;+local\ adversarial_examples_path_train\ =\ "'$adv_train_path'";+g' $proc_config_4
 sed -i 's+local\ adversarial_examples_path_val\ \=\ [^,]*;+local\ adversarial_examples_path_val\ =\ "'$adv_val_path'";+g' $proc_config_4
@@ -75,7 +79,7 @@ proc_config_5=bin/config/ruletaker/ruletaker_adv_retraining_test_$dt.jsonnet
 cp $raw_config_5 $proc_config_5
 
 sed -i 's+local\ dataset_dir\ \=\ [^,]*;+local\ dataset_dir\ =\ "'$data_dir'";+g' $proc_config_5
-sed -i 's+local\ adversarial\_examples_path_test\ \=\ [^,]*;+local\ adversarial_examples_path_test\ =\ "'$adv_test_path'";+g' $proc_config_5
+sed -i 's+local\ adversarial_examples_path_test\ \=\ [^,]*;+local\ adversarial_examples_path_test\ =\ "'$adv_test_path'";+g' $proc_config_5
 sed -i 's/"max_instances":\ [^,]*,/"max_instances":\ '$max_instances',/g' $proc_config_5
 
 echo '\n\nEvaluating the victim on the augmented test set using config '$proc_config_5'. \nOutputs will be saved to '$outdir_victim_retrain'\n\n'

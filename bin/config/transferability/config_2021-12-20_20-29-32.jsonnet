@@ -1,7 +1,7 @@
 local batch_size = 16;
-local adversarial_examples_path_test = "";
+local adversarial_examples_path_test = "bin/runs/adversarial/2021-12-03_08-15-20-keep/val-records_epoch2.pkl";
 local dataset_dir = "data/rule-reasoning-dataset-V2020.2.4/depth-5/";
-local dataset_reader_type = 'records_reader';
+local dataset_reader_type = baseline_records_reader;
 
 {
     "train_data_path": "",
@@ -9,7 +9,7 @@ local dataset_reader_type = 'records_reader';
     "test_data_path": adversarial_examples_path_test,
     "dataset_reader": {
         "type": dataset_reader_type,
-        "max_instances": 20,
+        "max_instances": 10,
     },
     "data_loader": {
         "batch_sampler": {

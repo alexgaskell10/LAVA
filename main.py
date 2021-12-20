@@ -35,6 +35,7 @@ def main(prog: Optional[str] = None) -> None:
     cmds = {
         "ruletaker_train_original": ['ruletaker_train_original', 'bin/config/ruletaker/rulereasoning_config.jsonnet', '-s', outdir_rt, '--include-package', 'ruletaker.allennlp_models'],
         "ruletaker_adv_training": ['ruletaker_adv_training', 'bin/config/ruletaker/ruletaker_adv_retraining.jsonnet', '-s', outdir_rt, '--include-package', 'ruletaker.allennlp_models'],
+        # "ruletaker_adv_training": ['ruletaker_adv_training', 'bin/config/ruletaker/ruletaker_adv_baseline_retraining.jsonnet', '-s', outdir_rt, '--include-package', 'ruletaker.allennlp_models'],
         "adversarial_dataset_generation": ['adversarial_dataset_generation', 'bin/config/attacker/tmp.jsonnet', '-s', outdir_adv, '--include-package', 'ruletaker.allennlp_models'],
         "ruletaker_adv_training_test": ['ruletaker_adv_training_test', 
             'bin/runs/ruletaker/2021-12-12_19-08-47_roberta-base_retrain/model.tar.gz', 'test', '--output-file', '_results.json', 
@@ -59,10 +60,10 @@ def main(prog: Optional[str] = None) -> None:
             '--include-package', 'ruletaker.allennlp_models'
         ],
         "transferability": ['transferability',
-            'bin/runs/ruletaker/2021-12-12_19-08-47_roberta-base//model.tar.gz', 
-            'bin/runs/adversarial/2021-12-12_17-38-38_roberta-large//test_results-records.pkl', 
-            '--output-file', 'bin/runs/ruletaker/2021-12-12_17-38-38_roberta-large//transferability_results_2021-12-12_17-38-38_roberta-large--2021-12-12_19-08-47_roberta-base_2021-12-16_20-35-13.json', 
-            '--overrides_file', 'bin/config/transferability/config_2021-12-16_20-35-13.jsonnet',
+            'bin/runs/ruletaker/2021-12-12_19-08-47_roberta-base/model.tar.gz', 
+            'bin/runs/baselines/hotflip//2021-12-16_11-00-14_reevaled_bu.pkl', 
+            '--output-file', 'bin/runs/ruletaker/2021-12-12_19-08-47_roberta-base/transferability_results_rb_lg--rb_base_hotflip.json', 
+            '--overrides_file', 'bin/config/transferability/config_2021-12-20_20-39-00.jsonnet',
             '--cuda-device', '8', '--include-package', 'ruletaker.allennlp_models'
         ],
         "adversarial_random_benchmark": ["adversarial_random_benchmark",

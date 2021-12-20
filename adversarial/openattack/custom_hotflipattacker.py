@@ -78,13 +78,23 @@ class CustomHotFlipAttacker(HotFlipAttacker):
             counter += 1
             if word in self.filter_words:
                 continue
-            neighbours = self.get_neighbours(word, pos)
-            for neighbour in neighbours:
-                x_new = self.tokenizer.detokenize(self.do_replace(x_orig, neighbour, counter))
-                pred_target = victim.get_pred([[question, x_new]])[0]
-                if goal.check(x_new, pred_target):
-                    return x_new, counter
+            neighbours = self.get_neighbours(word, pos)[:6]     # Limit neighbours to speed up inference
+            if len(neighbours) == 0:
+                continue
+            x_news = [self.tokenizer.detokenize(self.do_replace(x_orig, neighbour, counter)) for neighbour in neighbours]
+            inputs = [[question, x_new] for x_new in x_news]
+            pred_targets = victim.get_pred(inputs)
+            for i in range(len(pred_targets)):
+                if goal.check(x_news[i], pred_targets[i]):
+                    return x_news[i], counter
         return None, None
+        #     neighbours = self.get_neighbours(word, pos)[:6]
+        #     for neighbour in neighbours:
+        #         x_new = self.tokenizer.detokenize(self.do_replace(x_orig, neighbour, counter))
+        #         pred_target = victim.get_pred([[question, x_new]])[0]
+        #         if goal.check(x_new, pred_target):
+        #             return x_new, counter
+        # return None, None
       
     def do_replace(self, x_cur, word, index):
         ret = x_cur[:]

@@ -1,18 +1,15 @@
 local batch_size = 16;
-local adversarial_examples_path_test = "bin/runs/adversarial/2021-12-12_17-38-38_roberta-large/test_results-records.pkl";
+local adversarial_examples_path_test = "";
 local dataset_dir = "data/rule-reasoning-dataset-V2020.2.4/depth-5/";
+local dataset_reader_type = baseline_records_reader;
 
 {
     "train_data_path": "",
     "validation_data_path": "",
-    "test_data_path": dataset_dir + "test.jsonl",
+    "test_data_path": adversarial_examples_path_test,
     "dataset_reader": {
-        "type": "blended_rule_reasoning",
+        "type": dataset_reader_type,
         "max_instances": -1,
-        "adversarial_examples_path_train": "none",
-        "adversarial_examples_path_val": "none",
-        "adversarial_examples_path_test": adversarial_examples_path_test,
-        "adversarial_examples_path": '',
     },
     "data_loader": {
         "batch_sampler": {

@@ -1,7 +1,11 @@
 import json, os, sys
 import pickle as pkl
 import pandas as pd
+from glob import glob
 from sklearn.metrics import confusion_matrix, precision_score, recall_score, f1_score
+
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 from analysis import load_as_df, compute_features
 
@@ -10,8 +14,10 @@ paths = {
     'v_rb-b': 'bin/runs/ruletaker/2021-12-12_19-08-47_roberta-base/test_results.json',
     'v_rb-lg:a_rb-b': 'bin/runs/adversarial/2021-12-12_17-38-38_roberta-large/test_results-records.pkl',
     'v_rb-b:a_rb-b': 'bin/runs/adversarial/2021-12-12_19-08-47_roberta-base/test_results-records.pkl',
-    # 'v_rb-lg:a_hotflip': 'bin/runs/baselines/hotflip/CustomHotFlipAttacker_CustomVictim_CustomTokenizer_2021-12-06_13-36-26_modresults.txt',    # TODO update
-    'v_rb-lg:a_textfooler': 'bin/runs/baselines/textfooler/CustomTextFoolerAttacker_CustomVictim_CustomTokenizer_2021-12-06_22-18-05_reevaled.pkl',   # TODO update
+    # Baselines
+    'v_rb-lg:a_hotflip': 'bin/runs/baselines/hotflip/2021-12-16_11-00-14_reevaled.pkl',
+    'v_rb-lg:a_textfooler': 'bin/runs/baselines/textfooler/2021-12-16_11-00-14_reevaled.pkl',
+    # Random benchmarks
     'v_rb-lg:a_random': 'bin/runs/baselines/random_adversarial/2021-12-14_12-45-49_results-records.pkl',
     'v_rb-lg:a_wordscore': 'bin/runs/baselines/random_adversarial/word_score_2021-12-14_21-49-36_results-records.pkl',
     'v_rb-lg_retrain_orig': 'bin/runs/ruletaker/2021-12-12_17-38-38_roberta-large_retrain/test-orig-records_epoch100.pkl',
@@ -31,19 +37,35 @@ paths = {
     'retrain-v_rb-b:orig_after': 'bin/runs/ruletaker/2021-12-12_19-08-47_roberta-base_retrain_v1/test-orig-records_epoch100.pkl',       # TODO update
 }
 
+dirs = {
+    'num_perturbs': [
+        'bin/runs/num_perturbs/2021-12-16_10-41-53',
+        'bin/runs/num_perturbs/2021-12-16_10-42-44',
+        'bin/runs/num_perturbs/2021-12-16_10-43-16',
+        'bin/runs/num_perturbs/2021-12-16_10-43-27',
+        'bin/runs/num_perturbs/2021-12-16_10-43-41',
+    ]
+}
+
 ref_paths = {
     'v_rb-lg': 'data/rule-reasoning-dataset-V2020.2.4/depth-5/test.jsonl',
     'v_rb-b': 'data/rule-reasoning-dataset-V2020.2.4/depth-5/test.jsonl',
     # 'v_rb-lg:a_hotflip': 'bin/runs/baselines/textfooler/CustomTextFoolerAttacker_CustomVictim_CustomTokenizer_2021-12-06_22-18-05.pkl',
     # 'v_rb-lg:a_textfooler': 'bin/runs/baselines/textfooler/CustomTextFoolerAttacker_CustomVictim_CustomTokenizer_2021-12-06_22-18-05_reevaled.pkl',
-    # 'v_rb-lg:a_rb-b': 'data/rule-reasoning-dataset-V2020.2.4/depth-5/test.jsonl',
-    # 'v_rb-lg:a_rb-b': 'data/rule-reasoning-dataset-V2020.2.4/depth-5/test.jsonl',
+    'v_rb-lg:a_rb-b': 'data/rule-reasoning-dataset-V2020.2.4/depth-5/test.jsonl',
     'v_rb-lg_retrain_orig': 'data/rule-reasoning-dataset-V2020.2.4/depth-5/test.jsonl',
     'v_rb-lg_retrain_adv': 'data/rule-reasoning-dataset-V2020.2.4/depth-5/test.jsonl',
     'v_rb-lg_retrain_aug': 'data/rule-reasoning-dataset-V2020.2.4/depth-5/test.jsonl',
     'trans-v_rb-lg:v_rb-b': 'bin/runs/adversarial/2021-12-12_17-38-38_roberta-large/test_results-records.pkl',
     'trans-v_rb-b:v_rb-lg': 'bin/runs/adversarial/2021-12-12_19-08-47_roberta-base/test_results-records.pkl',
 }
+
+def compute_f1(row):
+    result, context = row
+    if result is not None:
+        unchanged = [r.replace(' ','')==c.replace(' ','') for r,c in zip(result.split('.')[:-1], context.split('.')[:-1])]
+        return sum(unchanged) / len(unchanged)
+    return None
 
 
 def display_victim_results():
@@ -110,11 +132,15 @@ def display_attacker_results():
         continue
 
     # Baseline performance
-    for name in ['v_rb-lg:a_textfooler']: #['v_rb-lg:a_hotflip']: #, 'v_rb-lg:a_textfooler']:
+    for name in ['v_rb-lg:a_hotflip', 'v_rb-lg:a_textfooler']:
         path = paths[name]
         df = load_as_df(path)
         df['orig_sentences'] = df['context'].apply(lambda x: len(x.split('.'))-1)
-        df['f1'] = 1 - df['subs'] / df['orig_sentences']
+        
+        # df['f1'] = 1 - df['subs'] / df['orig_sentences']
+        df['f1_'] = df[['result','context']].apply(compute_f1, axis=1)
+        df['f1'] = df[~df['f1_'].isnull()]['f1_'].mean()
+
         summary = df[['adv_result', 'f1']].mean()
         summary.loc['name'] = name + '-unadj'
         tmp_df = pd.DataFrame(summary).transpose()
@@ -232,9 +258,72 @@ def display_retraining_results():
     print(output_df.to_latex(float_format="%.1f"))
 
 
+def display_num_perturbs():
+    summaries = []
+    cols = ['success_rate', 'f1', 'name']
+
+    files_dct = {}
+    # Obtain files
+    for dir in dirs['num_perturbs']:
+        files = glob(dir+'/**/test_results-records.pkl', recursive=True)
+        for file in files:
+            key = file.strip(dir).split('/')[0]
+            files_dct[key] = file
+
+    # print('Done')
+
+    for name, path in files_dct.items():
+        df = load_as_df(path)
+        df = compute_features(df, 1, 1)
+        df['orig_proof_depth'] = df['orig_proof_depth'].astype(int).apply(lambda x: min(x, 5))
+        df['orig_proof_depth'] = df['orig_proof_depth'].astype(str).apply(lambda x: x.replace('5', '$\geq$5'))
+        summary = df[['qa_fooled', 'sampled_f1']].mean()
+        summary.loc['name'] = name
+        tmp_df = pd.DataFrame(summary).transpose()
+        tmp_df.columns = cols
+        summaries.append(tmp_df)
+        continue
+
+    output_df = pd.concat(summaries, axis=0)
+    output_df['Max. SentElim'] = output_df['name'].apply(lambda x: int(x.replace('SE-','')[0]))
+    output_df['Max. EquivSub'] = output_df['name'].apply(lambda x: int(x[-1]))
+
+    asr_df = output_df[['success_rate', 'Max. SentElim', 'Max. EquivSub']].pivot(index='Max. SentElim',columns='Max. EquivSub',values='success_rate')
+    f1_df = output_df[['f1', 'Max. SentElim', 'Max. EquivSub']].pivot(index='Max. SentElim',columns='Max. EquivSub',values='f1')
+
+    asr_df.fillna(0.5, inplace=True)
+    f1_df.fillna(0.5, inplace=True)
+
+    sns.set(font_scale=2.)
+    # fig, (ax0, ax1) = plt.subplots(2, 1, figsize=(8,12))
+    fig, (ax0, ax1) = plt.subplots(1, 2, figsize=(11,6))
+    sns.heatmap(asr_df, annot=True, cmap="YlGnBu", ax=ax0, cbar=False, fmt=".2f")
+    sns.heatmap(f1_df, annot=True, cmap="YlGnBu", ax=ax1, cbar=False, fmt=".2f")
+    ax0.set_title('ASR', fontsize=30)
+    ax1.set_title('F1', fontsize=30)
+    ax1.set(ylabel=None, yticklabels=[])
+    fig.tight_layout()
+    plt.savefig('adversarial/figs/num_perturbs.png')
+    plt.clf()
+
+    # https://stackoverflow.com/questions/33158075/custom-annotation-seaborn-heatmap    < see this for custom annotations
+    pass
+
+
+def analyze_attacks():
+    name = 'v_rb-lg:a_rb-b'
+    path = paths[name]    
+    df = load_as_df(path)
+    df = compute_features(df, 1, 1)
+    df.groupby('polarity').aggregate({'qa_fooled':'mean'})
+    pass
+
+
 if __name__ == '__main__':
     # display_victim_results()
     # display_attacker_results()
     # display_adversarial_retraining_results()
     # display_transferability_results()
-    display_retraining_results()
+    # display_retraining_results()
+    # display_num_perturbs()
+    analyze_attacks()

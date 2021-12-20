@@ -1,13 +1,13 @@
 ## bash bin/cmds/main_flow.sh 
+dt=$(date +%Y-%m-%d_%H-%M-%S)
 
 exec 3>&1 4>&2
 trap 'exec 2>&4 1>&3' 0 1 2 3
-exec 1>'logs/ablate.out' 2>&1
+exec 1>'logs/ablate_'$dt'.out' 2>&1
 
-dt=$(date +%Y-%m-%d_%H-%M-%S)
 
 max_instances=-1        # 10 -1
-cuda_device=1       # Currently only supports single GPU training
+cuda_device=5       # Currently only supports single GPU training
 victim=bin/runs/ruletaker/2021-12-12_17-38-38_roberta-large
 data_dir=data/rule-reasoning-dataset-V2020.2.4/depth-5/
 outdir_attacker_base=bin/runs/ablate/$dt
@@ -15,7 +15,8 @@ mkdir -p $outdir_attacker_base
 config_dir=bin/config/ablate/$dt
 mkdir -p $config_dir
 
-for perturbs in 'sentence_elimination,equivalence_substitution' 'sentence_elimination,question_flip' 'question_flip,equivalence_substitution'
+# for perturbs in 'equivalence_substitution,question_flip' 'sentence_elimination,question_flip' 'sentence_elimination,equivalence_substitution'
+for perturbs in 'sentence_elimination' 'equivalence_substitution' 'question_flip'
 
 do
     ## Create appropriate config file
@@ -25,10 +26,10 @@ do
 
     outdir_attacker=$outdir_attacker_base/$perturbs/
 
-    sed -i 's+local\ ruletaker_archive\ =\ [^,]*;+local\ ruletaker_archive\ =\ '"'"$victim/model.tar.gz"'"';+g' $proc_config_1
-    sed -i 's+local\ dataset_dir\ =\ [^,]*;+local\ dataset_dir\ =\ "'$data_dir'";+g' $proc_config_1
+    sed -i 's+local\ ruletaker_archive\ =\ [^;]*;+local\ ruletaker_archive\ =\ '"'"$victim/model.tar.gz"'"';+g' $proc_config_1
+    sed -i 's+local\ dataset_dir\ =\ [^;]*;+local\ dataset_dir\ =\ "'$data_dir'";+g' $proc_config_1
     sed -i 's/local\ cuda_device\ =\ [[:digit:]]\+/local\ cuda_device\ =\ '$cuda_device'/g' $proc_config_1
-    sed -i 's+local\ adversarial_perturbations\ =\ [^,]*;+local\ adversarial_perturbations\ =\ "'$perturbs'";+g' $proc_config_1
+    sed -i 's+local\ adversarial_perturbations\ =\ [^;]*;+local\ adversarial_perturbations\ =\ "'$perturbs'";+g' $proc_config_1
     sed -i 's/"max_instances":\ [^,]*,/"max_instances":\ '$max_instances',/g' $proc_config_1
 
     # Train model
@@ -45,10 +46,10 @@ do
 
     # Eval trained attacker on the test set
     raw_config_2=bin/config/ablate/test_config.jsonnet
-    proc_config_2=$config_dir/$perturbs'_test_config_$dt.jsonnet'
+    proc_config_2=$config_dir/$perturbs'_test_config_'$dt'.jsonnet'
     cp $raw_config_2 $proc_config_2
 
-    sed -i 's+local\ ruletaker_archive\ =\ [^,]*;+local\ ruletaker_archive\ =\ '"'"$outdir_victim/model.tar.gz"'"';+g' $proc_config_2
+    sed -i 's+local\ ruletaker_archive\ =\ [^,]*;+local\ ruletaker_archive\ =\ '"'"$victim/model.tar.gz"'"';+g' $proc_config_2
     sed -i 's/"max_instances":\ [^,]*,/"max_instances":\ '$max_instances',/g' $proc_config_2
 
     echo '\n\nEvaluating the attacker on the test set using config '$proc_config_2'. \nOutputs will be saved to '$outdir_attacker'\n\n'

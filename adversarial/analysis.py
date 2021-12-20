@@ -34,6 +34,8 @@ def compute_features(df, skip_start, skip_end):
     # Compute context composition features
     df['n_orig_rules'] =  df['orig_sentences'].apply(lambda sents: len([s for s in sents if any(i in s for i in ['All','If','are'])]))
     df['n_orig_facts'] = df['n_orig_sentences'] - df['n_orig_rules']
+    df['orig_facts_ixs'] =  df['orig_sentences'].apply(lambda sents: [n for n,s in enumerate(sents) if not any(i in s for i in ['All','If','are'])])
+    df['orig_rules_ixs'] =  df['orig_sentences'].apply(lambda sents: [n for n,s in enumerate(sents) if any(i in s for i in ['All','If','are'])])
     df['n_sampled_rules'] = df['sampled_sentences'].apply(lambda sents: len([s for s in sents if any(i in s for i in ['All','If','are'])]))
     df['n_sampled_facts'] = df['n_sampled_sentences'] - df['n_sampled_rules']
     # Compute precision, recall, f1
