@@ -26,6 +26,8 @@ paths = {
     # Transferability
     'trans-v_rb-lg:v_rb-b': 'bin/runs/ruletaker/2021-12-12_17-38-38_roberta-large/transferability_results_2021-12-12_17-38-38_roberta-large--2021-12-12_19-08-47_roberta-base-records.pkl',
     'trans-v_rb-b:v_rb-lg': 'bin/runs/ruletaker/2021-12-12_19-08-47_roberta-base/transferability_results_2021-12-12_19-08-47_roberta-base--2021-12-12_17-38-38_roberta-large-records.pkl',
+    'trans-hotflip-v_rb-lg:v_rb-b': 'bin/runs/ruletaker/2021-12-12_19-08-47_roberta-base/transferability_results_rb_lg--rb_base_hotflip-records.pkl',
+    'trans-textfooler-v_rb-lg:v_rb-b': 'bin/runs/ruletaker/2021-12-12_19-08-47_roberta-base/transferability_results_rb_lg--rb_base_hotflip-records.pkl',
     # Adv retraining
     'retrain-v_rb-lg:adv_before': 'bin/runs/adversarial/2021-12-12_17-38-38_roberta-large/test_results-records.pkl',
     'retrain-v_rb-lg:adv_after': 'bin/runs/ruletaker/2021-12-12_17-38-38_roberta-large_retrain_v1/test-adv-records_epoch100.pkl',
@@ -58,6 +60,8 @@ ref_paths = {
     'v_rb-lg_retrain_aug': 'data/rule-reasoning-dataset-V2020.2.4/depth-5/test.jsonl',
     'trans-v_rb-lg:v_rb-b': 'bin/runs/adversarial/2021-12-12_17-38-38_roberta-large/test_results-records.pkl',
     'trans-v_rb-b:v_rb-lg': 'bin/runs/adversarial/2021-12-12_19-08-47_roberta-base/test_results-records.pkl',
+    'trans-hotflip-v_rb-lg:v_rb-b': 'bin/runs/baselines/hotflip/2021-12-16_11-00-14_reevaled_bu.pkl',
+    'trans-textfooler-v_rb-lg:v_rb-b': 'bin/runs/baselines/textfooler/2021-12-16_11-00-14_reevaled_bu.pkl',
 }
 
 def compute_f1(row):
@@ -217,9 +221,25 @@ def display_transferability_results():
         row = [n_qafooled, 100*(1-precision), 100*df.is_correct.mean(), len(df)]
         tmp_df = pd.DataFrame([[name, *row]], columns=cols)
         summaries.append(tmp_df)
-        df_ = df[df.qa_fooled]
-        df_.is_correct.mean()
+        # df_ = df[df.qa_fooled]
+        # df_.is_correct.mean()
 
+    for name in ['trans-hotflip-v_rb-lg:v_rb-b', 'trans-textfooler-v_rb-lg:v_rb-b']:
+        path = paths[name]
+        preds = load_as_df(path)
+
+        data_path = ref_paths[name]
+        ref = load_as_df(data_path)
+        ref['qa_fooled'] = ref['adv_result'] & ref['label']==ref['mod_label']
+
+        preds['id'] = preds['id'].apply(lambda x: '-'.join(x.split('-')[1:-1]))
+        df = pd.merge(preds, ref[['QDep','qa_fooled','id']], on='id')
+        tn, fp, fn, tp = confusion_matrix(df['is_correct'], df['qa_fooled']).ravel().tolist()
+        precision = tp / (tp + fp)
+        n_qafooled = df.qa_fooled.tolist().count(True)
+        row = [n_qafooled, 100*(1-precision), 100*df.is_correct.mean(), len(df)]
+        tmp_df = pd.DataFrame([[name, *row]], columns=cols)
+        summaries.append(tmp_df)
 
     output_df = pd.concat(summaries, axis=0)
     output_df.set_index('name', inplace=True)
@@ -270,8 +290,6 @@ def display_num_perturbs():
             key = file.strip(dir).split('/')[0]
             files_dct[key] = file
 
-    # print('Done')
-
     for name, path in files_dct.items():
         df = load_as_df(path)
         df = compute_features(df, 1, 1)
@@ -291,14 +309,17 @@ def display_num_perturbs():
     asr_df = output_df[['success_rate', 'Max. SentElim', 'Max. EquivSub']].pivot(index='Max. SentElim',columns='Max. EquivSub',values='success_rate')
     f1_df = output_df[['f1', 'Max. SentElim', 'Max. EquivSub']].pivot(index='Max. SentElim',columns='Max. EquivSub',values='f1')
 
-    asr_df.fillna(0.5, inplace=True)
-    f1_df.fillna(0.5, inplace=True)
+    asr_annots = asr_df.applymap(lambda x: f'{x:.2f}'[1:])
+    f1_annots = f1_df.applymap(lambda x: f'{x:.2f}'[1:])
+    # asr_df.fillna(0.5, inplace=True)
+    # f1_df.fillna(0.5, inplace=True)
 
     sns.set(font_scale=2.)
-    # fig, (ax0, ax1) = plt.subplots(2, 1, figsize=(8,12))
     fig, (ax0, ax1) = plt.subplots(1, 2, figsize=(11,6))
-    sns.heatmap(asr_df, annot=True, cmap="YlGnBu", ax=ax0, cbar=False, fmt=".2f")
-    sns.heatmap(f1_df, annot=True, cmap="YlGnBu", ax=ax1, cbar=False, fmt=".2f")
+    sns.heatmap(asr_df, cmap="YlGnBu", ax=ax0, cbar=False, annot=asr_annots, fmt='', annot_kws={"fontsize":18})
+    sns.heatmap(f1_df, cmap="YlGnBu", ax=ax1, cbar=False, annot=f1_annots, fmt='', annot_kws={"fontsize":18})
+    # sns.heatmap(asr_df, annot=True, cmap="YlGnBu", ax=ax0, cbar=False, fmt=".2f")
+    # sns.heatmap(f1_df, annot=True, cmap="YlGnBu", ax=ax1, cbar=False, fmt=".2f")
     ax0.set_title('ASR', fontsize=30)
     ax1.set_title('F1', fontsize=30)
     ax1.set(ylabel=None, yticklabels=[])
@@ -325,5 +346,5 @@ if __name__ == '__main__':
     # display_adversarial_retraining_results()
     # display_transferability_results()
     # display_retraining_results()
-    # display_num_perturbs()
-    analyze_attacks()
+    display_num_perturbs()
+    # analyze_attacks()

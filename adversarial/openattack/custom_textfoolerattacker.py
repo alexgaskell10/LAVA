@@ -119,7 +119,7 @@ class CustomTextFoolerAttacker(TextFoolerAttacker):
                 words_perturb.append((idx, x_orig[idx], x_pos[idx]))
 
         synonym_words = [
-            self.get_neighbours(word, pos)
+            self.get_neighbours(word, pos)[:6]      # Max 6 neighbours to limit running time (minimal performance effect)
             if word not in self.filter_words
             else []
             for idx, word, pos in words_perturb

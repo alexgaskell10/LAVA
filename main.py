@@ -35,7 +35,6 @@ def main(prog: Optional[str] = None) -> None:
     cmds = {
         "ruletaker_train_original": ['ruletaker_train_original', 'bin/config/ruletaker/rulereasoning_config.jsonnet', '-s', outdir_rt, '--include-package', 'ruletaker.allennlp_models'],
         "ruletaker_adv_training": ['ruletaker_adv_training', 'bin/config/ruletaker/ruletaker_adv_retraining.jsonnet', '-s', outdir_rt, '--include-package', 'ruletaker.allennlp_models'],
-        # "ruletaker_adv_training": ['ruletaker_adv_training', 'bin/config/ruletaker/ruletaker_adv_baseline_retraining.jsonnet', '-s', outdir_rt, '--include-package', 'ruletaker.allennlp_models'],
         "adversarial_dataset_generation": ['adversarial_dataset_generation', 'bin/config/attacker/tmp.jsonnet', '-s', outdir_adv, '--include-package', 'ruletaker.allennlp_models'],
         "ruletaker_adv_training_test": ['ruletaker_adv_training_test', 
             'bin/runs/ruletaker/2021-12-12_19-08-47_roberta-base_retrain/model.tar.gz', 'test', '--output-file', '_results.json', 

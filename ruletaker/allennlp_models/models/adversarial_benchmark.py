@@ -85,7 +85,7 @@ class RandomAdversarialBaseline(AdversarialGenerator):
         # Adjust senteqiv samples here
         if self.max_elims > 0:
             z_sent_bl = z_sent_bl.topk(min(self.max_elims, z_sent_bl.size(1)), 1).values
-        maskers = [rule_idxs, z_sent_bl] if 'sentence_elimination' in self.adv_perturbations else [rule_idxs, z_sent_bl]
+        maskers = [rule_idxs, z_sent_bl] if 'sentence_elimination' in self.adv_perturbations else [rule_idxs]
         z_eqiv_bl = self.mask_draws(z_eqiv_bl, *maskers)
         if self.max_flips > 0:
             z_eqiv_bl = z_eqiv_bl.topk(min(self.max_flips, z_eqiv_bl.size(1)), 1).values
@@ -94,6 +94,8 @@ class RandomAdversarialBaseline(AdversarialGenerator):
         metadata_bl = metadata
         if 'sentence_elimination' in self.adv_perturbations:
             meta_records_bl = self.update_meta_sentelim(z_sent_bl, meta_records_bl, metadata_bl)
+        else:
+            meta_records_bl = self.update_meta(meta_records_bl)
         if 'question_flip' in self.adv_perturbations:
             meta_records_bl = self.update_meta_quesflip(z_ques_bl, meta_records_bl, metadata_bl)
         if 'equivalence_substitution' in self.adv_perturbations:

@@ -3,8 +3,8 @@ dt=$(date +%Y-%m-%d_%H-%M-%S)
 # dt=2021-12-16_11-00-14
 
 max_instances=-1        # 10 -1
-cuda_device=8       # Currently only supports single GPU
-dset=train
+cuda_device=6       # Currently only supports single GPU
+dset=test
 victim='bin/runs/ruletaker/2021-12-12_17-38-38_roberta-large'
 data='data/rule-reasoning-dataset-V2020.2.4/depth-5/'$dset'.jsonl'
 outdir='bin/runs/baselines'
@@ -15,7 +15,7 @@ trap 'exec 2>&4 1>&3' 0 1 2 3
 exec 1>'logs/hf_tf_baselines_log_'$dt'.out' 2>&1
 
 
-for attack_method in 'hotflip' # 'textfooler'
+for attack_method in 'hotflip' 'textfooler'
 do
     ### 1. Run the attack method on the victim over the data and generate predictions
     ext=$attack_method/$dt

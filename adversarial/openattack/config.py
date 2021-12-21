@@ -15,7 +15,7 @@ config = {
         'add_prefix': {'c': 'C: ','q': 'Q: '},
         'syntax': 'rulebase',
         'max_pieces': 384,
-        'one_proof': True,
+        'one_proof': False,
         'max_instances': False,
         'pretrained_model': 'roberta-large'
     },

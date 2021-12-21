@@ -1,11 +1,10 @@
 max_instances=-1        # 10 -1
 cuda_device=7       # Currently only supports single GPU training
-roberta_model="roberta-base"        # Victim model
+roberta_model="roberta-large"        # Victim model
 data_dir=data/rule-reasoning-dataset-V2020.2.4/depth-5/
 
 # dt=$(date +%Y-%m-%d_%H-%M-%S)
-dt='2021-12-20_09-00-40'
-# bin/runs/ruletaker/2021-12-20_09-00-40_roberta-base
+dt='2021-12-20_10-48-09'
 outdir_victim=bin/runs/ruletaker/$dt'_'$roberta_model
 outdir_victim_retrain=bin/runs/ruletaker/$dt'_'$roberta_model'_retrain_v2'
 # outdir_attacker=bin/runs/adversarial/$dt'_'$roberta_model
@@ -30,20 +29,23 @@ then
   num_epochs=4
   batch_size=2
   num_gradient_accumulation_steps=8
+  learning_rate=1e-6        # 1e-6
 else
   num_epochs=8
   batch_size=4
   num_gradient_accumulation_steps=8 #4 8
+  learning_rate=1e-7        # 1e-6
 fi
 
 sed -i 's/local\ cuda_device\ =\ [[:digit:]]\+/local\ cuda_device\ =\ '$cuda_device'/g' $proc_config_4
 sed -i 's/local\ num_epochs\ =\ [[:digit:]]\+/local\ num_epochs\ =\ '$num_epochs'/g' $proc_config_4
 sed -i 's/local\ batch_size\ =\ [[:digit:]]\+/local\ batch_size\ =\ '$batch_size'/g' $proc_config_4
 sed -i 's/local\ num_gradient_accumulation_steps\ =\ [[:digit:]]\+/local\ num_gradient_accumulation_steps\ =\ '$num_gradient_accumulation_steps'/g' $proc_config_4
-sed -i 's/local\ transformer\_model\ \=\ [^,]*;/local\ transformer\_model\ =\ "'$roberta_model'";/g' $proc_config_4
-sed -i 's+local\ dataset_dir\ \=\ [^,]*;+local\ dataset_dir\ =\ "'$data_dir'";+g' $proc_config_4
-sed -i 's+local\ transformer_weights_model\ \=\ [^,]*;+local\ transformer_weights_model\ =\ "'$outdir_victim'";+g' $proc_config_4
+sed -i 's/local\ transformer\_model\ \=\ [^;]*;/local\ transformer\_model\ =\ "'$roberta_model'";/g' $proc_config_4
+sed -i 's+local\ dataset_dir\ \=\ [^;]*;+local\ dataset_dir\ =\ "'$data_dir'";+g' $proc_config_4
+sed -i 's+local\ transformer_weights_model\ \=\ [^;]*;+local\ transformer_weights_model\ =\ "'$outdir_victim'";+g' $proc_config_4
 # sed -i 's+local\ transformer_weights_model\ \=\ [^,]*;+local\ transformer_weights_model\ =\ "";+g' $proc_config_4
+sed -i 's+local\ learning_rate\ \=\ [^;]*;+local\ learning_rate\ =\ '$learning_rate';+g' $proc_config_4
 
 # Get path for adversarial examples
 path=$(ls $outdir_attacker | grep val-records_epoch-1)

@@ -16,7 +16,7 @@ config_dir=bin/config/ablate/$dt
 mkdir -p $config_dir
 
 # for perturbs in 'equivalence_substitution,question_flip' 'sentence_elimination,question_flip' 'sentence_elimination,equivalence_substitution'
-for perturbs in 'sentence_elimination' 'equivalence_substitution' 'question_flip'
+for perturbs in 'equivalence_substitution' 'question_flip' 'equivalence_substitution,question_flip'
 
 do
     ## Create appropriate config file
