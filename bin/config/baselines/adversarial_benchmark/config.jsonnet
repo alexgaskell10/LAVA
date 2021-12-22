@@ -6,8 +6,8 @@ local inference_model = "roberta-base";
     "dataset_reader": {
         "type": "retriever_reasoning",
         "retriever_variant": inference_model,
-        "longest_proof": 10,
-        "shortest_proof": 1,
+        "longest_proof": 100,
+        "shortest_proof": 0,
         "one_proof": false,
         "word_overlap_scores": true,
         "pretrained_model": "roberta-large",

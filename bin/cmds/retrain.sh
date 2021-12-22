@@ -1,12 +1,12 @@
 max_instances=-1        # 10 -1
-cuda_device=7       # Currently only supports single GPU training
-roberta_model="roberta-large"        # Victim model
+cuda_device=8       # Currently only supports single GPU training
+roberta_model="roberta-base"        # Victim model
 data_dir=data/rule-reasoning-dataset-V2020.2.4/depth-5/
 
 # dt=$(date +%Y-%m-%d_%H-%M-%S)
-dt='2021-12-20_10-48-09'
+dt='2021-12-21_08-55-58' #'2021-12-20_10-48-09'
 outdir_victim=bin/runs/ruletaker/$dt'_'$roberta_model
-outdir_victim_retrain=bin/runs/ruletaker/$dt'_'$roberta_model'_retrain_v2'
+outdir_victim_retrain=bin/runs/ruletaker/$dt'_'$roberta_model'_retrain_v1'
 # outdir_attacker=bin/runs/adversarial/$dt'_'$roberta_model
 outdir_attacker=bin/runs/adversarial/2021-12-12_19-08-47_roberta-base
 
@@ -26,15 +26,15 @@ cp $raw_config_4 $proc_config_4
 # Set epochs depending on model size
 if [ $roberta_model = 'roberta-large' ]
 then
-  num_epochs=4
+  num_epochs=4 #8
   batch_size=2
-  num_gradient_accumulation_steps=8
+  num_gradient_accumulation_steps=16
   learning_rate=1e-6        # 1e-6
 else
   num_epochs=8
   batch_size=4
   num_gradient_accumulation_steps=8 #4 8
-  learning_rate=1e-7        # 1e-6
+  learning_rate=1e-5        # 1e-6
 fi
 
 sed -i 's/local\ cuda_device\ =\ [[:digit:]]\+/local\ cuda_device\ =\ '$cuda_device'/g' $proc_config_4

@@ -5,8 +5,8 @@ local cuda_device = 9;
 local batch_size = 8;
 local num_gradient_accumulation_steps = 1;
 local num_monte_carlo = 8;
-local longest_proof = 10;
-local shortest_proof = 1;
+local longest_proof = 100;
+local shortest_proof = 0;
 local lr = 5e-6;
 local model_type = 'adversarial_base';
 local compute_word_overlap_scores = true;
@@ -25,7 +25,7 @@ local epochs = 5;
         "shortest_proof": shortest_proof,
         "one_proof": false,
         "word_overlap_scores": compute_word_overlap_scores,
-        "max_instances": 8184,     # 10, 4096, 8184, false
+        "max_instances": false,     # 10, 4096, 8184, false
     },
     "retrieval_reasoning_model": {
         "variant": inference_model,
@@ -37,6 +37,7 @@ local epochs = 5;
         "adversarial_perturbations": "sentence_elimination,question_flip,equivalence_substitution",       # sentence_elimination,question_flip,equivalence_substitution
         "max_flips": 3,     # -1, 3
         "max_elims": 3,     # -1, 3
+        "val_num_monte_carlo": 1,
     },
     "trainer": {
         "cuda_device": cuda_device,

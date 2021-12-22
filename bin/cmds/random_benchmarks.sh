@@ -2,7 +2,7 @@
 dt=$(date +%Y-%m-%d_%H-%M-%S)
 
 max_instances=-1        # 10 -1
-cuda_device=4       # Currently only supports single GPU
+cuda_device=8       # Currently only supports single GPU
 victim='bin/runs/ruletaker/2021-12-12_17-38-38_roberta-large/'
 data='data/rule-reasoning-dataset-V2020.2.4/depth-5/test.jsonl'
 outdir='bin/runs/baselines/random_adversarial/'

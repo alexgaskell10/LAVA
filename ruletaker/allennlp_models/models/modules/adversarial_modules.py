@@ -14,10 +14,10 @@ class _BaseSentenceClassifier(Model):
         self._predictions = []
         self._dropout = dropout
 
+        assert 'roberta' in variant     # Only implemented for roberta currently
         self.variant = variant
         self.dataset_reader = dataset_reader
         self.model = AutoModel.from_pretrained(variant)
-        assert 'roberta' in variant     # Only implemented for roberta currently
 
         transformer_config = self.model.config
         transformer_config.num_labels = num_labels

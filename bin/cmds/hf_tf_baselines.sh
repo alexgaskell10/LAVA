@@ -3,9 +3,9 @@ dt=$(date +%Y-%m-%d_%H-%M-%S)
 # dt=2021-12-16_11-00-14
 
 max_instances=-1        # 10 -1
-cuda_device=6       # Currently only supports single GPU
+cuda_device=5       # Currently only supports single GPU
 dset=test
-victim='bin/runs/ruletaker/2021-12-12_17-38-38_roberta-large'
+victim='bin/runs/ruletaker/2021-12-20_10-48-09_roberta-large'
 data='data/rule-reasoning-dataset-V2020.2.4/depth-5/'$dset'.jsonl'
 outdir='bin/runs/baselines'
 outpath=$outdir/

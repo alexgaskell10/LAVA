@@ -52,6 +52,7 @@ class AdversarialGenerator(Model):
         regularizer = None,
         dataset_reader = None,
         num_monte_carlo = 1,
+        val_num_monte_carlo = 1,
         add_NAF = False,
         benchmark_type = 'random',
         word_overlap_scores = False,
@@ -80,6 +81,7 @@ class AdversarialGenerator(Model):
             self.gen_model = GenerativeNetwork(variant=variant, vocab=vocab, null_probability=self._p0, dataset_reader=dataset_reader, has_naf=add_NAF, num_labels=2, dropout=0.1)
 
         self.n_mc = num_monte_carlo          # Number of monte carlo steps
+        self.val_mc = val_num_monte_carlo          # Number of validation trials per sample
         self._logprob_method = 'CE'
         self._z_mask = -1
 
@@ -114,7 +116,7 @@ class AdversarialGenerator(Model):
             - z: retrievals (subset of c)
             - c: context (rules + facts)
         '''
-        # self._n_mc = self.n_mc if self.training else 1
+        self._n_mc = self.n_mc if self.training else self.val_mc
         if not self.training:
             set_dropout(self.gen_model, 0.0)
         self._d = phrase['tokens']['token_ids'].device
@@ -151,7 +153,6 @@ class AdversarialGenerator(Model):
         fact_idxs_ = fact_idxs.repeat_interleave(self._n_mc, dim=0)
         rule_idxs_ = rule_idxs.repeat_interleave(self._n_mc, dim=0)
 
-        
         # Adjust senteqiv samples here
         if self.max_elims > 0:
             z_sent = z_sent.topk(min(self.max_elims, z_sent.size(1)), 1).values
@@ -225,10 +226,32 @@ class AdversarialGenerator(Model):
         # assert not torch.isnan(estimator).any()
         outputs = {"loss": -(estimator.mean() + aux_signals), "estimator": estimator.mean()}
  
-        correct = (preds == modified_label_)
-        correct[skip_ids] = False
+        if not self.training:
+            # Compute the best sample for each set of MC samples. Retain the best and 
+            # discard the rest
+            correct_ps = (modified_label_ - probs[:,1]).abs()
+            correct_ps[skip_ids] = 1        # Skip samples where the solver couldn't solve for entailment
+            correct_ps_ = correct_ps.view(-1,self._n_mc)
+            ixs = correct_ps_.argmin(-1) + torch.arange(correct_ps_.size(0), device=self._d) * self._n_mc
+
+            # Apply filtering
+            preds = preds[ixs]
+            modified_label_ = modified_label_[ixs]
+            z_sent = z_sent[ixs]
+            z_eqiv = z_eqiv[ixs]
+            z_ques = z_ques[ixs]
+            new_metadata = [m for n,m in enumerate(new_metadata) if n in ixs]
+            metadata_ = [m for n,m in enumerate(metadata_) if n in ixs]
+            probs = probs[ixs]
+            qlens_ = [q for n,q in enumerate(qlens_) if n in ixs]
+
+            correct = (preds == modified_label_)
+        else:
+            correct = (preds == modified_label_)
+            correct[skip_ids] = False
+            
         log_metrics = {}
-        log_metrics['n_sentelim'] = (z_sent != -1).sum(-1).float().mean().item()
+        log_metrics['n_queselim'] = (z_sent != -1).sum(-1).float().mean().item()
         log_metrics['n_eqivsubt'] = (z_eqiv != -1).sum(-1).float().mean().item()
         log_metrics['n_quesflip'] = (z_ques != -1).sum(-1).float().mean().item()
 
@@ -237,7 +260,7 @@ class AdversarialGenerator(Model):
             log_metrics['lens'] = np.mean([len(s) for s in sentences])
             records = []
             for i in range(len(correct)):
-                i_ = floor(i / self._n_mc)
+                i_ = floor(i / self._n_mc) if self.training else i
                 record = {
                     "id": metadata_[i_]['id'],
                     "qa_fooled": correct[i].item(),
@@ -256,7 +279,6 @@ class AdversarialGenerator(Model):
                     "orig_proof_depth": metadata_[i]["QDep"],
                 }
                 records.append(record)
-                record["label"], record["polarity"], record["mod_label"], record["qa_probs"]
             self.records.extend(records)
 
         self.log_results(qlens_, correct, outputs, log_metrics=log_metrics)
@@ -535,7 +557,7 @@ class AdversarialGenerator(Model):
 
         archive = load_archive(
             archive_file=config.pop("ruletaker_archive"), 
-            cuda_device=training_params.get("cuda_device"))
+            cuda_device=cuda_device if cuda_device !=-1 else training_params.get("cuda_device"))
         model_params.params['qa_model'] = archive.model.eval()
 
         reader_type = config.params["dataset_reader"].pop("type")

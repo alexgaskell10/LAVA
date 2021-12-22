@@ -41,7 +41,7 @@ class RetrievalReasoningReader(DatasetReader):
         retriever_variant: str = None,
         pretrained_retriever_model = None,
         longest_proof: int = 100,
-        shortest_proof: int = 1,
+        shortest_proof: int = 0,
         concat_q_and_c: bool = True,
         true_samples_only: bool = False,
         add_NAF: bool = False,

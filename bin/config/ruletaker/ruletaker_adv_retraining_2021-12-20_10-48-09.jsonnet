@@ -1,6 +1,6 @@
 local train_size = 119068;
 local batch_size = 2;
-local num_gradient_accumulation_steps = 8;
+local num_gradient_accumulation_steps = 16;
 local num_epochs = 4;
 local learning_rate = 1e-6;
 local weight_decay = 0.1;
@@ -10,7 +10,7 @@ local transformer_model = "roberta-large";
 local max_pieces = 384;
 local transformer_weights_model = "bin/runs/ruletaker/2021-12-20_10-48-09_roberta-large";
 local dataset_dir = "data/rule-reasoning-dataset-V2020.2.4/depth-5/";
-local cuda_device = 7;
+local cuda_device = 3;
 local adversarial_examples_path_train = "bin/runs/adversarial/2021-12-12_19-08-47_roberta-base/val-records_epoch-1.pkl"; # "none","bin/runs/adversarial/2021-12-01_17-36-59-keep/train-records_epoch2.pkl"
 local adversarial_examples_path_val = "bin/runs/adversarial/2021-12-12_19-08-47_roberta-base/val-records_epoch4.pkl"; # "none","bin/runs/adversarial/2021-12-01_17-36-59-keep/train-records_epoch2.pkl"
 local adversarial_examples_path_test = "none"; # "none","bin/runs/adversarial/2021-12-01_17-36-59-keep/train-records_epoch2.pkl"

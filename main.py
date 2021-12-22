@@ -47,15 +47,16 @@ def main(prog: Optional[str] = None) -> None:
             '--cuda-device', '3', '--include-package', 'ruletaker.allennlp_models'
         ],
         "ruletaker_test_original": ['ruletaker_test_original',
-            'bin/runs/ruletaker/depth-5/model.tar.gz', 'test', '--output-file', '_results.json', 
-            '-o', "{'trainer': {'cuda_device': 3}, 'validation_data_loader': {'batch_sampler': {'batch_size': 64, 'type': 'bucket'}}}", 
-            '--cuda-device', '3', '--include-package', 'ruletaker.allennlp_models'
+            'bin/runs/ruletaker/depth-5/model.tar.gz', 'data/rule-reasoning-dataset-V2020.2.4/depth-5/test.jsonl', 
+            '--output-file', '_results.json', 
+            '-o', "{'trainer': {'cuda_device': 9}, 'validation_data_loader': {'batch_sampler': {'batch_size': 64, 'type': 'bucket'}}}", 
+            '--cuda-device', '9', '--include-package', 'ruletaker.allennlp_models'
         ],
         "adversarial_dataset_generation_test": ['adversarial_dataset_generation_test',
-            'bin/runs/adversarial/2021-12-06_16-53-27-keep/model.tar.gz', 'data/rule-reasoning-dataset-V2020.2.4/depth-5/test.jsonl', 
+            'bin/runs/adversarial/2021-12-12_17-38-38_roberta-large/model.tar.gz', 'data/rule-reasoning-dataset-V2020.2.4/depth-5/test.jsonl', 
             '--output-file', '_results.json',
-            '--overrides_file', 'bin/config/attacker/test_config.jsonnet',
-            '--cuda-device', '3', 
+            '--overrides_file', 'bin/config/attacker/test_config_2021-12-12_17-38-38.jsonnet',
+            '--cuda-device', '9', 
             '--include-package', 'ruletaker.allennlp_models'
         ],
         "transferability": ['transferability',

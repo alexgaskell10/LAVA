@@ -2,27 +2,27 @@
 dt=$(date +%Y-%m-%d_%H-%M-%S)
 
 max_instances=-1        # 10 -1
-cuda_device=7       # Currently only supports single GPU
+cuda_device=9       # Currently only supports single GPU
 
-## Below args for computing attacker transferability
-# victim1=bin/runs/ruletaker/2021-12-12_17-38-38_roberta-large/
-# victim2=bin/runs/ruletaker/2021-12-12_19-08-47_roberta-base/
-# adv_dir_1=bin/runs/adversarial/2021-12-12_17-38-38_roberta-large/
-# adv_dir_2=bin/runs/adversarial/2021-12-12_19-08-47_roberta-base/
-# dataset_reader_type='records_reader'        # records_reader,baseline_records_reader
-# suffix=test_results-records.pkl
-# ext1=$(echo $victim1 | sed 's+\/$++' | sed -e 's+.*/++')--$(echo $victim2 | sed 's+\/$++' | sed -e 's+.*/++')
-# ext2=$(echo $victim2 | sed 's+\/$++' | sed -e 's+.*/++')--$(echo $victim1 | sed 's+\/$++' | sed -e 's+.*/++')
+# Below args for computing attacker transferability
+victim1=bin/runs/ruletaker/2021-12-12_17-38-38_roberta-large/
+victim2=bin/runs/ruletaker/2021-12-12_19-08-47_roberta-base/
+adv_dir_1=bin/runs/adversarial/2021-12-12_17-38-38_roberta-large/
+adv_dir_2=bin/runs/adversarial/2021-12-12_19-08-47_roberta-base/
+dataset_reader_type='records_reader'        # records_reader,baseline_records_reader
+suffix='test_results-records.pkl'
+ext1=$(echo $victim1 | sed 's+\/$++' | sed -e 's+.*/++')--$(echo $victim2 | sed 's+\/$++' | sed -e 's+.*/++')
+ext2=$(echo $victim2 | sed 's+\/$++' | sed -e 's+.*/++')--$(echo $victim1 | sed 's+\/$++' | sed -e 's+.*/++')
 
-# Below args for computing baseline transferability
-victim1=bin/runs/ruletaker/2021-12-12_19-08-47_roberta-base/
-victim2=$victim1
-adv_dir_1=bin/runs/baselines/hotflip/
-adv_dir_2=bin/runs/baselines/textfooler/
-dataset_reader_type='baseline_records_reader'        # records_reader,baseline_records_reader
-suffix=2021-12-16_11-00-14_reevaled_bu.pkl
-ext1=rb_lg--rb_base_hotflip
-ext2=rb_lg--rb_base_textfooler
+# # Below args for computing baseline transferability
+# victim1=bin/runs/ruletaker/2021-12-12_19-08-47_roberta-base/
+# victim2=$victim1
+# adv_dir_1=bin/runs/baselines/hotflip/
+# adv_dir_2=bin/runs/baselines/textfooler/
+# dataset_reader_type='baseline_records_reader'        # records_reader,baseline_records_reader
+# suffix=2021-12-16_11-00-14_reevaled_bu.pkl
+# ext1=rb_lg--rb_base_hotflip
+# ext2=rb_lg--rb_base_textfooler
 
 exec 3>&1 4>&2
 trap 'exec 2>&4 1>&3' 0 1 2 3
@@ -34,7 +34,7 @@ proc_config_1=bin/config/transferability/config_$dt.jsonnet
 cp $raw_config_1 $proc_config_1
 
 adv_samples_vic1=$adv_dir_1/$suffix
-output_file=$victim1'/transferability_results_'$ext1'.json'
+output_file=$victim1'/transferability_results_'$ext1'-2.json'
 sed -i 's/"max_instances":\ [^,]*,/"max_instances":\ '$max_instances',/g' $proc_config_1
 sed -i 's/local\ dataset_reader_type\ =\ [^;]*;/local\ dataset_reader_type\ =\ "'$dataset_reader_type'";/g' $proc_config_1
 
@@ -50,7 +50,7 @@ cmd='python main.py \
         --include-package ruletaker.allennlp_models'
 cmd=$(sed 's/\\//g' <<< $cmd)
 echo $cmd
-# $cmd
+$cmd
 
 
 
@@ -60,7 +60,7 @@ proc_config_2=bin/config/transferability/config_$dt.jsonnet
 cp $raw_config_2 $proc_config_2
 
 adv_samples_vic2=$adv_dir_2/$suffix
-output_file=$victim2'/transferability_results_'$ext2'.json'
+output_file=$victim2'/transferability_results_'$ext2'-2.json'
 sed -i 's/"max_instances":\ [^,]*,/"max_instances":\ '$max_instances',/g' $proc_config_2
 sed -i 's/local\ dataset_reader_type\ =\ [^;]*;/local\ dataset_reader_type\ =\ "'$dataset_reader_type'";/g' $proc_config_1
 

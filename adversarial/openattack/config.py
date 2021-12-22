@@ -4,7 +4,7 @@ config = {
         'add_NAF': False, #True,
         'true_samples_only': False,
         'concat_q_and_c': True,
-        'shortest_proof': 1,
+        'shortest_proof': 0,
         'longest_proof': 100,
         'pretrained_retriever_model': None, #'bin/runs/pretrain_retriever/rb-base/model.tar.gz',
         'retriever_variant': 'roberta-large',
