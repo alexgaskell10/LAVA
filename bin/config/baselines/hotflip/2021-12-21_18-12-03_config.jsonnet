@@ -4,7 +4,7 @@ local pkl_path = "";
 local cuda_device = 5;
 local attack_method = "hotflip";
 local outdir = "bin/runs/baselines";
-local outpath = "bin/runs/baselines/hotflip/2021-12-21_18-12-03.pkl";
+local outpath = "bin/runs/baselines/hotflip/2021-12-21_18-12-03_reeval.txt";
 
 {
     "outpath": outpath,

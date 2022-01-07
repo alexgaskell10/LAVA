@@ -23,6 +23,8 @@ from allennlp.training.metrics import CategoricalAccuracy
 import wandb
 import os
 
+from .utils import set_dropout
+
 logger = logging.getLogger(__name__)
 
 @Model.register("transformer_binary_qa")
@@ -38,7 +40,8 @@ class TransformerBinaryQA(Model):
         num_labels: int = 2,
         predictions_file=None,
         layer_freeze_regexes: List[str] = None,
-        regularizer: Optional[RegularizerApplicator] = None
+        regularizer: Optional[RegularizerApplicator] = None,
+        dropout = -1,
     ):
         super().__init__(vocab, regularizer)
 
@@ -102,6 +105,9 @@ class TransformerBinaryQA(Model):
         self._loss = torch.nn.CrossEntropyLoss()
 
         self._debug = -1
+
+        if dropout != -1:
+            set_dropout(self, dropout)
 
     def forward(self, 
             phrase,

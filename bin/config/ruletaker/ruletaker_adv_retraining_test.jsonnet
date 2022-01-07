@@ -1,6 +1,7 @@
 local batch_size = 16;
 local adversarial_examples_path_test = "bin/runs/adversarial/2021-12-03_08-15-20-keep/val-records_epoch2.pkl";
 local dataset_dir = "data/rule-reasoning-dataset-V2020.2.4/depth-5/";
+local dropout = -1;
 
 {
     "train_data_path": "",
@@ -21,5 +22,8 @@ local dataset_dir = "data/rule-reasoning-dataset-V2020.2.4/depth-5/";
             "sampler": "random",        # random, sequential
             "drop_last": false
         }
+    },
+    "model": {
+        "dropout": dropout,
     },
 }

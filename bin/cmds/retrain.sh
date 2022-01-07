@@ -1,14 +1,13 @@
 max_instances=-1        # 10 -1
 cuda_device=8       # Currently only supports single GPU training
-roberta_model="roberta-base"        # Victim model
+roberta_model="distilroberta-base" #"roberta-large"        # Victim model
 data_dir=data/rule-reasoning-dataset-V2020.2.4/depth-5/
 
 # dt=$(date +%Y-%m-%d_%H-%M-%S)
-dt='2021-12-21_08-55-58' #'2021-12-20_10-48-09'
+dt='2021-12-22_09-38-17' #'2021-12-20_10-48-09'
 outdir_victim=bin/runs/ruletaker/$dt'_'$roberta_model
-outdir_victim_retrain=bin/runs/ruletaker/$dt'_'$roberta_model'_retrain_v1'
-# outdir_attacker=bin/runs/adversarial/$dt'_'$roberta_model
-outdir_attacker=bin/runs/adversarial/2021-12-12_19-08-47_roberta-base
+outdir_victim_retrain=bin/runs/ruletaker/$dt'_'$roberta_model'_retrain'
+outdir_attacker=bin/runs/adversarial/$dt'_'$roberta_model
 
 
 exec 3>&1 4>&2
@@ -74,6 +73,8 @@ cmd='python main.py \
 cmd=$(sed 's/\\//g' <<< $cmd)
 echo $cmd
 $cmd
+
+
 
 # Evaluate trained model on the test set (original, adv, combined)
 raw_config_5=bin/config/ruletaker/ruletaker_adv_retraining_test.jsonnet

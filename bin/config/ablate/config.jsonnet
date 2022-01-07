@@ -5,12 +5,12 @@ local cuda_device = 9;
 local batch_size = 8;
 local num_gradient_accumulation_steps = 1;
 local num_monte_carlo = 8;
-local longest_proof = 10;
-local shortest_proof = 1;
+local longest_proof = 100;
+local shortest_proof = 0;
 local lr = 5e-6;
 local model_type = 'adversarial_base';
 local compute_word_overlap_scores = true;
-local epochs = 2;
+local epochs = 5;
 local adversarial_perturbations = "sentence_elimination,question_flip,equivalence_substitution";
 
 {

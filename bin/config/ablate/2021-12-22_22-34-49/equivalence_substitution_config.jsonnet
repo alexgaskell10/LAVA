@@ -1,12 +1,12 @@
 local ruletaker_archive = 'bin/runs/ruletaker/2021-12-12_17-38-38_roberta-large/model.tar.gz';
 local dataset_dir = "data/rule-reasoning-dataset-V2020.2.4/depth-5/";
 local inference_model = "roberta-base";      # {roberta-base, roberta-large}
-local cuda_device = 4;
+local cuda_device = 2;
 local batch_size = 8;
 local num_gradient_accumulation_steps = 1;
 local num_monte_carlo = 8;
-local longest_proof = 10;
-local shortest_proof = 1;
+local longest_proof = 100;
+local shortest_proof = 0;
 local lr = 5e-6;
 local model_type = 'adversarial_base';
 local compute_word_overlap_scores = true;

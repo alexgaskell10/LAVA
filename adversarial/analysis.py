@@ -29,6 +29,8 @@ def compute_features(df, skip_start, skip_end):
     # Compute basic features
     df['n_orig_sentences'] = df['orig_sentences'].apply(len)
     df['n_sampled_sentences'] = df['sampled_sentences'].apply(len)
+    df['n_orig_tokens'] = df['orig_sentences'].apply(lambda sent: sum(len(x.strip().split()) for x in sent))
+    df['n_sampled_tokens'] = df['sampled_sentences'].apply(lambda sent: sum(len(x.strip().split()) for x in sent))
     df['orig_tokens'] = df['orig_sentences'].apply(lambda x: ' '.join(x)).str.split(' ').apply(len)
     df['sampled_tokens'] = df['sampled_sentences'].apply(lambda x: ' '.join(x)).str.split(' ').apply(len)
     # Compute context composition features

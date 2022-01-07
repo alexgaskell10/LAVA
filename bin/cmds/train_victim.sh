@@ -27,13 +27,14 @@ then
   num_epochs=8 #4
   batch_size=2
   num_gradient_accumulation_steps=8
-  learning_rate=1e-5
+  learning_rate=5e-6 #1e-5
 else
   num_epochs=16 #8
   batch_size=8
   num_gradient_accumulation_steps=2
   learning_rate=1e-5
 fi
+dropout=-1
 
 sed -i 's/local\ cuda_device\ =\ [[:digit:]]\+/local\ cuda_device\ =\ '$cuda_device'/g' $proc_config_1
 sed -i 's/local\ num_epochs\ =\ [[:digit:]]\+/local\ num_epochs\ =\ '$num_epochs'/g' $proc_config_1
@@ -43,6 +44,7 @@ sed -i 's/local\ transformer_model\ \=\ [^,]*;/local\ transformer_model\ =\ "'$r
 sed -i 's+local\ dataset_dir\ \=\ [^,]*;+local\ dataset_dir\ =\ "'$data_dir'";+g' $proc_config_1
 sed -i 's/"max_instances":\ [^,]*,/"max_instances":\ '$max_instances',/g' $proc_config_1
 sed -i 's+local\ learning_rate\ \=\ [^;]*;+local\ learning_rate\ =\ '$learning_rate';+g' $proc_config_1
+sed -i 's+local\ dropout\ \=\ [^;]*;+local\ dropout\ =\ '$dropout';+g' $proc_config_1
 
 # Train the model
 echo '\n\nTraining the victim model using config '$proc_config_1'. \nOutputs will be saved to '$outdir_victim'\n\n'

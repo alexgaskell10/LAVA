@@ -11,6 +11,7 @@ local max_pieces = 384;
 local transformer_weights_model = "";
 local dataset_dir = "data/rule-reasoning-dataset-V2020.2.4/depth-5/";
 local cuda_device = 2;
+local dropout = -1;
 
 {
   "data_loader": {
@@ -37,7 +38,8 @@ local cuda_device = 2;
     "type": "transformer_binary_qa",
     "num_labels": 2,
     "transformer_weights_model": transformer_weights_model,
-    "pretrained_model": transformer_model
+    "pretrained_model": transformer_model,
+    "dropout": dropout,
   },
   "trainer": {
     "patience": 2,

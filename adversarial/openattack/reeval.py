@@ -179,7 +179,7 @@ if __name__ == '__main__':
         else None 
         for d in proc_data]
 
-    # Compute modified results: correct if engine_label == (adv result == 
+    # Compute modified results
     adv_results = [d['metrics']['Succeed'] for d in adv_data]
     orig_labels = [p['label'] for p in proc_data]
     modified_correct = [a and o==e for a,o,e in zip(adv_results, orig_labels, engine_labels) if e is not None]

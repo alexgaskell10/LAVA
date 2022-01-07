@@ -1,10 +1,10 @@
 ## bash bin/cmds/hf_tf_baselines.sh
 dt=$(date +%Y-%m-%d_%H-%M-%S)
-# dt=2021-12-16_11-00-14
+# dt=2021-12-29_09-44-40
 
 max_instances=-1        # 10 -1
 cuda_device=5       # Currently only supports single GPU
-dset=test
+dset=train
 victim='bin/runs/ruletaker/2021-12-20_10-48-09_roberta-large'
 data='data/rule-reasoning-dataset-V2020.2.4/depth-5/'$dset'.jsonl'
 outdir='bin/runs/baselines'
@@ -15,10 +15,11 @@ trap 'exec 2>&4 1>&3' 0 1 2 3
 exec 1>'logs/hf_tf_baselines_log_'$dt'.out' 2>&1
 
 
-for attack_method in 'hotflip' 'textfooler'
+# for attack_method in 'hotflip' 'textfooler'
+for attack_method in 'hotflip'
 do
     ### 1. Run the attack method on the victim over the data and generate predictions
-    ext=$attack_method/$dt
+    ext=$attack_method/$dt'_'$dset
     raw_config_1=bin/config/baselines/config.jsonnet
     proc_config_1=bin/config/baselines/$ext'_config.jsonnet'
     cp $raw_config_1 $proc_config_1
@@ -44,13 +45,13 @@ do
     proc_config_2=bin/config/baselines/$ext'_reeval.jsonnet'
     cp $proc_config_1 $proc_config_2
     attack_records=$outdir/$ext'.pkl'
-    ext_=$attack_method/$dt'_reeval'
-    outpath=$outdir/$ext_'.txt'
+    ext_=$attack_method/$dt'_'$dset'_reeval'
+    outpath2=$outdir/$ext_'.txt'
 
     # Use the outputs from the above job as the input for this job
     sed -i 's+local\ pkl_path\ =\ [^;]*;+local\ pkl_path\ =\ "'$attack_records'";+g' $proc_config_2
     sed -i 's+local\ file_path\ =\ [^;]*;+local\ file_path\ =\ "";+g' $proc_config_2
-    sed -i 's+local\ outpath\ =\ [^;]*;+local\ outpath\ =\ "'$outpath'";+g' $proc_config_1
+    sed -i 's+local\ outpath\ =\ [^;]*;+local\ outpath\ =\ "'$outpath2'";+g' $proc_config_2
 
     echo '\n\nComputing the revised entailment relationships and attack flip rates. \nOutputs will be saved to '$outpath'\n\n'
     cmd='python adversarial/openattack/reeval.py '$proc_config_2

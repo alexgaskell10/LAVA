@@ -52,6 +52,13 @@ def main(prog: Optional[str] = None) -> None:
             '-o', "{'trainer': {'cuda_device': 9}, 'validation_data_loader': {'batch_sampler': {'batch_size': 64, 'type': 'bucket'}}}", 
             '--cuda-device', '9', '--include-package', 'ruletaker.allennlp_models'
         ],
+        "baseline_test": ['baseline_test',
+            'bin/runs/ruletaker/depth-5/model.tar.gz', 'bin/runs/baselines/textfooler/2021-12-21_18-12-03_reevaled.pkl', 
+            '--output-file', 'bin/runs/baselines/textfooler/2021-12-21_18-12-03_reevaled_results_abc.pkl', 
+            '--overrides_file', 'bin/config/baselines/transferability/config.jsonnet',
+            '--cuda-device', '9', 
+            '--include-package', 'ruletaker.allennlp_models'
+        ],
         "adversarial_dataset_generation_test": ['adversarial_dataset_generation_test',
             'bin/runs/adversarial/2021-12-12_17-38-38_roberta-large/model.tar.gz', 'data/rule-reasoning-dataset-V2020.2.4/depth-5/test.jsonl', 
             '--output-file', '_results.json',
@@ -83,6 +90,7 @@ def main(prog: Optional[str] = None) -> None:
         "ruletaker_adv_training_test": 'custom_reevaluate',
         "ruletaker_eval_original": 'evaluate',
         "ruletaker_test_original": 'evaluate',
+        "baseline_test": 'custom_evaluate',
         "transferability": 'custom_evaluate',
         "adversarial_dataset_generation_test": 'custom_evaluate',
         "adversarial_random_benchmark": 'custom_evaluate',
@@ -100,6 +108,8 @@ def main(prog: Optional[str] = None) -> None:
         launch_ruletaker_adv_training_test()
     if cmd == 'transferability':
         launch_transferability()
+    if cmd == 'baseline_test':
+        launch_baseline_test()
 
     parser = create_parser(prog)
     args = parser.parse_args()
@@ -198,6 +208,26 @@ def launch_ruletaker_adv_training_test():
 
 
 def launch_transferability():
+    ix = sys.argv.index('--overrides_file')
+    sys.argv.pop(ix)                        # Pop flag
+    overrides_file = sys.argv.pop(ix)       # And pop path
+
+    file_overrides = json.loads(_jsonnet.evaluate_file(overrides_file))
+    model_overrides = json.load(open(sys.argv[2].replace('model.tar.gz', 'config.json'), 'r'))
+    for k,v in file_overrides.items():
+        if isinstance(v, dict):
+            if k in model_overrides:
+                model_overrides[k].update(v)
+            else:
+                model_overrides[k] = v
+        else:
+            model_overrides.update({k:v})
+
+    model_overrides['dataset_reader'].pop('adversarial_examples_path', None)
+    sys.argv.extend(['-o', str(model_overrides).replace("True", "'True'").replace("False", "'False'").replace("None", "'None'")])
+
+
+def launch_baseline_test():
     ix = sys.argv.index('--overrides_file')
     sys.argv.pop(ix)                        # Pop flag
     overrides_file = sys.argv.pop(ix)       # And pop path
