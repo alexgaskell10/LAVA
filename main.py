@@ -20,12 +20,6 @@ def datetime_now():
 
 
 def main(prog: Optional[str] = None) -> None:
-    """
-    The :mod:`~allennlp.run` command only knows about the registered classes in the ``allennlp``
-    codebase. In particular, once you start creating your own ``Model`` s and so forth, it won't
-    work for them, unless you use the ``--include-package`` flag or you make your code available
-    as a plugin (see :mod:`~allennlp.common.plugins`).
-    """
     import_plugins()
 
     outdir_adv = 'bin/runs/adversarial/'+datetime_now()

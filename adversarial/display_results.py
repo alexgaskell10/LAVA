@@ -50,10 +50,13 @@ paths = {
     # Analysis
     'v_rb-lg:a_rb-b:ana': 'bin/runs/adversarial/2021-12-12_17-38-38_roberta-large/test_results-records.pkl',
     # Ablations
-    'all3': 'bin/runs/ablate/2021-12-22_22-34-49/equivalence_substitution,question_flip,sentence_elimination/test_results-records.pkl',
-    '-qf': 'bin/runs/ablate/2021-12-22_22-37-52/sentence_elimination,equivalence_substitution/test_results-records.pkl',
-    '-se': 'bin/runs/ablate/2021-12-22_22-37-52/equivalence_substitution,question_flip/test_results-records.pkl',
-    '-es': 'bin/runs/ablate/2021-12-22_22-37-52/sentence_elimination,question_flip/test_results-records.pkl',
+    # 'all3': 'bin/runs/ablate/2021-12-22_22-34-49/equivalence_substitution,question_flip,sentence_elimination/test_results-records.pkl',
+    # '-qf': 'bin/runs/ablate/2021-12-22_22-37-52/sentence_elimination,equivalence_substitution/test_results-records.pkl',
+    # '-se': 'bin/runs/ablate/2021-12-22_22-37-52/equivalence_substitution,question_flip/test_results-records.pkl',
+    # '-es': 'bin/runs/ablate/2021-12-22_22-37-52/sentence_elimination,question_flip/test_results-records.pkl',
+    '-qf': 'bin/runs/ablate/2022-01-06_10-36-21/sentence_elimination,equivalence_substitution/test_results-records.pkl',
+    '-se': 'bin/runs/ablate/2022-01-06_10-33-08/equivalence_substitution,question_flip/test_results-records.pkl',
+    '-es': 'bin/runs/ablate/2022-01-06_10-35-27/sentence_elimination,question_flip/test_results-records.pkl',
     # Successful sample
     'main_model': 'bin/runs/adversarial/2021-12-12_17-38-38_roberta-large/test_results-records.pkl',
 }
@@ -154,7 +157,8 @@ def display_attacker_results():
     cols = ['success_rate', 'f1', 'name']
 
     # Attacker model performance (incl. random baselines + ablations)
-    for name in ['v_rb-lg:a_rb-b', 'v_rb-b:a_rb-b', 'v_drb-b:a_rb-b', 'v_rb-lg:a_random', 'v_rb-lg:a_wordscore', 'all3', '-qf', '-se', '-es']:
+    # for name in ['v_rb-lg:a_rb-b', 'v_rb-b:a_rb-b', 'v_drb-b:a_rb-b', 'v_rb-lg:a_random', 'v_rb-lg:a_wordscore', 'all3', '-qf', '-se', '-es']:
+    for name in ['v_rb-lg:a_rb-b', '-qf', '-se', '-es']:
         path = paths[name]
         df = load_as_df(path)
         df = compute_features(df, 1, 1)
@@ -169,7 +173,7 @@ def display_attacker_results():
         continue
 
     # Baseline performance
-    for name in ['v_rb-lg:a_hotflip', 'v_rb-lg:a_textfooler']:
+    for name in []: #['v_rb-lg:a_hotflip', 'v_rb-lg:a_textfooler']:
         path = paths[name]
         df = load_as_df(path)
         df['orig_sentences'] = df['context'].apply(lambda x: len(x.split('.'))-1)
@@ -220,9 +224,9 @@ def display_attacker_results():
     print(output_df.to_latex())
     return output_df
 
-    # x1 = rows[0]
-    # x2 = rows[-2]
-    # print(stats.ttest_ind(x1, x2, equal_var=False))
+    x1 = rows[0]
+    x2 = rows[3]
+    print(stats.ttest_ind(x1, x2, equal_var=False))
 
 
 def display_adversarial_retraining_results():
@@ -527,7 +531,6 @@ def display_successful_sample():
     subset = df[df.is_correct == result]
 
 
-
 def analyze_attacks():
     name = 'v_rb-lg:a_rb-b:ana'
     path = paths[name]    
@@ -554,12 +557,12 @@ def analyze_attacks():
 
 if __name__ == '__main__':
     # display_victim_results()
-    # display_attacker_results()
+    display_attacker_results()
     # display_adversarial_retraining_results()
     # display_transferability_results()
     # display_retraining_results()
     # display_num_perturbs()
-    display_val_monte_carlo()
+    # display_val_monte_carlo()
     # display_proof_len_results()
     # display_successful_sample()
     # analyze_attacks()

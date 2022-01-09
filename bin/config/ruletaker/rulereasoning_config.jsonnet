@@ -29,7 +29,7 @@ local dropout = -1;
     "skip_id_regex": skip_id_regex,
     "pretrained_model": transformer_model,
     "max_pieces": max_pieces,
-    "max_instances": "none",        # "none", 10
+    "max_instances": -1,        # -1, 10
   },
   "train_data_path": dataset_dir + "train.jsonl",
   "validation_data_path": dataset_dir + "dev.jsonl",

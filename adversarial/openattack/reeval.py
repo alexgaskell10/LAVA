@@ -5,7 +5,7 @@ import pickle as pkl
 from datetime import datetime
 import difflib
 
-sys.path.extend(['/vol/bitbucket/aeg19/re-re'])
+sys.path.extend(['/vol/bitbucket/aeg19/re-re'])     # TODO
 
 from ruletaker.allennlp_models.dataset_readers.retrieval_reasoning_reader import RetrievalReasoningReader as DataReader
 from ruletaker.allennlp_models.models.solver.theory_label_generator import call_theorem_prover_from_lst
