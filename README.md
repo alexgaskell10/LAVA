@@ -47,7 +47,7 @@ mv rule-reasoning-dataset-V2020.2.4 data/rule-reasoning-dataset-V2020.2.4
 
 Outlined below are the instructions to replicate the results in the paper. The main_flow script is of most interest as it contains the main results of the paper so this should be (relatively) well-documented & simple to follow. The other scripts follow this script's blueprint so should also be simple to adapt as required. **Note**: the tables & figs. were produced using `lava/common/display_results.py` but will require the use to specify paths to outputs manually at the top of this file to run it.
 
-i) `resources/cmds/main_flow.sh` 
+**i)** `resources/cmds/main_flow.sh` 
 
 The main pipeline consisting of the following stages:
 1) Train the victim (& eval on the test set)
@@ -60,14 +60,14 @@ The script is configured to reproduce our main results (i.e., in the paper, **Ou
 Running instructions:
 - Open `resources/cmds/main_flow.sh` & set the parameters within the section USER INPUT. This is where you decide which victim model you would like. Our main model uses roberta-large.
 
-ii) `resources/cmds/ablate.sh`
+**ii)** `resources/cmds/ablate.sh`
 
 Reproduce the ablations in table 2 in the paper. 
 
 Running instructions:
 - As for `main_flow.sh`, open the script & add inputs where marked
 
-iii)  `resources/cmds/num_perturbs.sh`
+**iii)**  `resources/cmds/num_perturbs.sh`
 
 Reproduce the data used to generate fig.5 in the paper.
 
@@ -76,7 +76,7 @@ Running instructions:
 - As for `main_flow.sh`, open the script & add inputs where marked
 - **Note**: due to the large number of trials, this will take a while. Probably best to parallelize across multiple machines
 
-iv)  `resources/cmds/transferability.sh`
+**iv)**  `resources/cmds/transferability.sh`
 
 Reproduce the data used to generate table 3 in the paper. 
 
@@ -86,12 +86,13 @@ Running instructions:
 - This script is setup to use 2 victims, i.e. victim1 -> victim2 & victim2 -> victim1 but can easily be adapted to use only 1 victim
 - Uncomment the appropriate section to reproduce the results for the HF and TF baselines
 
-v) `resources/cmds/hf_tf_baselines.sh`
+**v)** `resources/cmds/hf_tf_baselines.sh`
 
 Reproduce the data used for the HF and TF baselines in table 2 in the paper. 
 
 - As for `main_flow.sh`, open the script & add inputs where marked
 - This script is a 2-stage process: 1) generate adversarial samples 2) re-evaluate these samples by applying the perturbation to the underlying logic program and passing this through problog to compute the modified label (i.e. run through the solver module using the paper's terminology)
+- See `lava/common/display_results.py:display_attacker_results` to obtain results from the above outputs
 - **Note** This takes several days to run because the HF/TF implementations are very slow
 
 The other results from the paper can be reporduced using the remaining scripts from in `resources/cmds`.
