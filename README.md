@@ -1,6 +1,6 @@
 # Logically consistent AdVersarial Attacks (LAVA)
 
-![alt text](resources/fig/re-re-schematic.drawio.png)
+<img src="resources/fig/re-re-schematic.drawio.png" alt="model illustration" width="600"/>
 
 LAVA is a method for adversarially attacking soft theorem provers (STPs). Throughout this repo, the STP is the victim, and LAVA is a framework for training an attacker model to generate attacks to fool the victim. The attacks are logically consistent because they use a symbolic solver to guarantee that the label faithfully represents the logical entailment relationship after the perturbations have been applied.
 
@@ -36,6 +36,7 @@ Download the data & place into the appropriate location by running the following
 
 ```
 mkdir -p data
+mkdir -p logs
 wget https://logically-consistent-adversarial-attacker.s3.eu-west-2.amazonaws.com/rule-reasoning-dataset-V2020.2.4.zip
 unzip rule-reasoning-dataset-V2020.2.4.zip
 rm -f rule-reasoning-dataset-V2020.2.4.zip
