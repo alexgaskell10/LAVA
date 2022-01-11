@@ -133,10 +133,12 @@ inputs
 tmp_trainer
 wandb
 .vscode
-runs
+bin/runs/*
 data
 *.pkl
 log*.out*
 bin/config/*_2021-12-*
+bin/config/*_2021-01-*
 logs
 adversarial/figs
+rule-reasoning-dataset-V2020.2.4.zip

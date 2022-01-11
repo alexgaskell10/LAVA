@@ -470,6 +470,7 @@ class AdversarialGenerator(Model):
         # Obtain samples
         # During validation, use argmax unless prob = 0.5, in which case sample
         draws = gs(logits_).argmax(-1)
+        # draws = torch.multinomial(logits_.softmax(-1), 1).squeeze(1)
         samples = draws
 
         # Ensure padding sentences are not sampled

@@ -27,3 +27,6 @@ pyyaml
 # To keep consistent with AllenNLP lib, revert to prev transformers version
 # tensorflow==2.0.0       # <-- might need to upgrade pip for this to work: pip install -U pip
 # tensorflow-hub==0.12.0
+
+# # For bert-score eval
+# bert-score

@@ -157,8 +157,8 @@ def display_attacker_results():
     cols = ['success_rate', 'f1', 'name']
 
     # Attacker model performance (incl. random baselines + ablations)
-    # for name in ['v_rb-lg:a_rb-b', 'v_rb-b:a_rb-b', 'v_drb-b:a_rb-b', 'v_rb-lg:a_random', 'v_rb-lg:a_wordscore', 'all3', '-qf', '-se', '-es']:
-    for name in ['v_rb-lg:a_rb-b', '-qf', '-se', '-es']:
+    for name in []: #['v_rb-lg:a_rb-b', 'v_rb-b:a_rb-b', 'v_drb-b:a_rb-b', 'v_rb-lg:a_random', 'v_rb-lg:a_wordscore', 'all3', '-qf', '-se', '-es']:
+    # for name in ['v_rb-lg:a_rb-b', '-qf', '-se', '-es']:
         path = paths[name]
         df = load_as_df(path)
         df = compute_features(df, 1, 1)
@@ -170,10 +170,17 @@ def display_attacker_results():
         tmp_df.columns = cols
         summaries.append(tmp_df)
         rows.append(df['qa_fooled'])
+
+        # df_pos = df[df['qa_fooled']]
+        # from bert_score import score
+        # cands = df_pos['orig_sentences'].iloc[:100].apply(lambda x: '.'.join(x)+'.').tolist()
+        # refs = df_pos['sampled_sentences'].iloc[:100].apply(lambda x: '.'.join(x)+'.').tolist()
+        # P, R, F1 = score(cands, refs, lang='en', verbose=True)
+
         continue
 
     # Baseline performance
-    for name in []: #['v_rb-lg:a_hotflip', 'v_rb-lg:a_textfooler']:
+    for name in ['v_rb-lg:a_hotflip', 'v_rb-lg:a_textfooler']:
         path = paths[name]
         df = load_as_df(path)
         df['orig_sentences'] = df['context'].apply(lambda x: len(x.split('.'))-1)
@@ -189,7 +196,7 @@ def display_attacker_results():
         summaries.append(tmp_df)
 
         # filter out samples on which the Problog solver failed
-        df = df[df.mod_label.isin([True, False])]
+        # df = df[df.mod_label.isin([True, False])]
         df['mod_correct'] = df['adv_result'] & df['label']==df['mod_label']
         summary = df[['mod_correct', 'f1']].mean()
         summary.loc['name'] = name + '-adj'
@@ -197,6 +204,13 @@ def display_attacker_results():
         tmp_df.columns = cols
         summaries.append(tmp_df)
         rows.append(df['mod_correct'])
+
+        # df_pos = df[df['adv_result'] & (df['label']==df['mod_label'])]
+        # from bert_score import score
+        # cands = df_pos['context'].iloc[:100].tolist()
+        # refs = df_pos['result'].iloc[:100].tolist()
+        # P, R, F1 = score(cands, refs, lang='en', verbose=True)
+
         continue
 
     names = {
