@@ -13,7 +13,7 @@ Tested for python3.6.
 - Activate environment
 ```
 python3 -m venv <path_to_venv>
-source <path_to_venv>/resources/activate
+source <path_to_venv>/bin/activate
 ```
 
 
