@@ -1,5 +1,0 @@
-max_instances: 30
-victim_archive_file: ./ruletaker/runs/depth-5
-attacker: textfooler
-cuda_device: 1
-outdir: bin/runs/baselines

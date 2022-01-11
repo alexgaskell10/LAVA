@@ -133,10 +133,10 @@ inputs
 tmp_trainer
 wandb
 .vscode
-runs
+resources/runs/*
 data
 *.pkl
-log*.out*
-bin/config/*_2021-12-*
-logs
+resources/config/*_2021-12-*
+logs/*
 adversarial/figs
+__MACOSX
