@@ -10,6 +10,11 @@ import seaborn as sns
 
 from analysis import load_as_df, compute_features
 
+# Set fonttype for IJCAI PDF submission
+import matplotlib
+matplotlib.rcParams['pdf.fonttype'] = 42
+matplotlib.rcParams['ps.fonttype'] = 42
+
 paths = {
     'v_rb-lg': 'resources/runs/ruletaker/2021-12-20_10-48-09_roberta-large/test_results.json',
     'v_rb-b': 'resources/runs/ruletaker/2021-12-21_08-55-58_roberta-base/test_results.json',
@@ -557,11 +562,11 @@ def analyze_attacks():
 
 if __name__ == '__main__':
     # display_victim_results()
-    display_attacker_results()
+    # display_attacker_results()
     # display_adversarial_retraining_results()
     # display_transferability_results()
     # display_retraining_results()
-    # display_num_perturbs()
+    display_num_perturbs()
     # display_val_monte_carlo()
     # display_proof_len_results()
     # display_successful_sample()
