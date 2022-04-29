@@ -1,12 +1,12 @@
 # 🌋 🌋  LAVA  🌋 🌋
 
+This repository accompanies the paper: **Logically Consistent Adversarial Attacks for Soft Theorem Provers** (IJCAI-ECAI 2022). 
+
 <img src="resources/fig/re-re-schematic.drawio.png" alt="model illustration" width="800"/>
 
 **NOTE**: this repo is a WIP so bear with us if you come across any bugs 🐛. Raising issues / submitting PRs are welcome 😀 !
 
 ## 🕵🏼‍♀️ Overview 🕵🏾‍♂️
-
-This repository accompanies the paper: **Logically Consistent Adversarial Attacks for Soft Theorem Provers** (IJCAI-ECAI 2022). 
 
 Our **L**ogically-consistent **A**d**V**ersarial **A**ttacker (LAVA 🌋) is a method for adversarially attacking soft theorem provers (STPs). Throughout this repo, we refer to the STP as victim (because it is being attacked), and LAVA 🌋 is a framework for training an attacker model to generate attacks to fool the victim. The attacks are logically consistent because they use a symbolic solver to guarantee that the label faithfully represents the logical entailment relationship after the perturbations have been applied.
 
