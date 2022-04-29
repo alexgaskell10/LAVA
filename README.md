@@ -14,7 +14,7 @@ Our **L**ogically-consistent **A**d**V**ersarial **A**ttacker (LAVA 🌋) is a m
 
 Table 2 shown below contains the primary result from out paper showing that our attacker outperforms several strong baselines. See the paper for more context and discussion.
 
-<img src="resources/fig/table2.png" alt="model performance" width="400"/>
+<img src="resources/fig/table2.png" alt="model performance" width="500"/>
 
 
 ## ⚙️ Setup environment ⚙️
