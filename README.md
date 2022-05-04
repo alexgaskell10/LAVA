@@ -110,7 +110,15 @@ The other results from the paper can be reporduced using the remaining scripts f
 
 ## 📜 Citation 📜
 
-If you found LAVA 🌋 and/or this repo useful you can cite our paper IJCAI-ECAI 2022 paper 😀 !
+If you found LAVA 🌋 and/or this repo useful you can cite our paper IJCAI-ECAI 2022 paper 😀 ! (TODO: update to IJCAI bibtex.)
 ```bibtex
-TODO once released on arXiv.
+@misc{https://doi.org/10.48550/arxiv.2205.00047,
+  doi = {10.48550/ARXIV.2205.00047}, 
+  url = {https://arxiv.org/abs/2205.00047},
+  author = {Gaskell, Alexander and Miao, Yishu and Specia, Lucia and Toni, Francesca},
+  title = {Logically Consistent Adversarial Attacks for Soft Theorem Provers},  
+  publisher = {arXiv},
+  year = {2022},
+  copyright = {Creative Commons Attribution 4.0 International}
+}
 ```
