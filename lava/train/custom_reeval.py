@@ -136,6 +136,11 @@ class Evaluate(Subcommand):
             "they are not available we will use random vectors for embedding extension.",
         )
 
+        subparser.add_argument(
+            "--overrides_file",
+            help="manually pass the path to overrides so they can be loaded later",
+        )
+
         subparser.set_defaults(func=evaluate_from_args)
 
         return subparser

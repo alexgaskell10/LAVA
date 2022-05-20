@@ -27,8 +27,7 @@ cmd='python main.py \
         '$data_dir'/test.jsonl \
         --output-file '$outdir_attacker'/test_results.json \
         --overrides_file '$proc_config_3' \
-        --cuda-device '$cuda_device' \
-        --include-package lava'
+        --cuda-device '$cuda_device
 cmd=$(sed 's/\\//g' <<< $cmd)
 echo $cmd
 $cmd

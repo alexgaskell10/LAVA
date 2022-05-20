@@ -23,7 +23,7 @@ from allennlp.training.metrics import CategoricalAccuracy
 import wandb
 import os
 
-from .utils import set_dropout
+from ..utils import set_dropout, correct_legacy_path
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +62,7 @@ class TransformerBinaryQA(Model):
             self._padding_value = 1  # The index of the RoBERTa padding token
             if transformer_weights_model:  # Override for RoBERTa only for now
                 logging.info(f"Loading Transformer weights model from {transformer_weights_model}")
-                transformer_model_loaded = load_archive(transformer_weights_model)
+                transformer_model_loaded = load_archive(correct_legacy_path(transformer_weights_model))
                 self._transformer_model = transformer_model_loaded.model._transformer_model
             else:
                 self._transformer_model = RobertaModel.from_pretrained(pretrained_model)

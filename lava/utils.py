@@ -1,22 +1,49 @@
+from datetime import datetime
+from functools import wraps
+from time import time
+import logging
 import numpy as np
-
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
 import torch.nn.functional as F
 
-from graphviz import Digraph
-
-import cProfile
-
-import logging
 logger = logging.getLogger(__name__)
 
 EPSILON = float(np.finfo(float).eps)
 HUGE_INT = 1e31
 
-from functools import wraps
-from time import time
+
+def nested_args_update(dict_overrider, dict_overridden):
+    for k,v in dict_overrider.items():
+        if isinstance(v, dict):
+            if k in dict_overridden:
+                dict_overridden[k].update(v)
+            else:
+                dict_overridden[k] = v
+        else:
+            dict_overridden.update({k:v})
+    return dict_overridden
+
+
+def dict_to_str(overrides):
+    return str(overrides).replace("True", "'True'").replace("False", "'False'").replace("None", "'None'")
+
+
+def lfilter(func, l):
+    return list(filter(func, l))
+
+
+def lmap(func, l):
+    return list(map(func, l))
+
+
+def flatten_list(l):
+    return [item for sublist in l for item in sublist]
+
+
+def datetime_now():
+    return datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
 
 def timing(f):
@@ -28,24 +55,6 @@ def timing(f):
         print(f'func:"{f.__qualname__}" took: {te-ts:2.4f} sec')
         return result
     return wrap
-
-
-# @timing
-# def func(meta_records):
-#     return call_theorem_prover_from_lst(instances=meta_records)
-
-# @timing
-# def func1(meta_records):
-#     processes = []
-#     for i in range(0,64,24):
-#         p = multiprocessing.Process(target=call_theorem_prover_from_lst, args=(meta_records[i:i+24],))
-#         processes.append(p)
-#         p.start()
-
-#     for process in processes:
-#         process.join()
-    
-#     return process
 
 
 def batch_lookup(M, idx, vector_output=True):
@@ -81,44 +90,8 @@ def right_pad(x, y, value=0.0):
         return output
 
 
-def make_dot(var, params=None):
-    if params is not None:
-        assert isinstance(params.values()[0], Variable)
-        param_map = {id(v): k for k, v in params.items()}
-
-    node_attr = dict(style="filled", shape="box", align="left", fontsize="12", ranksep="0.1", height="0.2")
-    dot = Digraph(node_attr=node_attr, graph_attr=dict(size="12,12"))
-    seen = set()
-
-    def size_to_str(size):
-        return "(" + (", ").join(["%d" % v for v in size]) + ")"
-
-    def add_nodes(var):
-        if var not in seen:
-            if torch.is_tensor(var):
-                dot.node(str(id(var)), size_to_str(var.size()), fillcolor="orange")
-                dot.edge(str(id(var.grad_fn)), str(id(var)))
-                var = var.grad_fn
-            if hasattr(var, "variable"):
-                u = var.variable
-                name = param_map[id(u)] if params is not None else ""
-                node_name = "%s\n %s" % (name, size_to_str(u.size()))
-                dot.node(str(id(var)), node_name, fillcolor="lightblue")
-            else:
-                dot.node(str(id(var)), str(type(var).__name__))
-            seen.add(var)
-            if hasattr(var, "next_functions"):
-                for u in var.next_functions:
-                    if u[0] is not None:
-                        dot.edge(str(id(u[0])), str(id(var)))
-                        add_nodes(u[0])
-            if hasattr(var, "saved_tensors"):
-                for t in var.saved_tensors:
-                    dot.edge(str(id(t)), str(id(var)))
-                    add_nodes(t)
-
-    add_nodes(var)
-    return dot
+def correct_legacy_path(path):
+    return path.replace('bin/runs/', 'resources/runs/')
 
 
 def set_dropout(model, drop_rate=0.1):
@@ -130,18 +103,6 @@ def set_dropout(model, drop_rate=0.1):
 
 def one_hot(make_as, x):
     return torch.zeros_like(make_as).scatter(1, x.unsqueeze(-1), 1)
-
-
-def lfilter(*args):
-    return list(filter(*args))
-
-
-def lmap(*args):
-    return list(map(*args))
-
-
-def flatten_list(l):
-    return [item for sublist in l for item in sublist]
 
 
 def lrange(*args):

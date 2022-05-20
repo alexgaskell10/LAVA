@@ -1,257 +1,91 @@
-import sys
-import os
+import sys, os
 import logging
 import _jsonnet, json
-from typing import Any, Optional
-from datetime import datetime
-import pkgutil
 
 from allennlp.common.util import import_module_and_submodules
-from allennlp.common.plugins import import_plugins
 from allennlp.commands import create_parser
+from lava.utils import dict_to_str, nested_args_update
+from lava.debugger_shortcuts import debugger_shortcut_cmds, shortcut_launch
 
 import lava
 
 logger = logging.getLogger(__name__)
 
 
-def datetime_now():
-    return datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+CMD_MAP = {
+    "ruletaker_train_original":'train',
+    "ruletaker_adv_training": 'train',
+    "adversarial_dataset_generation": 'custom_train',
+    "ruletaker_adv_training_test": 'custom_reevaluate',
+    "ruletaker_eval_original": 'evaluate',
+    "ruletaker_test_original": 'evaluate',
+    "baseline_test": 'custom_evaluate',
+    "transferability": 'custom_evaluate',
+    "adversarial_dataset_generation_test": 'custom_evaluate',
+    "adversarial_random_benchmark": 'custom_evaluate',
+}
 
 
-def main(prog: Optional[str] = None) -> None:
-    import_plugins()
-
-    outdir_adv = 'resources/runs/adversarial/'+datetime_now()
-    outdir_rt = 'resources/runs/ruletaker/'+datetime_now()
-    outdir_random_bl = 'resources/runs/baselines/random_adversarial/'+datetime_now()
-
-    cmds = {
-        "ruletaker_train_original": ['ruletaker_train_original', 'resources/config/ruletaker/rulereasoning_config_tmp.jsonnet', '-s', outdir_rt, '--include-package', 'lava'],
-        "ruletaker_adv_training": ['ruletaker_adv_training', 'resources/config/ruletaker/ruletaker_adv_retraining.jsonnet', '-s', outdir_rt, '--include-package', 'lava'],
-        "adversarial_dataset_generation": ['adversarial_dataset_generation', 'resources/config/attacker/tmp.jsonnet', '-s', outdir_adv, '--include-package', 'lava'],
-        "ruletaker_adv_training_test": ['ruletaker_adv_training_test', 
-            'resources/runs/ruletaker/2022-01-09_18-46-52_distilroberta-base_retrain/model.tar.gz', 'test', 
-            '--output-file', 'resources/runs/ruletaker/2022-01-09_18-46-52_distilroberta-base_retrain/aug_test_results.json', 
-            '--overrides_file', 'resources/config/ruletaker/ruletaker_adv_retraining_test_2022-01-09_18-46-52.jsonnet',\
-            '--cuda-device', '1', '--include-package', 'lava'
-        ],
-        "ruletaker_eval_original": ['ruletaker_eval_original',
-            'resources/runs/ruletaker/depth-5/model.tar.gz', 'dev', '--output-file', '_results.json', 
-            '-o', "{'trainer': {'cuda_device': 3}, 'validation_data_loader': {'batch_sampler': {'batch_size': 64, 'type': 'bucket'}}}", 
-            '--cuda-device', '3', '--include-package', 'lava'
-        ],
-        "ruletaker_test_original": ['ruletaker_test_original',
-            'resources/runs/ruletaker/depth-5/model.tar.gz', 'data/rule-reasoning-dataset-V2020.2.4/depth-5/test.jsonl', 
-            '--output-file', '_results.json', 
-            '-o', "{'trainer': {'cuda_device': 9}, 'validation_data_loader': {'batch_sampler': {'batch_size': 64, 'type': 'bucket'}}}", 
-            '--cuda-device', '9', '--include-package', 'lava'
-        ],
-        "baseline_test": ['baseline_test',
-            'resources/runs/ruletaker/depth-5/model.tar.gz', 'resources/runs/baselines/textfooler/2021-12-21_18-12-03_reevaled.pkl', 
-            '--output-file', 'resources/runs/baselines/textfooler/2021-12-21_18-12-03_reevaled_results_abc.pkl', 
-            '--overrides_file', 'resources/config/baselines/transferability/config.jsonnet',
-            '--cuda-device', '9', 
-            '--include-package', 'lava'
-        ],
-        "adversarial_dataset_generation_test": ['adversarial_dataset_generation_test',
-            'resources/runs/adversarial/2021-12-12_17-38-38_roberta-large/model.tar.gz', 'data/rule-reasoning-dataset-V2020.2.4/depth-5/test.jsonl', 
-            '--output-file', '_results.json',
-            '--overrides_file', 'resources/config/attacker/test_config_2021-12-12_17-38-38.jsonnet',
-            '--cuda-device', '9', 
-            '--include-package', 'lava'
-        ],
-        "transferability": ['transferability',
-            'resources/runs/ruletaker/2021-12-12_19-08-47_roberta-base/model.tar.gz', 
-            'resources/runs/baselines/hotflip//2021-12-16_11-00-14_reevaled_bu.pkl', 
-            '--output-file', 'resources/runs/ruletaker/2021-12-12_19-08-47_roberta-base/transferability_results_rb_lg--rb_base_hotflip.json', 
-            '--overrides_file', 'resources/config/transferability/config_2021-12-20_20-39-00.jsonnet',
-            '--cuda-device', '8', '--include-package', 'lava'
-        ],
-        "adversarial_random_benchmark": ["adversarial_random_benchmark",
-            '', 'data/rule-reasoning-dataset-V2020.2.4/depth-5/test.jsonl',
-            '--output-file', f'{outdir_random_bl}_results.json',
-            '--overrides_file', 'resources/config/baselines/adversarial_benchmark/config.jsonnet',
-            '--cuda-device', '8',
-            '--fresh-init',
-            '--include-package', 'lava'
-        ],
-    }
-
-    cmd_map = {
-        "ruletaker_train_original":'train',
-        "ruletaker_adv_training": 'train',
-        "adversarial_dataset_generation": 'custom_train',
-        "ruletaker_adv_training_test": 'custom_reevaluate',
-        "ruletaker_eval_original": 'evaluate',
-        "ruletaker_test_original": 'evaluate',
-        "baseline_test": 'custom_evaluate',
-        "transferability": 'custom_evaluate',
-        "adversarial_dataset_generation_test": 'custom_evaluate',
-        "adversarial_random_benchmark": 'custom_evaluate',
-    }
+def main(prog = None):
 
     if len(sys.argv) == 2:
-        shortcut_launch(cmds)
+        # Hacky way to conveniently pre-load a set of commands to use
+        # with the vs code debugger
+        shortcut_launch(debugger_shortcut_cmds)
 
-    cmd = sys.argv[1]
-    sys.argv[1] = cmd_map[cmd]
+    # Remap from program name to main control flow
+    prog_name = sys.argv[1]
+    sys.argv[1] = CMD_MAP[prog_name]
 
-    if cmd == 'adversarial_dataset_generation_test':
-        launch_adversarial_dataset_generation_test()
-    if cmd == 'ruletaker_adv_training_test':
-        launch_ruletaker_adv_training_test()
-    if cmd == 'transferability':
-        launch_transferability()
-    if cmd == 'baseline_test':
-        launch_baseline_test()
-
+    # Load args
     parser = create_parser(prog)
     args = parser.parse_args()
-
-    if cmd == 'adversarial_random_benchmark':
-        args = launch_adversarial_random_benchmark(args)
-
     logging.info('Args loaded')
 
-    # Comment below and uncomment the following line to enable wandb logging
-    if False:
-    # if 'train' in sys.argv[1] and pkgutil.find_loader('wandb') is not None:
-        import wandb
+    # Perform task-dependent manual adjustments/overrides of args
+    if prog_name in ['adversarial_dataset_generation_test', 'transferability' 
+        'ruletaker_adv_training_test', 'baseline_test']:
+        args = pre_launch(args, prog_name)
+    elif prog_name == 'adversarial_random_benchmark':
+        args = launch_adversarial_random_benchmark(args)
 
-        if 'pretrain_retriever' in sys.argv[2]:
-            project = "re-re_pretrain-ret"  
-        elif 'gumbel_softmax' in sys.argv[2]:
-            project = "re-re_gumbel-softmax"
-        elif 'ruletaker' in sys.argv[2]:
-            project = "ruletaker"
-            os.environ['WANDB_LOG'] = 'true'
-        elif 'attacker' in sys.argv[2]:
-            project = "adversarial"
-        else:
-            project = "re-re"
-
-        from _jsonnet import evaluate_file
-        import json
-        file_dict = json.loads(evaluate_file(args.param_path))
-
-        wandb.init(project=project, config={**vars(args), **file_dict})
-        os.environ['WANDB_LOG_1'] = 'true'
-        args.wandb_name = wandb.run.name
-    else:
-        os.environ['WANDB_LOG'] = 'false'
-
-    for package_name in args.include_package:
-        import_module_and_submodules(package_name)
     args.func(args)
 
 
-def shortcut_launch(cmds):
-    sys.argv[1:] = cmds[sys.argv.pop(1)]
+def pre_launch(args, prog_name):
 
-    # if sys.argv[1].endswith('evaluate') or sys.argv[1].endswith('test'):
-    #     # sys.argv[3] = f"ruletaker/inputs/dataset/rule-reasoning-dataset-V2020.2.4/depth-5/{sys.argv[3]}.jsonl"
-    #     sys.argv[5] = f"{'/'.join(sys.argv[2].split('/')[:4])}/{sys.argv[3].split('/')[-1].strip('.jsonl') + sys.argv[5]}"
+    # Load manually specified overrides 
+    file_overrides = json.loads(_jsonnet.evaluate_file(args.overrides_file))
 
-    if 'tmp' in sys.argv[2] or 'tmp' in sys.argv[4]:
-        while os.path.isdir(sys.argv[4]):
-            if os.path.isdir(sys.argv[4]):
-                os.system(f"rm -rf {sys.argv[4]}")
-            if os.path.isdir(sys.argv[4]):
-                sys.argv[4] += '.1'
+    # Grab archived model's training params so these can be re-used
+    model_overrides_file = args.archive_file.replace('model.tar.gz', 'config.json')
+    model_overrides = json.load(open(model_overrides_file, 'r'))
+    
+    # Override the model's training params with the manually-specified overrides
+    model_overrides = nested_args_update(file_overrides, model_overrides)
+    
+    # Additional arg correction
+    if prog_name == 'adversarial_dataset_generation_test':
+        model_overrides['model'] = model_overrides.pop('retrieval_reasoning_model')
+    elif prog_name in ['transferability' 'ruletaker_adv_training_test', 'baseline_test']:
+        model_overrides['dataset_reader'].pop('adversarial_examples_path', None)
 
+    # Reformat args as a string so they can be loaded correctly
+    args.overrides = dict_to_str(model_overrides)
 
-def launch_adversarial_dataset_generation_test():
-    ix = sys.argv.index('--overrides_file')
-    sys.argv.pop(ix)                        # Pop flag
-    overrides_file = sys.argv.pop(ix)       # And pop path
-
-    file_overrides = json.loads(_jsonnet.evaluate_file(overrides_file))
-    model_overrides = json.load(open(sys.argv[2].replace('model.tar.gz', 'config.json'), 'r'))
-    for k,v in file_overrides.items():
-        if isinstance(v, dict):
-            if k in model_overrides:
-                model_overrides[k].update(v)
-            else:
-                model_overrides[k] = v
-        else:
-            model_overrides.update({k:v})
-
-    model_overrides['model'] = model_overrides.pop('retrieval_reasoning_model')
-
-    sys.argv.extend(['-o', str(model_overrides).replace("True", "'True'").replace("False", "'False'").replace("None", "'None'")])
-
-
-def launch_ruletaker_adv_training_test():
-    ix = sys.argv.index('--overrides_file')
-    sys.argv.pop(ix)                        # Pop flag
-    overrides_file = sys.argv.pop(ix)       # And pop path
-
-    file_overrides = json.loads(_jsonnet.evaluate_file(overrides_file))
-    model_overrides = json.load(open(sys.argv[2].replace('model.tar.gz', 'config.json'), 'r'))
-    for k,v in file_overrides.items():
-        if isinstance(v, dict):
-            if k in model_overrides:
-                model_overrides[k].update(v)
-            else:
-                model_overrides[k] = v
-        else:
-            model_overrides.update({k:v})
-
-    model_overrides['dataset_reader'].pop('adversarial_examples_path', None)
-    sys.argv.extend(['-o', str(model_overrides).replace("True", "'True'").replace("False", "'False'").replace("None", "'None'")])
-
-
-def launch_transferability():
-    ix = sys.argv.index('--overrides_file')
-    sys.argv.pop(ix)                        # Pop flag
-    overrides_file = sys.argv.pop(ix)       # And pop path
-
-    file_overrides = json.loads(_jsonnet.evaluate_file(overrides_file))
-    model_overrides = json.load(open(sys.argv[2].replace('model.tar.gz', 'config.json'), 'r'))
-    for k,v in file_overrides.items():
-        if isinstance(v, dict):
-            if k in model_overrides:
-                model_overrides[k].update(v)
-            else:
-                model_overrides[k] = v
-        else:
-            model_overrides.update({k:v})
-
-    model_overrides['dataset_reader'].pop('adversarial_examples_path', None)
-    sys.argv.extend(['-o', str(model_overrides).replace("True", "'True'").replace("False", "'False'").replace("None", "'None'")])
-
-
-def launch_baseline_test():
-    ix = sys.argv.index('--overrides_file')
-    sys.argv.pop(ix)                        # Pop flag
-    overrides_file = sys.argv.pop(ix)       # And pop path
-
-    file_overrides = json.loads(_jsonnet.evaluate_file(overrides_file))
-    model_overrides = json.load(open(sys.argv[2].replace('model.tar.gz', 'config.json'), 'r'))
-    for k,v in file_overrides.items():
-        if isinstance(v, dict):
-            if k in model_overrides:
-                model_overrides[k].update(v)
-            else:
-                model_overrides[k] = v
-        else:
-            model_overrides.update({k:v})
-
-    model_overrides['dataset_reader'].pop('adversarial_examples_path', None)
-    sys.argv.extend(['-o', str(model_overrides).replace("True", "'True'").replace("False", "'False'").replace("None", "'None'")])
+    return args
 
 
 def launch_adversarial_random_benchmark(args):
-    ix = sys.argv.index('--overrides_file')
-    sys.argv.pop(ix)                        # Pop flag
-    overrides_file = sys.argv.pop(ix)       # And pop path
-    file_overrides = json.loads(_jsonnet.evaluate_file(overrides_file))
+    # Load manually specified overrides 
+    file_overrides = json.loads(_jsonnet.evaluate_file(args.overrides_file))
 
+    # Manually pass in the model class directly as we will be initialising 
+    # a fresh version of this model
     from lava.models.adversarial_benchmark import RandomAdversarialBaseline as Model
-
     file_overrides['model_class'] = Model
     args.config = file_overrides
+
     return args
 
 

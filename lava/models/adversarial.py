@@ -27,8 +27,8 @@ from allennlp.models.archival import load_archive
 
 from transformers import AutoModel
 
-from .utils import (
-    safe_log, right_pad, batch_lookup, EPSILON, make_dot, set_dropout, one_hot, lmap, lfilter, print_results, gs, 
+from ..utils import (
+    safe_log, right_pad, batch_lookup, EPSILON, set_dropout, one_hot, lmap, lfilter, print_results, gs, 
     timing
 )
 

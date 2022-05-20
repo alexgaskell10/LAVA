@@ -51,8 +51,7 @@ echo '\n\nTraining the victim model using config '$proc_config_1'. \nOutputs wil
 cmd='python main.py \
         ruletaker_train_original \
         '$proc_config_1' \
-        -s '$outdir_victim' \
-        --include-package lava'
+        -s '$outdir_victim
 cmd=$(sed 's/\\//g' <<< $cmd)
 echo $cmd
 $cmd
@@ -66,8 +65,7 @@ cmd='python main.py \
         '$data_dir'/test.jsonl \
         --output-file '$outdir_victim'/test_results.json \
         --cuda-device '$cuda_device' \
-        -o "'$overrides'" \
-        --include-package lava'
+        -o "'$overrides'"'
 cmd=$(sed 's/\\//g' <<< $cmd)
 echo $cmd
 $cmd

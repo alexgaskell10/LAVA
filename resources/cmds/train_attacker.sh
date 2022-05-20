@@ -30,8 +30,7 @@ echo '\n\nTraining the attacker model using config '$proc_config_2'. \nOutputs w
 cmd='python main.py \
         adversarial_dataset_generation \
         '$proc_config_2' \
-        -s '$outdir_attacker' \
-        --include-package lava'
+        -s '$outdir_attacker
 cmd=$(sed 's/\\//g' <<< $cmd)
 echo $cmd
 $cmd
@@ -51,8 +50,7 @@ cmd='python main.py \
         '$data_dir'/test.jsonl \
         --output-file '$outdir_attacker'/test_results.json \
         --overrides_file '$proc_config_3' \
-        --cuda-device '$cuda_device' \
-        --include-package lava'
+        --cuda-device '$cuda_device
 cmd=$(sed 's/\\//g' <<< $cmd)
 echo $cmd
 $cmd

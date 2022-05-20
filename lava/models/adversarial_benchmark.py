@@ -10,18 +10,13 @@ import random
 import numpy as np
 from torch._C import Value
 
-try:
-    import wandb
-except:
-    pass
-
 import torch
 from torch import nn
 
 from allennlp.models.model import Model
 
-from .utils import (
-    safe_log, right_pad, batch_lookup, EPSILON, make_dot, set_dropout, one_hot, lmap, lfilter, print_results, gs, 
+from ..utils import (
+    safe_log, right_pad, batch_lookup, EPSILON, set_dropout, one_hot, lmap, lfilter, print_results, gs, 
     timing
 )
 from .solver.theory_label_generator import call_theorem_prover_from_lst

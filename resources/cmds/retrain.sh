@@ -68,8 +68,7 @@ echo '\n\nRetraining the victim model on the augmented dataset using config '$pr
 cmd='python main.py \
         ruletaker_adv_training \
         '$proc_config_4' \
-        -s '$outdir_victim_retrain' \
-        --include-package lava'
+        -s '$outdir_victim_retrain
 cmd=$(sed 's/\\//g' <<< $cmd)
 echo $cmd
 $cmd
@@ -92,8 +91,7 @@ cmd='python main.py \
         test \
         --output-file '$outdir_victim_retrain'/aug_test_results.json \
         --overrides_file '$proc_config_5' \
-        --cuda-device '$cuda_device' \
-        --include-package lava'
+        --cuda-device '$cuda_device
 cmd=$(sed 's/\\//g' <<< $cmd)
 echo $cmd
 $cmd

@@ -47,8 +47,7 @@ cmd='python main.py \
         '$adv_samples_vic1' \
         --output-file '$output_file' \
         --overrides_file '$proc_config_1' \
-        --cuda-device '$cuda_device' \
-        --include-package lava'
+        --cuda-device '$cuda_device
 cmd=$(sed 's/\\//g' <<< $cmd)
 echo $cmd
 $cmd
@@ -73,8 +72,7 @@ cmd='python main.py \
         '$adv_samples_vic2' \
         --output-file '$output_file' \
         --overrides_file '$proc_config_2' \
-        --cuda-device '$cuda_device' \
-        --include-package lava'
+        --cuda-device '$cuda_device
 cmd=$(sed 's/\\//g' <<< $cmd)
 echo $cmd
 $cmd

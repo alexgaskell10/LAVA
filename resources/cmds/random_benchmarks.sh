@@ -34,8 +34,7 @@ do
             --output-file '$outdir/$ext'_results.json \
             --overrides_file '$proc_config_1' \
             --cuda-device '$cuda_device' \
-            --fresh-init \
-            --include-package lava'
+            --fresh-init'
     cmd=$(sed 's/\\//g' <<< $cmd)
     echo $cmd
     $cmd

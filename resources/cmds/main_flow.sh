@@ -49,8 +49,7 @@ echo '\n\nTraining the victim model using config '$proc_config_1'. \nOutputs wil
 cmd='python main.py \
         ruletaker_train_original \
         '$proc_config_1' \
-        -s '$outdir_victim' \
-        --include-package lava'
+        -s '$outdir_victim
 cmd=$(sed 's/\\//g' <<< $cmd)
 echo $cmd
 $cmd
@@ -64,8 +63,7 @@ cmd='python main.py \
         '$data_dir'/test.jsonl \
         --output-file '$outdir_victim'/test_results.json \
         --cuda-device '$cuda_device' \
-        -o "'$overrides'" \
-        --include-package lava'
+        -o "'$overrides'"'
 cmd=$(sed 's/\\//g' <<< $cmd)
 echo $cmd
 $cmd
@@ -90,8 +88,7 @@ echo '\n\nTraining the attacker model using config '$proc_config_2'. \nOutputs w
 cmd='python main.py \
         adversarial_dataset_generation \
         '$proc_config_2' \
-        -s '$outdir_attacker' \
-        --include-package lava'
+        -s '$outdir_attacker
 cmd=$(sed 's/\\//g' <<< $cmd)
 echo $cmd
 $cmd
@@ -111,8 +108,7 @@ cmd='python main.py \
         '$data_dir'/test.jsonl \
         --output-file '$outdir_attacker'/test_results.json \
         --overrides_file '$proc_config_3' \
-        --cuda-device '$cuda_device' \
-        --include-package lava'
+        --cuda-device '$cuda_device
 cmd=$(sed 's/\\//g' <<< $cmd)
 echo $cmd
 $cmd
@@ -169,8 +165,7 @@ echo '\n\nRetraining the victim model on the augmented dataset using config '$pr
 cmd='python main.py \
         ruletaker_adv_training \
         '$proc_config_4' \
-        -s '$outdir_victim_retrain' \
-        --include-package lava'
+        -s '$outdir_victim_retrain
 cmd=$(sed 's/\\//g' <<< $cmd)
 echo $cmd
 $cmd
@@ -191,8 +186,7 @@ cmd='python main.py \
         test \
         --output-file '$outdir_victim_retrain'/aug_test_results.json \
         --overrides_file '$proc_config_5' \
-        --cuda-device '$cuda_device' \
-        --include-package lava'
+        --cuda-device '$cuda_device
 cmd=$(sed 's/\\//g' <<< $cmd)
 echo $cmd
 $cmd

@@ -30,8 +30,7 @@ do
             '$data_dir'/test.jsonl \
             --output-file '$outdir_attacker'/val_mc-'$val_num_monte_carlo'_test_results.json \
             --overrides_file '$proc_config' \
-            --cuda-device '$cuda_device' \
-            --include-package lava'
+            --cuda-device '$cuda_device
     cmd=$(sed 's/\\//g' <<< $cmd)
     echo $cmd
     $cmd

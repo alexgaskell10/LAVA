@@ -2,7 +2,7 @@ from random import shuffle
 from torch.utils import data
 
 from allennlp.data.samplers import SequentialSampler, Sampler, BasicBatchSampler, BatchSampler
-from .utils import flatten_list, lfilter
+from ..utils import flatten_list, lfilter
 
 @Sampler.register("custom_sequential")
 class CustomSequentialSampler(SequentialSampler):

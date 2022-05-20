@@ -36,8 +36,7 @@ do
     cmd='python main.py \
             adversarial_dataset_generation \
             '$proc_config_1' \
-            -s '$outdir_attacker' \
-            --include-package lava'
+            -s '$outdir_attacker
     cmd=$(sed 's/\\//g' <<< $cmd)
     echo $cmd
     $cmd
@@ -58,8 +57,7 @@ do
             '$data_dir'/test.jsonl \
             --output-file '$outdir_attacker'/test_results.json \
             --overrides_file '$proc_config_2' \
-            --cuda-device '$cuda_device' \
-            --include-package lava'
+            --cuda-device '$cuda_device
     cmd=$(sed 's/\\//g' <<< $cmd)
     echo $cmd
     $cmd

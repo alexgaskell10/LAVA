@@ -125,7 +125,7 @@ class CustomTrain(Subcommand):
             "--dont_save_best_model",
             action="store_true",
             default=False,
-            help="outputs tqdm status on separate lines and slows tqdm refresh rate",
+            help="Prevent the model from saving during training",
         )
 
         subparser.add_argument(
@@ -747,7 +747,7 @@ class TrainModel(Registrable):
             vocabulary_.save_to_files(vocabulary_path)
 
         for dataset in datasets.values():
-            dataset.index_with(vocabulary_)        # TODO: check this. Indexes using both vocabs combined into one
+            dataset.index_with(vocabulary_)
 
         data_loader_ = data_loader.construct(dataset=datasets["train"])
         validation_data = datasets.get("validation")
@@ -777,9 +777,7 @@ class TrainModel(Registrable):
             model=model_, data_loader=data_loader_, validation_data_loader=validation_data_loader_,
         )
 
-        # TODO: hack to stop scheduler below
-        # trainer_.optimizer.param_groups[0]['lr'] = trainer_.optimizer.defaults['lr']
-        # trainer_.optimizer.param_groups[1]['lr'] = trainer_.optimizer.defaults['lr']
+        # Manually override the scheduler as this was causing problems during (re)training
         trainer_.optimizer.param_groups[0]['lr'] = lr
         trainer_.optimizer.param_groups[1]['lr'] = lr
         trainer_._learning_rate_scheduler = None

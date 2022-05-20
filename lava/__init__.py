@@ -6,7 +6,7 @@ from lava.dataset_readers.proof_reader import ProofReader
 from lava.models.transformer_binary_qa_model import TransformerBinaryQA
 from lava.train.re_train import *
 from lava.train.custom_train import *
-from lava.models.utils import *
+# from lava.models.utils import *
 from lava.models.adversarial import AdversarialGenerator
 from lava.models.adversarial_benchmark import RandomAdversarialBaseline
 from lava.train.adv_trainer import AdversarialTrainer
