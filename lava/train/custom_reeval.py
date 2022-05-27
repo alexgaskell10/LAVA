@@ -67,7 +67,7 @@ from allennlp.training.util import evaluate
 
 from allennlp.common import Params
 
-from .utils import write_records
+from ..utils import write_records
 
 logger = logging.getLogger(__name__)
 

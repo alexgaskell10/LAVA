@@ -58,8 +58,6 @@ from allennlp.models.model import _DEFAULT_WEIGHTS, Model
 from allennlp.training.trainer import Trainer
 from allennlp.training import util as training_util
 
-from .utils import create_serialization_dir
-
 logger = logging.getLogger(__name__)
 
 

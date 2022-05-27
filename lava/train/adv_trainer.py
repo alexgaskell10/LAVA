@@ -12,10 +12,6 @@ import json
 from contextlib import contextmanager
 import numpy as np
 
-# try:
-#     from apex import amp
-# except ImportError:
-#     amp = None
 import torch
 import torch.distributed as dist
 import torch.optim.lr_scheduler
@@ -39,7 +35,7 @@ from allennlp.training.optimizers import Optimizer
 from allennlp.training.tensorboard_writer import TensorboardWriter
 from allennlp.training.trainer import GradientDescentTrainer, Trainer, BatchCallback, EpochCallback
 
-from .utils import lrange, duplicate_list, description_from_metrics, write_records
+from ..utils import lrange, duplicate_list, description_from_metrics, write_records
 
 logger = logging.getLogger(__name__)
 

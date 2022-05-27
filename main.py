@@ -2,11 +2,10 @@ import sys, os
 import logging
 import _jsonnet, json
 
-from allennlp.common.util import import_module_and_submodules
 from allennlp.commands import create_parser
-from lava.utils import dict_to_str, nested_args_update
-from lava.debugger_shortcuts import debugger_shortcut_cmds, shortcut_launch
 
+from lava.utils import dict_to_str, nested_args_update, set_seed
+from lava.debugger_shortcuts import debugger_shortcut_cmds, shortcut_launch
 import lava
 
 logger = logging.getLogger(__name__)
@@ -37,7 +36,7 @@ def main(prog = None):
     prog_name = sys.argv[1]
     sys.argv[1] = CMD_MAP[prog_name]
 
-    # Load args
+    # Load args. We borrow the AllenNLP parser functionality for simplicity
     parser = create_parser(prog)
     args = parser.parse_args()
     logging.info('Args loaded')
@@ -49,6 +48,9 @@ def main(prog = None):
     elif prog_name == 'adversarial_random_benchmark':
         args = launch_adversarial_random_benchmark(args)
 
+    set_seed(1,1)
+
+    # Launch program
     args.func(args)
 
 

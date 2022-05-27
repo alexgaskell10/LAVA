@@ -58,90 +58,32 @@ from allennlp.models.archival import archive_model, CONFIG_NAME, load_archive
 from allennlp.models.model import _DEFAULT_WEIGHTS, Model
 from allennlp.training.trainer import Trainer
 from allennlp.training import util as training_util
+from allennlp.models.archival import Archive
 
+from allennlp.commands.train import train_model_from_args, train_model_from_file, _train_worker, TrainModel, Train
+from ..utils import read_all_datasets
 
 logger = logging.getLogger(__name__)
 
 
 @Subcommand.register("custom_train")
-class CustomTrain(Subcommand):
+class CustomTrain(Train):
     @overrides
     def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
-        description = """Train the specified model on the specified dataset."""
-        subparser = parser.add_parser(self.name, description=description, help="Train a model.")
-
-        subparser.add_argument(
-            "param_path", type=str, help="path to parameter file describing the model to be trained"
-        )
-
-        subparser.add_argument(
-            "--cuda-device", type=int, default=-1, help="id of GPU to use (if any)"
-        )
-
-        subparser.add_argument(
-            "-s",
-            "--serialization-dir",
-            required=True,
-            type=str,
-            help="directory in which to save the model and its logs",
-        )
-
-        subparser.add_argument(
-            "-r",
-            "--recover",
-            action="store_true",
-            default=False,
-            help="recover training from the state in serialization_dir",
-        )
-
-        subparser.add_argument(
-            "-f",
-            "--force",
-            action="store_true",
-            required=False,
-            help="overwrite the output directory if it exists",
-        )
-
-        subparser.add_argument(
-            "-o",
-            "--overrides",
-            type=str,
-            default="",
-            help="a JSON structure used to override the experiment configuration",
-        )
-
-        subparser.add_argument(
-            "--file-friendly-logging",
-            action="store_true",
-            default=False,
-            help="outputs tqdm status on separate lines and slows tqdm refresh rate",
-        )
-
-        subparser.add_argument(
-            "--node-rank", type=int, default=0, help="rank of this node in the distributed setup"
-        )
-
-        subparser.add_argument(
-            "--dont_save_best_model",
-            action="store_true",
-            default=False,
-            help="Prevent the model from saving during training",
-        )
-
-        subparser.add_argument(
-            "--dry-run",
-            action="store_true",
-            help="do not train a model, but create a vocabulary, show dataset statistics and "
-                 "other training information",
-        )
-
+        subparser = super().add_subparser(parser)
         subparser.set_defaults(func=train_custom_model_from_args)
+        subparser.add_argument(
+            "--cuda-device",
+            type=int,
+            default=-1,
+            help="Which device",
+        )
         return subparser
 
 
 def train_custom_model_from_args(args: argparse.Namespace):
-    """
-    Just converts from an `argparse.Namespace` object to string paths.
+    """ Loads the archived model from file so its args can be accessed during
+        training setup.
     """
     # Load saved model archive
     params, archive = load_file(args)
@@ -160,6 +102,13 @@ def train_custom_model_from_args(args: argparse.Namespace):
 
 
 def load_file(args: argparse.Namespace):
+    """ Load an archived model and merge its args with
+        the user-specified args. 
+
+        returns:
+            - params: allennlp.common.params.Params
+            - archive: allennlp.models.archival.Archive
+    """
     tmp_params = Params.from_file(args.param_path, args.overrides)
     if not "ruletaker_archive" in tmp_params:
         return tmp_params, None
@@ -180,84 +129,6 @@ def load_file(args: argparse.Namespace):
 
     return params, archive
 
-
-def train_model_from_args(args: argparse.Namespace):
-    """
-    Just converts from an `argparse.Namespace` object to string paths.
-    """
-    train_model_from_file(
-        parameter_filename=args.param_path,
-        serialization_dir=args.serialization_dir,
-        overrides=args.overrides,
-        file_friendly_logging=args.file_friendly_logging,
-        recover=args.recover,
-        force=args.force,
-        dont_save_best_model=args.dont_save_best_model,
-        node_rank=args.node_rank,
-        include_package=args.include_package,
-        dry_run=args.dry_run,
-    )
-
-
-def train_model_from_file(
-    parameter_filename: str,
-    serialization_dir: str,
-    overrides: str = "",
-    file_friendly_logging: bool = False,
-    recover: bool = False,
-    force: bool = False,
-    dont_save_best_model: bool = True,
-    node_rank: int = 0,
-    include_package: List[str] = None,
-    dry_run: bool = False,
-) -> Optional[Model]:
-    """
-    A wrapper around :func:`train_model` which loads the params from a file.
-
-    # Parameters
-
-    parameter_filename : `str`
-        A json parameter file specifying an AllenNLP experiment.
-    serialization_dir : `str`
-        The directory in which to save results and logs. We just pass this along to
-        :func:`train_model`.
-    overrides : `str`
-        A JSON string that we will use to override values in the input parameter file.
-    file_friendly_logging : `bool`, optional (default=False)
-        If `True`, we make our output more friendly to saved model files.  We just pass this
-        along to :func:`train_model`.
-    recover : `bool`, optional (default=False)
-        If `True`, we will try to recover a training run from an existing serialization
-        directory.  This is only intended for use when something actually crashed during the middle
-        of a run.  For continuing training a model on new data, see `Model.from_archive`.
-    force : `bool`, optional (default=False)
-        If `True`, we will overwrite the serialization directory if it already exists.
-    node_rank : `int`, optional
-        Rank of the current node in distributed training
-    include_package : `str`, optional
-        In distributed mode, extra packages mentioned will be imported in trainer workers.
-    dry_run : `bool`, optional (default=False)
-        Do not train a model, but create a vocabulary, show dataset statistics and other training
-        information.
-
-    # Returns
-
-    best_model : `Optional[Model]`
-        The model with the best epoch weights or `None` if in dry run.
-    """
-    # Load the experiment config from a file and pass it to `train_model`.
-    params = Params.from_file(parameter_filename, overrides)
-    return train_model(
-        params=params,
-        serialization_dir=serialization_dir,
-        file_friendly_logging=file_friendly_logging,
-        recover=recover,
-        force=force,
-        dont_save_best_model=dont_save_best_model,
-        node_rank=node_rank,
-        include_package=include_package,
-        dry_run=dry_run,
-    )
 
 def train_model(
     params: Params,
@@ -517,7 +388,7 @@ def _train_worker(
             f"for distributed training in worker {global_rank}"
         )
 
-    train_loop = TrainModel.from_params(
+    train_loop = CustomTrainModel.from_params(
         params=params,
         serialization_dir=serialization_dir,
         local_rank=process_rank,
@@ -551,68 +422,7 @@ def _train_worker(
     return None
 
 
-class TrainModel(Registrable):
-    """
-    This class exists so that we can easily read a configuration file with the `allennlp train`
-    command.  The basic logic is that we call `train_loop =
-    TrainModel.from_params(params_from_config_file)`, then `train_loop.run()`.  This class performs
-    very little logic, pushing most of it to the `Trainer` that has a `train()` method.  The
-    point here is to construct all of the dependencies for the `Trainer` in a way that we can do
-    it using `from_params()`, while having all of those dependencies transparently documented and
-    not hidden in calls to `params.pop()`.  If you are writing your own training loop, you almost
-    certainly should not use this class, but you might look at the code for this class to see what
-    we do, to make writing your training loop easier.
-
-    In particular, if you are tempted to call the `__init__` method of this class, you are probably
-    doing something unnecessary.  Literally all we do after `__init__` is call `trainer.train()`.  You
-    can do that yourself, if you've constructed a `Trainer` already.  What this class gives you is a
-    way to construct the `Trainer` by means of a config file.  The actual constructor that we use
-    with `from_params` in this class is `from_partial_objects`.  See that method for a description
-    of all of the allowed top-level keys in a configuration file used with `allennlp train`.
-    """
-
-    default_implementation = "default"
-
-    def __init__(
-        self,
-        serialization_dir: str,
-        model: Model,
-        trainer: Trainer,
-        evaluation_data_loader: DataLoader = None,
-        evaluate_on_test: bool = False,
-        batch_weight_key: str = "",
-    ) -> None:
-        self.serialization_dir = serialization_dir
-        self.model = model
-        self.trainer = trainer
-        self.evaluation_data_loader = evaluation_data_loader
-        self.evaluate_on_test = evaluate_on_test
-        self.batch_weight_key = batch_weight_key
-
-    def run(self) -> Dict[str, Any]:
-        return self.trainer.train()
-
-    def finish(self, metrics: Dict[str, Any]):
-        if self.evaluation_data_loader and self.evaluate_on_test:
-            logger.info("The model will be evaluated using the best epoch weights.")
-            test_metrics = training_util.evaluate(
-                self.model,
-                self.evaluation_data_loader,
-                cuda_device=self.trainer.cuda_device,
-                batch_weight_key=self.batch_weight_key,
-            )
-
-            for key, value in test_metrics.items():
-                metrics["test_" + key] = value
-        elif self.evaluation_data_loader:
-            logger.info(
-                "To evaluate on the test set after training, pass the "
-                "'evaluate_on_test' flag, or use the 'allennlp evaluate' command."
-            )
-        common_util.dump_metrics(
-            os.path.join(self.serialization_dir, "metrics.json"), metrics, log=False
-        )
-
+class CustomTrainModel(TrainModel):
     @classmethod
     def from_partial_objects(
         cls,
@@ -630,12 +440,9 @@ class TrainModel(Registrable):
         validation_data_loader: Lazy[DataLoader] = None,
         test_data_path: str = None,
         evaluate_on_test: bool = False,
-        #### AG additions 
-        archive = None,
-        model: Lazy[Model] = None,
-        retriever = None,
+        archive: Archive = None,
         retrieval_reasoning_model: Lazy[Model] = None,
-        lr = None,
+        lr: float = None,
     ) -> "TrainModel":
         """
         This method is intended for use with our `FromParams` logic, to construct a `TrainModel`
@@ -701,7 +508,6 @@ class TrainModel(Registrable):
             that we do not recommend using this for actual test data in every-day experimentation;
             you should only very rarely evaluate your model on actual test data.
         """
-        from lava.train.utils import read_all_datasets
         datasets = read_all_datasets(
             train_data_path=train_data_path,
             dataset_reader=dataset_reader,
@@ -777,7 +583,8 @@ class TrainModel(Registrable):
             model=model_, data_loader=data_loader_, validation_data_loader=validation_data_loader_,
         )
 
-        # Manually override the scheduler as this was causing problems during (re)training
+        # Manually override the learning rate and scheduler as this was 
+        # causing problems during (re)training
         trainer_.optimizer.param_groups[0]['lr'] = lr
         trainer_.optimizer.param_groups[1]['lr'] = lr
         trainer_._learning_rate_scheduler = None
@@ -800,4 +607,4 @@ class TrainModel(Registrable):
             return trainer.model
 
 
-TrainModel.register("default", constructor="from_partial_objects")(TrainModel)
+CustomTrainModel.register("default", constructor="from_partial_objects")(CustomTrainModel)
